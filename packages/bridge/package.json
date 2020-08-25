@@ -12,9 +12,11 @@
   "homepage": "http://plugins.dev",
   "license": "EPL-1.0",
   "main": "dist/bridge.js",
+  "module": "dist/bridge.es5.js",
   "directories": {
     "lib": "src",
-    "test": "tests"
+    "test": "tests",
+    "doc": "doc"
   },
   "typings": "dist/types/bridge.d.ts",
   "files": [
@@ -28,7 +30,17 @@
     "url": "git+https://github.com/pluginsdotdev/pluginsdotdev.git"
   },
   "scripts": {
-    "test": "echo \"Error: run tests from root\" && exit 1"
+    "test": "echo \"Error: run tests from root\" && exit 1",
+    "lint": "tslint  --project tsconfig.json -t codeFrame 'src/**/*.ts' 'test/**/*.ts'",
+    "prebuild": "rimraf dist",
+    "build": "tsc --module commonjs && rollup -c rollup.config.ts && typedoc --out docs --target es6 --theme minimal --mode file src",
+    "pre-commit": "lint-staged"
+  },
+  "lint-staged": {
+    "{src,test}/**/*.ts": [
+      "prettier --write",
+      "git add"
+    ]
   },
   "bugs": {
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
