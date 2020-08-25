@@ -23,7 +23,7 @@
     "end-user",
     "programming"
   ],
-  "author": "Adam Berger",
+  "author": "Adam Berger <adam@ratchetdesigns.com>",
   "license": "EPL-1.0",
   "bugs": {
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
