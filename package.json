@@ -1,0 +1,38 @@
+{
+  "name": "pluginsdotdev",
+  "version": "1.0.0",
+  "description": "Plugins.dev gives your app superpowers: allow your users to safely add 3rd party plugins to your site and let plugin authors extend your functionality and make you money.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lerna": "lerna",
+    "commit": "git-cz"
+  },
+  "config": {
+    "commitizen": {
+      "path": "node_modules/cz-conventional-changelog"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pluginsdotdev/pluginsdotdev.git"
+  },
+  "keywords": [
+    "React",
+    "plugins",
+    "end-user",
+    "programming"
+  ],
+  "author": "Adam Berger",
+  "license": "EPL-1.0",
+  "bugs": {
+    "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
+  },
+  "homepage": "https://github.com/pluginsdotdev/pluginsdotdev#readme",
+  "dependencies": {
+    "lerna": "^3.22.1"
+  },
+  "devDependencies": {
+    "cz-conventional-changelog": "^3.3.0"
+  }
+}

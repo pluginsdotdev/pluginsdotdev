@@ -1,0 +1,15 @@
+version: '2'
+services:
+  npm:
+    build:
+      context: .
+    image: pluginsdotdev
+    working_dir: "/app"
+    user: ${CURRENT_USER}
+    ports:
+     - "9000:9000"
+    volumes:
+     - ".:/app"
+     - "${HOME}/.gitconfig:/home/node/.gitconfig:ro"
+     - "${HOME}/.git-credentials:/home/node/.git-credentials:ro"
+    entrypoint: ["npm"]
