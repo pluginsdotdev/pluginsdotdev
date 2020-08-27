@@ -10,39 +10,43 @@ interface BridgeDataContainer extends InternalBridgeDataContainer {
   bridgeData: any;
 }
 
-type HostObj = Readonly<any> | number | string | boolean | null;
+type HostValue = Readonly<any> | number | string | boolean | null;
 
 const isObject = (o: any) => Object(o) === o;
 
 let globalFnId = 0;
 
 const _toBridge = (
-  hostObj: HostObj,
+  hostValue: HostValue,
   hdc: InternalBridgeDataContainer,
   path: Array<string | number>
 ): [InternalBridgeDataContainer, any] => {
-  if (typeof hostObj === "function") {
+  if (typeof hostValue === "function") {
     // functions are referred to by fnId on the plugin side and are looked up and invoked by fnId on the host side.
     // a map of json path in the bridgeData to fnId is passed alongside bridgeData to avoid any possibility of
     // contamination by hosts
     const fnId = "" + ++globalFnId;
     hdc.bridgeFns[path.join("/")] = fnId;
-    hdc.localFns[fnId] = hostObj;
+    hdc.localFns[fnId] = hostValue;
     return [hdc, null];
-  } else if (Array.isArray(hostObj)) {
+  } else if (Array.isArray(hostValue)) {
     // arrays are traversed item by item, each is converted from host->plugin
     // TODO: for large arrays, we may want to bail if they are monomorphic (by declaration or partial testing)
-    const pluginObj = hostObj.map((hostVal, idx) => {
+    const pluginObj = hostValue.map((hostVal, idx) => {
       const [_hdc, pluginVal] = _toBridge(hostVal, hdc, path.concat(idx));
       hdc = _hdc;
       return pluginVal;
     });
     return [hdc, pluginObj];
-  } else if (typeof hostObj === "object" && hostObj && isObject(hostObj)) {
+  } else if (
+    typeof hostValue === "object" &&
+    hostValue &&
+    isObject(hostValue)
+  ) {
     // objects are traversed property by property, each is converted from host->plugin
-    const pluginObj = Object.keys(hostObj).reduce(
+    const pluginObj = Object.keys(hostValue).reduce(
       (p: { [key: string]: any }, key: string) => {
-        const [_hdc, val] = _toBridge(hostObj[key], hdc, path.concat(key));
+        const [_hdc, val] = _toBridge(hostValue[key], hdc, path.concat(key));
         p[key] = val;
         hdc = _hdc;
         return p;
@@ -52,23 +56,23 @@ const _toBridge = (
     return [hdc, pluginObj];
   }
 
-  return [hdc, hostObj];
+  return [hdc, hostValue];
 };
 
 /**
  * Construct a BridgeDataContainer from a host object.
- * The BridgeDataContainer contains a representation of hostObj suitable for
+ * The BridgeDataContainer contains a representation of hostValue suitable for
  * transport to across domains and the state needed to bridge further interactions
  * between the host and plugin. This state can be used, for example, to lookup a
  * function by ID.
  **/
-const toBridge = (hostObj: HostObj): BridgeDataContainer => {
+const toBridge = (hostValue: HostValue): BridgeDataContainer => {
   const internalHdc = {
     bridgeFns: {},
     localFns: {}
   };
 
-  const [hdc, bridgeData] = _toBridge(hostObj, internalHdc, []);
+  const [hdc, bridgeData] = _toBridge(hostValue, internalHdc, []);
 
   return {
     ...hdc,
