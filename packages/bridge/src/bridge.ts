@@ -1,14 +1,40 @@
-interface InternalBridgeDataContainer {
-  // bridgeFns is a map from paths in bridgeData to function ids the host will recognize (through localFns)
+/**
+ * BridgeValue contains data suitable for transmission over the bridge
+ **/
+interface BridgeValue {
+  /**
+   * bridgeData is the data that is safe to pass to the plugin
+   **/
+  bridgeData: any;
+  /**
+   * bridgeFns is a map from paths in bridgeData to function ids the host will recognize (through localFns)
+   **/
   bridgeFns: { [path: string]: string };
-  // localFns is a map from function ids to the actual host function
+}
+
+/**
+ * LocalBridgeState contains the state necessary to support invocation of functions passed
+ * to a bridge through the corresponding BridgeValue.
+ **/
+interface LocalBridgeState {
+  /**
+   * localFns is a map from function ids to the actual host function
+   **/
   localFns: { [fnId: string]: Readonly<(...args: any[]) => any> };
 }
 
-interface BridgeDataContainer extends InternalBridgeDataContainer {
-  // bridgeData is the data that is safe to pass to the plugin
-  bridgeData: any;
-}
+/**
+ * BridgeDataContainer contains data suitable for transmission over the bridge and the
+ * state required to be kept to facilitate further invocations of any transmitted
+ * functions.
+ **/
+type BridgeDataContainer = BridgeValue & LocalBridgeState;
+
+/**
+ * InternalBridgeDataContainer is an implementation detail we use because
+ * we fill in the bridgeData after filling in bridgeFns and localFns.
+ **/
+type InternalBridgeDataContainer = Omit<BridgeDataContainer, "bridgeData">;
 
 type HostValue = Readonly<any> | number | string | boolean | null;
 
@@ -18,7 +44,7 @@ let globalFnId = 0;
 
 const _toBridge = (
   hostValue: HostValue,
-  hdc: InternalBridgeDataContainer,
+  bdc: InternalBridgeDataContainer,
   path: Array<string | number>
 ): [InternalBridgeDataContainer, any] => {
   if (typeof hostValue === "function") {
@@ -26,18 +52,18 @@ const _toBridge = (
     // a map of json path in the bridgeData to fnId is passed alongside bridgeData to avoid any possibility of
     // contamination by hosts
     const fnId = "" + ++globalFnId;
-    hdc.bridgeFns[path.join("/")] = fnId;
-    hdc.localFns[fnId] = hostValue;
-    return [hdc, null];
+    bdc.bridgeFns[path.join("/")] = fnId;
+    bdc.localFns[fnId] = hostValue;
+    return [bdc, null];
   } else if (Array.isArray(hostValue)) {
     // arrays are traversed item by item, each is converted from host->plugin
     // TODO: for large arrays, we may want to bail if they are monomorphic (by declaration or partial testing)
     const pluginObj = hostValue.map((hostVal, idx) => {
-      const [_hdc, pluginVal] = _toBridge(hostVal, hdc, path.concat(idx));
-      hdc = _hdc;
+      const [_bdc, pluginVal] = _toBridge(hostVal, bdc, path.concat(idx));
+      bdc = _bdc;
       return pluginVal;
     });
-    return [hdc, pluginObj];
+    return [bdc, pluginObj];
   } else if (
     typeof hostValue === "object" &&
     hostValue &&
@@ -46,17 +72,17 @@ const _toBridge = (
     // objects are traversed property by property, each is converted from host->plugin
     const pluginObj = Object.keys(hostValue).reduce(
       (p: { [key: string]: any }, key: string) => {
-        const [_hdc, val] = _toBridge(hostValue[key], hdc, path.concat(key));
+        const [_bdc, val] = _toBridge(hostValue[key], bdc, path.concat(key));
         p[key] = val;
-        hdc = _hdc;
+        bdc = _bdc;
         return p;
       },
       {}
     );
-    return [hdc, pluginObj];
+    return [bdc, pluginObj];
   }
 
-  return [hdc, hostValue];
+  return [bdc, hostValue];
 };
 
 /**
@@ -67,15 +93,15 @@ const _toBridge = (
  * function by ID.
  **/
 const toBridge = (hostValue: HostValue): BridgeDataContainer => {
-  const internalHdc = {
+  const internalBdc = {
     bridgeFns: {},
     localFns: {}
   };
 
-  const [hdc, bridgeData] = _toBridge(hostValue, internalHdc, []);
+  const [bdc, bridgeData] = _toBridge(hostValue, internalBdc, []);
 
   return {
-    ...hdc,
+    ...bdc,
     bridgeData
   };
 };

@@ -2723,13 +2723,19 @@ img {
 <nav class="tsd-navigation secondary">
 	<ul>
 		<li class=" tsd-kind-interface">
-			<a href="interfaces/bridgedatacontainer.html" class="tsd-kind-icon">Bridge<wbr>Data<wbr>Container</a>
+			<a href="interfaces/bridgevalue.html" class="tsd-kind-icon">Bridge<wbr>Value</a>
 		</li>
 		<li class=" tsd-kind-interface">
-			<a href="interfaces/internalbridgedatacontainer.html" class="tsd-kind-icon">Internal<wbr>Bridge<wbr>Data<wbr>Container</a>
+			<a href="interfaces/localbridgestate.html" class="tsd-kind-icon">Local<wbr>Bridge<wbr>State</a>
 		</li>
 		<li class=" tsd-kind-type-alias">
-			<a href="globals.html#hostobj" class="tsd-kind-icon">Host<wbr>Obj</a>
+			<a href="globals.html#bridgedatacontainer" class="tsd-kind-icon">Bridge<wbr>Data<wbr>Container</a>
+		</li>
+		<li class=" tsd-kind-type-alias">
+			<a href="globals.html#hostvalue" class="tsd-kind-icon">Host<wbr>Value</a>
+		</li>
+		<li class=" tsd-kind-type-alias">
+			<a href="globals.html#internalbridgedatacontainer" class="tsd-kind-icon">Internal<wbr>Bridge<wbr>Data<wbr>Container</a>
 		</li>
 		<li class=" tsd-kind-variable">
 			<a href="globals.html#globalfnid" class="tsd-kind-icon">global<wbr>FnId</a>
@@ -2769,14 +2775,16 @@ img {
 					<section class="tsd-index-section ">
 						<h3>Interfaces</h3>
 						<ul class="tsd-index-list">
-							<li class="tsd-kind-interface"><a href="interfaces/bridgedatacontainer.html" class="tsd-kind-icon">Bridge<wbr>Data<wbr>Container</a></li>
-							<li class="tsd-kind-interface"><a href="interfaces/internalbridgedatacontainer.html" class="tsd-kind-icon">Internal<wbr>Bridge<wbr>Data<wbr>Container</a></li>
+							<li class="tsd-kind-interface"><a href="interfaces/bridgevalue.html" class="tsd-kind-icon">Bridge<wbr>Value</a></li>
+							<li class="tsd-kind-interface"><a href="interfaces/localbridgestate.html" class="tsd-kind-icon">Local<wbr>Bridge<wbr>State</a></li>
 						</ul>
 					</section>
 					<section class="tsd-index-section ">
 						<h3>Type aliases</h3>
 						<ul class="tsd-index-list">
-							<li class="tsd-kind-type-alias"><a href="globals.html#hostobj" class="tsd-kind-icon">Host<wbr>Obj</a></li>
+							<li class="tsd-kind-type-alias"><a href="globals.html#bridgedatacontainer" class="tsd-kind-icon">Bridge<wbr>Data<wbr>Container</a></li>
+							<li class="tsd-kind-type-alias"><a href="globals.html#hostvalue" class="tsd-kind-icon">Host<wbr>Value</a></li>
+							<li class="tsd-kind-type-alias"><a href="globals.html#internalbridgedatacontainer" class="tsd-kind-icon">Internal<wbr>Bridge<wbr>Data<wbr>Container</a></li>
 						</ul>
 					</section>
 					<section class="tsd-index-section ">
@@ -2799,14 +2807,47 @@ img {
 		<section class="tsd-panel-group tsd-member-group ">
 			<h2>Type aliases</h2>
 			<section class="tsd-panel tsd-member tsd-kind-type-alias">
-				<a name="hostobj" class="tsd-anchor"></a>
-				<h3>Host<wbr>Obj</h3>
-				<div class="tsd-signature tsd-kind-icon">Host<wbr>Obj<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Readonly</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">null</span></div>
+				<a name="bridgedatacontainer" class="tsd-anchor"></a>
+				<h3>Bridge<wbr>Data<wbr>Container</h3>
+				<div class="tsd-signature tsd-kind-icon">Bridge<wbr>Data<wbr>Container<span class="tsd-signature-symbol">:</span> <a href="interfaces/bridgevalue.html" class="tsd-signature-type">BridgeValue</a><span class="tsd-signature-symbol"> &amp; </span><a href="interfaces/localbridgestate.html" class="tsd-signature-type">LocalBridgeState</a></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/b5fb9d9/packages/bridge/src/bridge.ts#L13">bridge.ts:13</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/15a3ebe/packages/bridge/src/bridge.ts#L31">bridge.ts:31</a></li>
 					</ul>
 				</aside>
+				<div class="tsd-comment tsd-typography">
+					<div class="lead">
+						<p>BridgeDataContainer contains data suitable for transmission over the bridge and the
+							state required to be kept to facilitate further invocations of any transmitted
+						functions.</p>
+					</div>
+				</div>
+			</section>
+			<section class="tsd-panel tsd-member tsd-kind-type-alias">
+				<a name="hostvalue" class="tsd-anchor"></a>
+				<h3>Host<wbr>Value</h3>
+				<div class="tsd-signature tsd-kind-icon">Host<wbr>Value<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Readonly</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">null</span></div>
+				<aside class="tsd-sources">
+					<ul>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/15a3ebe/packages/bridge/src/bridge.ts#L39">bridge.ts:39</a></li>
+					</ul>
+				</aside>
+			</section>
+			<section class="tsd-panel tsd-member tsd-kind-type-alias">
+				<a name="internalbridgedatacontainer" class="tsd-anchor"></a>
+				<h3>Internal<wbr>Bridge<wbr>Data<wbr>Container</h3>
+				<div class="tsd-signature tsd-kind-icon">Internal<wbr>Bridge<wbr>Data<wbr>Container<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><a href="globals.html#bridgedatacontainer" class="tsd-signature-type">BridgeDataContainer</a><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">"bridgeData"</span><span class="tsd-signature-symbol">&gt;</span></div>
+				<aside class="tsd-sources">
+					<ul>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/15a3ebe/packages/bridge/src/bridge.ts#L37">bridge.ts:37</a></li>
+					</ul>
+				</aside>
+				<div class="tsd-comment tsd-typography">
+					<div class="lead">
+						<p>InternalBridgeDataContainer is an implementation detail we use because
+						we fill in the bridgeData after filling in bridgeFns and localFns.</p>
+					</div>
+				</div>
 			</section>
 		</section>
 		<section class="tsd-panel-group tsd-member-group ">
@@ -2817,7 +2858,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">global<wbr>FnId<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 0</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/b5fb9d9/packages/bridge/src/bridge.ts#L17">bridge.ts:17</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/15a3ebe/packages/bridge/src/bridge.ts#L43">bridge.ts:43</a></li>
 					</ul>
 				</aside>
 			</section>
@@ -2828,28 +2869,28 @@ img {
 				<a name="_tobridge" class="tsd-anchor"></a>
 				<h3><span class="tsd-flag ts-flagConst">Const</span> _to<wbr>Bridge</h3>
 				<ul class="tsd-signatures tsd-kind-function">
-					<li class="tsd-signature tsd-kind-icon">_to<wbr>Bridge<span class="tsd-signature-symbol">(</span>hostObj<span class="tsd-signature-symbol">: </span><a href="globals.html#hostobj" class="tsd-signature-type">HostObj</a>, hdc<span class="tsd-signature-symbol">: </span><a href="interfaces/internalbridgedatacontainer.html" class="tsd-signature-type">InternalBridgeDataContainer</a>, path<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Array</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">[</span><a href="interfaces/internalbridgedatacontainer.html" class="tsd-signature-type">InternalBridgeDataContainer</a><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">]</span></li>
+					<li class="tsd-signature tsd-kind-icon">_to<wbr>Bridge<span class="tsd-signature-symbol">(</span>hostValue<span class="tsd-signature-symbol">: </span><a href="globals.html#hostvalue" class="tsd-signature-type">HostValue</a>, bdc<span class="tsd-signature-symbol">: </span><a href="globals.html#internalbridgedatacontainer" class="tsd-signature-type">InternalBridgeDataContainer</a>, path<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Array</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">[</span><a href="globals.html#internalbridgedatacontainer" class="tsd-signature-type">InternalBridgeDataContainer</a><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">]</span></li>
 				</ul>
 				<ul class="tsd-descriptions">
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/b5fb9d9/packages/bridge/src/bridge.ts#L19">bridge.ts:19</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/15a3ebe/packages/bridge/src/bridge.ts#L45">bridge.ts:45</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-parameters-title">Parameters</h4>
 						<ul class="tsd-parameters">
 							<li>
-								<h5>hostObj: <a href="globals.html#hostobj" class="tsd-signature-type">HostObj</a></h5>
+								<h5>hostValue: <a href="globals.html#hostvalue" class="tsd-signature-type">HostValue</a></h5>
 							</li>
 							<li>
-								<h5>hdc: <a href="interfaces/internalbridgedatacontainer.html" class="tsd-signature-type">InternalBridgeDataContainer</a></h5>
+								<h5>bdc: <a href="globals.html#internalbridgedatacontainer" class="tsd-signature-type">InternalBridgeDataContainer</a></h5>
 							</li>
 							<li>
 								<h5>path: <span class="tsd-signature-type">Array</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">&gt;</span></h5>
 							</li>
 						</ul>
-						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-symbol">[</span><a href="interfaces/internalbridgedatacontainer.html" class="tsd-signature-type">InternalBridgeDataContainer</a><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">]</span></h4>
+						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-symbol">[</span><a href="globals.html#internalbridgedatacontainer" class="tsd-signature-type">InternalBridgeDataContainer</a><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">]</span></h4>
 					</li>
 				</ul>
 			</section>
@@ -2863,7 +2904,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/b5fb9d9/packages/bridge/src/bridge.ts#L15">bridge.ts:15</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/15a3ebe/packages/bridge/src/bridge.ts#L41">bridge.ts:41</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-parameters-title">Parameters</h4>
@@ -2880,19 +2921,19 @@ img {
 				<a name="tobridge" class="tsd-anchor"></a>
 				<h3><span class="tsd-flag ts-flagConst">Const</span> to<wbr>Bridge</h3>
 				<ul class="tsd-signatures tsd-kind-function">
-					<li class="tsd-signature tsd-kind-icon">to<wbr>Bridge<span class="tsd-signature-symbol">(</span>hostObj<span class="tsd-signature-symbol">: </span><a href="globals.html#hostobj" class="tsd-signature-type">HostObj</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="interfaces/bridgedatacontainer.html" class="tsd-signature-type">BridgeDataContainer</a></li>
+					<li class="tsd-signature tsd-kind-icon">to<wbr>Bridge<span class="tsd-signature-symbol">(</span>hostValue<span class="tsd-signature-symbol">: </span><a href="globals.html#hostvalue" class="tsd-signature-type">HostValue</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="globals.html#bridgedatacontainer" class="tsd-signature-type">BridgeDataContainer</a></li>
 				</ul>
 				<ul class="tsd-descriptions">
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/b5fb9d9/packages/bridge/src/bridge.ts#L61">bridge.ts:61</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/15a3ebe/packages/bridge/src/bridge.ts#L95">bridge.ts:95</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
 							<div class="lead">
 								<p>Construct a BridgeDataContainer from a host object.
-									The BridgeDataContainer contains a representation of hostObj suitable for
+									The BridgeDataContainer contains a representation of hostValue suitable for
 									transport to across domains and the state needed to bridge further interactions
 									between the host and plugin. This state can be used, for example, to lookup a
 								function by ID.</p>
@@ -2901,10 +2942,10 @@ img {
 						<h4 class="tsd-parameters-title">Parameters</h4>
 						<ul class="tsd-parameters">
 							<li>
-								<h5>hostObj: <a href="globals.html#hostobj" class="tsd-signature-type">HostObj</a></h5>
+								<h5>hostValue: <a href="globals.html#hostvalue" class="tsd-signature-type">HostValue</a></h5>
 							</li>
 						</ul>
-						<h4 class="tsd-returns-title">Returns <a href="interfaces/bridgedatacontainer.html" class="tsd-signature-type">BridgeDataContainer</a></h4>
+						<h4 class="tsd-returns-title">Returns <a href="globals.html#bridgedatacontainer" class="tsd-signature-type">BridgeDataContainer</a></h4>
 					</li>
 				</ul>
 			</section>

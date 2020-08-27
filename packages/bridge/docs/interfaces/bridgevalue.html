@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>BridgeDataContainer | @pluginsdotdev/bridge</title>
+	<title>BridgeValue | @pluginsdotdev/bridge</title>
 	<meta name="description" content="Documentation for @pluginsdotdev/bridge">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<style type="text/css">/*! normalize.css v1.1.3 | MIT License | git.io/normalize */
@@ -2723,24 +2723,27 @@ img {
 <nav class="tsd-navigation secondary">
 	<ul>
 		<li class="current tsd-kind-interface">
-			<a href="bridgedatacontainer.html" class="tsd-kind-icon">Bridge<wbr>Data<wbr>Container</a>
+			<a href="bridgevalue.html" class="tsd-kind-icon">Bridge<wbr>Value</a>
 			<ul>
 				<li class=" tsd-kind-property tsd-parent-kind-interface">
-					<a href="bridgedatacontainer.html#bridgedata" class="tsd-kind-icon">bridge<wbr>Data</a>
+					<a href="bridgevalue.html#bridgedata" class="tsd-kind-icon">bridge<wbr>Data</a>
 				</li>
-				<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-inherited">
-					<a href="bridgedatacontainer.html#bridgefns" class="tsd-kind-icon">bridge<wbr>Fns</a>
-				</li>
-				<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-inherited">
-					<a href="bridgedatacontainer.html#localfns" class="tsd-kind-icon">local<wbr>Fns</a>
+				<li class=" tsd-kind-property tsd-parent-kind-interface">
+					<a href="bridgevalue.html#bridgefns" class="tsd-kind-icon">bridge<wbr>Fns</a>
 				</li>
 			</ul>
 		</li>
 		<li class=" tsd-kind-interface">
-			<a href="internalbridgedatacontainer.html" class="tsd-kind-icon">Internal<wbr>Bridge<wbr>Data<wbr>Container</a>
+			<a href="localbridgestate.html" class="tsd-kind-icon">Local<wbr>Bridge<wbr>State</a>
 		</li>
 		<li class=" tsd-kind-type-alias">
-			<a href="../globals.html#hostobj" class="tsd-kind-icon">Host<wbr>Obj</a>
+			<a href="../globals.html#bridgedatacontainer" class="tsd-kind-icon">Bridge<wbr>Data<wbr>Container</a>
+		</li>
+		<li class=" tsd-kind-type-alias">
+			<a href="../globals.html#hostvalue" class="tsd-kind-icon">Host<wbr>Value</a>
+		</li>
+		<li class=" tsd-kind-type-alias">
+			<a href="../globals.html#internalbridgedatacontainer" class="tsd-kind-icon">Internal<wbr>Bridge<wbr>Data<wbr>Container</a>
 		</li>
 		<li class=" tsd-kind-variable">
 			<a href="../globals.html#globalfnid" class="tsd-kind-icon">global<wbr>FnId</a>
@@ -2758,16 +2761,18 @@ img {
 </nav>
 <div class="container container-main">
 	<div class="content-wrap">
+		<section class="tsd-panel tsd-comment">
+			<div class="tsd-comment tsd-typography">
+				<div class="lead">
+					<p>BridgeValue contains data suitable for transmission over the bridge</p>
+				</div>
+			</div>
+		</section>
 		<section class="tsd-panel tsd-hierarchy">
 			<h3>Hierarchy</h3>
 			<ul class="tsd-hierarchy">
 				<li>
-					<a href="internalbridgedatacontainer.html" class="tsd-signature-type">InternalBridgeDataContainer</a>
-					<ul class="tsd-hierarchy">
-						<li>
-							<span class="target">BridgeDataContainer</span>
-						</li>
-					</ul>
+					<span class="target">BridgeValue</span>
 				</li>
 			</ul>
 		</section>
@@ -2778,9 +2783,8 @@ img {
 					<section class="tsd-index-section ">
 						<h3>Properties</h3>
 						<ul class="tsd-index-list">
-							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="bridgedatacontainer.html#bridgedata" class="tsd-kind-icon">bridge<wbr>Data</a></li>
-							<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="bridgedatacontainer.html#bridgefns" class="tsd-kind-icon">bridge<wbr>Fns</a></li>
-							<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="bridgedatacontainer.html#localfns" class="tsd-kind-icon">local<wbr>Fns</a></li>
+							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="bridgevalue.html#bridgedata" class="tsd-kind-icon">bridge<wbr>Data</a></li>
+							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="bridgevalue.html#bridgefns" class="tsd-kind-icon">bridge<wbr>Fns</a></li>
 						</ul>
 					</section>
 				</div>
@@ -2794,44 +2798,34 @@ img {
 				<div class="tsd-signature tsd-kind-icon">bridge<wbr>Data<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">any</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/b5fb9d9/packages/bridge/src/bridge.ts#L10">bridge.ts:10</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/15a3ebe/packages/bridge/src/bridge.ts#L8">bridge.ts:8</a></li>
 					</ul>
 				</aside>
+				<div class="tsd-comment tsd-typography">
+					<div class="lead">
+						<p>bridgeData is the data that is safe to pass to the plugin</p>
+					</div>
+				</div>
 			</section>
-			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited">
+			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
 				<a name="bridgefns" class="tsd-anchor"></a>
 				<h3>bridge<wbr>Fns</h3>
 				<div class="tsd-signature tsd-kind-icon">bridge<wbr>Fns<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">{}</span></div>
 				<aside class="tsd-sources">
-					<p>Inherited from <a href="internalbridgedatacontainer.html">InternalBridgeDataContainer</a>.<a href="internalbridgedatacontainer.html#bridgefns">bridgeFns</a></p>
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/b5fb9d9/packages/bridge/src/bridge.ts#L3">bridge.ts:3</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/15a3ebe/packages/bridge/src/bridge.ts#L12">bridge.ts:12</a></li>
 					</ul>
 				</aside>
+				<div class="tsd-comment tsd-typography">
+					<div class="lead">
+						<p>bridgeFns is a map from paths in bridgeData to function ids the host will recognize (through localFns)</p>
+					</div>
+				</div>
 				<div class="tsd-type-declaration">
 					<h4>Type declaration</h4>
 					<ul class="tsd-parameters">
 						<li class="tsd-parameter-index-signature">
 							<h5><span class="tsd-signature-symbol">[</span>path: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]: </span><span class="tsd-signature-type">string</span></h5>
-						</li>
-					</ul>
-				</div>
-			</section>
-			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited">
-				<a name="localfns" class="tsd-anchor"></a>
-				<h3>local<wbr>Fns</h3>
-				<div class="tsd-signature tsd-kind-icon">local<wbr>Fns<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">{}</span></div>
-				<aside class="tsd-sources">
-					<p>Inherited from <a href="internalbridgedatacontainer.html">InternalBridgeDataContainer</a>.<a href="internalbridgedatacontainer.html#localfns">localFns</a></p>
-					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/b5fb9d9/packages/bridge/src/bridge.ts#L5">bridge.ts:5</a></li>
-					</ul>
-				</aside>
-				<div class="tsd-type-declaration">
-					<h4>Type declaration</h4>
-					<ul class="tsd-parameters">
-						<li class="tsd-parameter-index-signature">
-							<h5><span class="tsd-signature-symbol">[</span>fnId: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]: </span><span class="tsd-signature-type">Readonly</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">...</span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">&gt;</span></h5>
 						</li>
 					</ul>
 				</div>
