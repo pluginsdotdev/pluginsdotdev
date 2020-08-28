@@ -1,7 +1,9 @@
+export type FunctionId = number;
+
 /**
  * BridgeValue contains data suitable for transmission over the bridge
  **/
-interface BridgeValue {
+export interface BridgeValue {
   /**
    * bridgeData is the data that is safe to pass to the plugin
    **/
@@ -9,18 +11,18 @@ interface BridgeValue {
   /**
    * bridgeFns is a map from paths in bridgeData to function ids the host will recognize (through localFns)
    **/
-  bridgeFns: { [path: string]: string };
+  bridgeFns: Map<string, FunctionId>;
 }
 
 /**
  * LocalBridgeState contains the state necessary to support invocation of functions passed
  * to a bridge through the corresponding BridgeValue.
  **/
-interface LocalBridgeState {
+export interface LocalBridgeState {
   /**
    * localFns is a map from function ids to the actual host function
    **/
-  localFns: { [fnId: string]: Readonly<(...args: any[]) => any> };
+  localFns: Map<FunctionId, Function>;
 }
 
 /**
@@ -28,7 +30,7 @@ interface LocalBridgeState {
  * state required to be kept to facilitate further invocations of any transmitted
  * functions.
  **/
-type BridgeDataContainer = BridgeValue & LocalBridgeState;
+export type BridgeDataContainer = BridgeValue & LocalBridgeState;
 
 /**
  * InternalBridgeDataContainer is an implementation detail we use because
@@ -51,9 +53,9 @@ const _toBridge = (
     // functions are referred to by fnId on the plugin side and are looked up and invoked by fnId on the host side.
     // a map of json path in the bridgeData to fnId is passed alongside bridgeData to avoid any possibility of
     // contamination by hosts
-    const fnId = "" + ++globalFnId;
-    bdc.bridgeFns[path.join("/")] = fnId;
-    bdc.localFns[fnId] = hostValue;
+    const fnId = ++globalFnId;
+    bdc.bridgeFns.set(path.join("."), fnId);
+    bdc.localFns.set(fnId, hostValue);
     return [bdc, null];
   } else if (Array.isArray(hostValue)) {
     // arrays are traversed item by item, each is converted from host->plugin
@@ -94,11 +96,11 @@ const _toBridge = (
  **/
 const toBridge = (hostValue: HostValue): BridgeDataContainer => {
   const internalBdc = {
-    bridgeFns: {},
-    localFns: {}
+    bridgeFns: new Map<string, FunctionId>(),
+    localFns: new Map<FunctionId, Function>()
   };
 
-  const [bdc, bridgeData] = _toBridge(hostValue, internalBdc, []);
+  const [bdc, bridgeData] = _toBridge(hostValue, internalBdc, ["$"]);
 
   return {
     ...bdc,
@@ -106,4 +108,74 @@ const toBridge = (hostValue: HostValue): BridgeDataContainer => {
   };
 };
 
-export { toBridge };
+/**
+ * We parse the very simplified version of jsonpath we write to Keys<bridgeFns>
+ * and assign val to that path in container. We return the new container
+ * as it may have changed.
+ **/
+const assignAtPath = (container: any, path: string, val: any): any => {
+  if (path === "$") {
+    return val;
+  }
+
+  const pathParts = path.split(".").slice(1);
+  const traversalParts = pathParts.slice(0, -1);
+  const finalPart = pathParts[pathParts.length - 1];
+
+  const penultimateObj = traversalParts.reduce((o, part) => {
+    if (!o[part]) {
+      o[part] = {};
+    }
+    return o[part];
+  }, container);
+
+  penultimateObj[finalPart] = val;
+
+  return container;
+};
+
+interface Bridge {
+  invokeFn: (fnId: FunctionId, args: any[]) => Promise<BridgeValue>;
+  appendLocalState: (localState: LocalBridgeState) => void;
+}
+
+const wrapFnFromBridge = (
+  bridge: Bridge,
+  fnId: FunctionId
+): ((...args: any[]) => any) => {
+  return (...args: any[]): any => {
+    // convert our args to something we can send over the bridge
+    const { bridgeData, localFns, bridgeFns } = toBridge({ args });
+    // update our local state to capture any passed functions
+    bridge.appendLocalState({ localFns });
+    // invoke the function
+    return bridge.invokeFn(fnId, bridgeData).then(
+      // unwrap the function's return value
+      fromBridge.bind(null, bridge)
+    ); // TODO: catch and unwrap any exception
+  };
+};
+
+/**
+ * Given a bridge and a bridgeValue, construct a regular object with all
+ * functions on the bridgeValue proxied back over the bridge.
+ * By nature of our proxy logic, bridge may be mutated on future invocations
+ * of properties of the returned object.
+ **/
+const fromBridge = (bridge: Bridge, bridgeValue: BridgeValue): any => {
+  const { bridgeFns } = bridgeValue;
+  let stubbedBridgeValue = bridgeValue.bridgeData;
+  const iter = bridgeValue.bridgeFns.entries();
+  for (let next = iter.next(); !next.done; next = iter.next()) {
+    const [path, fn] = next.value;
+    stubbedBridgeValue = assignAtPath(
+      stubbedBridgeValue,
+      path,
+      wrapFnFromBridge(bridge, fn)
+    );
+  }
+
+  return stubbedBridgeValue;
+};
+
+export { toBridge, fromBridge };

@@ -2722,6 +2722,9 @@ img {
 </header>
 <nav class="tsd-navigation secondary">
 	<ul>
+		<li class=" tsd-kind-interface">
+			<a href="bridge.html" class="tsd-kind-icon">Bridge</a>
+		</li>
 		<li class="current tsd-kind-interface">
 			<a href="bridgevalue.html" class="tsd-kind-icon">Bridge<wbr>Value</a>
 			<ul>
@@ -2740,6 +2743,9 @@ img {
 			<a href="../globals.html#bridgedatacontainer" class="tsd-kind-icon">Bridge<wbr>Data<wbr>Container</a>
 		</li>
 		<li class=" tsd-kind-type-alias">
+			<a href="../globals.html#functionid" class="tsd-kind-icon">Function<wbr>Id</a>
+		</li>
+		<li class=" tsd-kind-type-alias">
 			<a href="../globals.html#hostvalue" class="tsd-kind-icon">Host<wbr>Value</a>
 		</li>
 		<li class=" tsd-kind-type-alias">
@@ -2752,10 +2758,19 @@ img {
 			<a href="../globals.html#_tobridge" class="tsd-kind-icon">_to<wbr>Bridge</a>
 		</li>
 		<li class=" tsd-kind-function">
+			<a href="../globals.html#assignatpath" class="tsd-kind-icon">assign<wbr>AtPath</a>
+		</li>
+		<li class=" tsd-kind-function">
+			<a href="../globals.html#frombridge" class="tsd-kind-icon">from<wbr>Bridge</a>
+		</li>
+		<li class=" tsd-kind-function">
 			<a href="../globals.html#isobject" class="tsd-kind-icon">is<wbr>Object</a>
 		</li>
 		<li class=" tsd-kind-function">
 			<a href="../globals.html#tobridge" class="tsd-kind-icon">to<wbr>Bridge</a>
+		</li>
+		<li class=" tsd-kind-function">
+			<a href="../globals.html#wrapfnfrombridge" class="tsd-kind-icon">wrap<wbr>FnFrom<wbr>Bridge</a>
 		</li>
 	</ul>
 </nav>
@@ -2798,7 +2813,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">bridge<wbr>Data<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">any</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/15a3ebe/packages/bridge/src/bridge.ts#L8">bridge.ts:8</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/f5bf2cc/packages/bridge/src/bridge.ts#L10">bridge.ts:10</a></li>
 					</ul>
 				</aside>
 				<div class="tsd-comment tsd-typography">
@@ -2810,24 +2825,16 @@ img {
 			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
 				<a name="bridgefns" class="tsd-anchor"></a>
 				<h3>bridge<wbr>Fns</h3>
-				<div class="tsd-signature tsd-kind-icon">bridge<wbr>Fns<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">{}</span></div>
+				<div class="tsd-signature tsd-kind-icon">bridge<wbr>Fns<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">, </span><a href="../globals.html#functionid" class="tsd-signature-type">FunctionId</a><span class="tsd-signature-symbol">&gt;</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/15a3ebe/packages/bridge/src/bridge.ts#L12">bridge.ts:12</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/f5bf2cc/packages/bridge/src/bridge.ts#L14">bridge.ts:14</a></li>
 					</ul>
 				</aside>
 				<div class="tsd-comment tsd-typography">
 					<div class="lead">
 						<p>bridgeFns is a map from paths in bridgeData to function ids the host will recognize (through localFns)</p>
 					</div>
-				</div>
-				<div class="tsd-type-declaration">
-					<h4>Type declaration</h4>
-					<ul class="tsd-parameters">
-						<li class="tsd-parameter-index-signature">
-							<h5><span class="tsd-signature-symbol">[</span>path: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]: </span><span class="tsd-signature-type">string</span></h5>
-						</li>
-					</ul>
 				</div>
 			</section>
 		</section>
