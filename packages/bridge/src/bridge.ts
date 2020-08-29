@@ -1,5 +1,8 @@
 export type FunctionId = number;
 
+export type ObjectPath = string;
+export type ObjectPathParts = Array<string | number>;
+
 /**
  * BridgeValue contains data suitable for transmission over the bridge
  **/
@@ -11,7 +14,7 @@ export interface BridgeValue {
   /**
    * bridgeFns is a map from paths in bridgeData to function ids the host will recognize (through localFns)
    **/
-  bridgeFns: Map<string, FunctionId>;
+  bridgeFns: Map<ObjectPath, FunctionId>;
 }
 
 /**
@@ -40,6 +43,11 @@ type InternalBridgeDataContainer = Omit<BridgeDataContainer, "bridgeData">;
 
 type HostValue = Readonly<any> | number | string | boolean | null;
 
+const pathPartsToObjectPath = (parts: ObjectPathParts): ObjectPath =>
+  JSON.stringify(parts);
+
+const objectPathToPathParts = (p: ObjectPath): ObjectPathParts => JSON.parse(p);
+
 const isObject = (o: any) => Object(o) === o;
 
 let globalFnId = 0;
@@ -54,7 +62,7 @@ const _toBridge = (
     // a map of json path in the bridgeData to fnId is passed alongside bridgeData to avoid any possibility of
     // contamination by hosts
     const fnId = ++globalFnId;
-    bdc.bridgeFns.set(path.join("."), fnId);
+    bdc.bridgeFns.set(pathPartsToObjectPath(path), fnId);
     bdc.localFns.set(fnId, hostValue);
     return [bdc, null];
   } else if (Array.isArray(hostValue)) {
@@ -96,11 +104,11 @@ const _toBridge = (
  **/
 const toBridge = (hostValue: HostValue): BridgeDataContainer => {
   const internalBdc = {
-    bridgeFns: new Map<string, FunctionId>(),
+    bridgeFns: new Map<ObjectPath, FunctionId>(),
     localFns: new Map<FunctionId, Function>()
   };
 
-  const [bdc, bridgeData] = _toBridge(hostValue, internalBdc, ["$"]);
+  const [bdc, bridgeData] = _toBridge(hostValue, internalBdc, []);
 
   return {
     ...bdc,
@@ -109,27 +117,23 @@ const toBridge = (hostValue: HostValue): BridgeDataContainer => {
 };
 
 /**
- * We parse the very simplified version of jsonpath we write to Keys<bridgeFns>
- * and assign val to that path in container. We return the new container
- * as it may have changed.
+ * Assign container@path the value, val.
  **/
-const assignAtPath = (container: any, path: string, val: any): any => {
-  if (path === "$") {
+const assignAtPath = (container: any, path: ObjectPathParts, val: any): any => {
+  const pathLen = path.length;
+  if (!pathLen) {
     return val;
   }
 
-  const pathParts = path.split(".").slice(1);
-  const traversalParts = pathParts.slice(0, -1);
-  const finalPart = pathParts[pathParts.length - 1];
-
-  const penultimateObj = traversalParts.reduce((o, part) => {
-    if (!o[part]) {
-      o[part] = {};
+  path.reduce((o, part, idx) => {
+    if (idx === pathLen - 1) {
+      // last item
+      o[part] = val;
+    } else if (!o[part]) {
+      o[part] = typeof part === "number" ? [] : {};
     }
     return o[part];
   }, container);
-
-  penultimateObj[finalPart] = val;
 
   return container;
 };
@@ -162,7 +166,10 @@ const wrapFnFromBridge = (
  * By nature of our proxy logic, bridge may be mutated on future invocations
  * of properties of the returned object.
  **/
-const fromBridge = (bridge: Bridge, bridgeValue: BridgeValue): any => {
+const fromBridge = (
+  bridge: Bridge,
+  bridgeValue: Readonly<BridgeValue>
+): any => {
   const { bridgeFns } = bridgeValue;
   let stubbedBridgeValue = bridgeValue.bridgeData;
   const iter = bridgeValue.bridgeFns.entries();
@@ -170,7 +177,7 @@ const fromBridge = (bridge: Bridge, bridgeValue: BridgeValue): any => {
     const [path, fn] = next.value;
     stubbedBridgeValue = assignAtPath(
       stubbedBridgeValue,
-      path,
+      objectPathToPathParts(path),
       wrapFnFromBridge(bridge, fn)
     );
   }
@@ -178,4 +185,4 @@ const fromBridge = (bridge: Bridge, bridgeValue: BridgeValue): any => {
   return stubbedBridgeValue;
 };
 
-export { toBridge, fromBridge };
+export { pathPartsToObjectPath, objectPathToPathParts, toBridge, fromBridge };

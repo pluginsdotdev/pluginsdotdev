@@ -1,5 +1,7 @@
-import { fromBridge, toBridge } from '../src/bridge';
-import type { FunctionId, BridgeValue, BridgeDataContainer, LocalBridgeState } from '../src/bridge';
+import fc from 'fast-check';
+import clone = require('clone');
+import { fromBridge, toBridge, pathPartsToObjectPath } from '../src/bridge';
+import type { ObjectPath, FunctionId, BridgeValue, BridgeDataContainer, LocalBridgeState } from '../src/bridge';
 
 expect.extend({
   toMatchMap(received: Map<any, any>, expected: Map<any, any>) {
@@ -29,7 +31,7 @@ expect.extend({
       pass: true
     };
   },
-  toMatchBridgeDataContainer(received: BridgeDataContainer, expected: Omit<BridgeDataContainer, "localFns"> & { localFnsByPath: Map<string, Function> }) {
+  toMatchBridgeDataContainer(received: BridgeDataContainer, expected: Omit<BridgeDataContainer, "localFns"> & { localFnsByPath: Map<ObjectPath, Function> }) {
     expect(received).toMatchObject({
       bridgeData: expected.bridgeData
     });
@@ -66,7 +68,7 @@ declare global {
   namespace jest {
     interface Matchers<R> {
       toMatchMap(expected: Map<any, any>): R;
-      toMatchBridgeDataContainer(expected: Omit<BridgeDataContainer, "localFns"> & { localFnsByPath: Map<string, Function> }): R;
+      toMatchBridgeDataContainer(expected: Omit<BridgeDataContainer, "localFns"> & { localFnsByPath: Map<ObjectPath, Function> }): R;
     }
   }
 }
@@ -98,8 +100,8 @@ describe('toBridge', () => {
     const fnBridge = toBridge(fn);
     expect(fnBridge).toMatchBridgeDataContainer({
       bridgeData: null,
-      bridgeFns: new Map([['$', expect.any(Number)]]),
-      localFnsByPath: new Map([['$', fn]])
+      bridgeFns: new Map([[pathPartsToObjectPath([]), expect.any(Number)]]),
+      localFnsByPath: new Map([[pathPartsToObjectPath([]), fn]])
     });
   });
   it('nested examples', () => {
@@ -124,14 +126,14 @@ describe('toBridge', () => {
         }
       },
       bridgeFns: new Map([
-        ['$.c', expect.any(Number)],
-        ['$.d.e', expect.any(Number)],
-        ['$.d.f.0', expect.any(Number)]
+        [pathPartsToObjectPath(['c']), expect.any(Number)],
+        [pathPartsToObjectPath(['d', 'e']), expect.any(Number)],
+        [pathPartsToObjectPath(['d', 'f', 0]), expect.any(Number)]
       ]),
       localFnsByPath: new Map([
-        ['$.c', fn1],
-        ['$.d.e', fn2],
-        ['$.d.f.0', fn3]
+        [pathPartsToObjectPath(['c']), fn1],
+        [pathPartsToObjectPath(['d', 'e']), fn2],
+        [pathPartsToObjectPath(['d', 'f', 0]), fn3]
       ])
     });
   });
@@ -178,5 +180,56 @@ describe('fromBridge', () => {
         f: [expect.any(Function), "hello"]
       }
     });
+  });
+});
+
+const setAtPath = (obj: any, path: Array<string>, val: any) => {
+  path.reduce(
+    (obj, key, idx) => {
+      if ( idx === path.length - 1 ) {
+        obj[key] = val;
+      } else if ( !obj[key] ) {
+        obj[key] = {};
+      }
+
+      return obj[key];
+    },
+    obj
+  );
+
+  return obj;
+};
+
+describe('properties', () => {
+  it('should be symmetric for simple data', () => {
+    fc.assert(fc.property(
+      fc.object(),
+      obj => {
+        const bridgeValue = toBridge(obj);
+        const bridge = bridgeFromLocalFns(bridgeValue.localFns);
+        expect(fromBridge(bridge, bridgeValue)).toEqual(obj);
+      }
+    ));
+  });
+  it('should be symmetric other than functions', () => {
+    fc.assert(fc.property(
+      // we ensure that object keys won't conflict with function keys by restricting lengths
+      fc.object({ key: fc.string(0, 5) }),
+      fc.array(fc.array(fc.string(6, 8))),
+      (simpleObj, fnPaths) => {
+        const preBridgeVal = fnPaths.reduce(
+          (obj, fnPath) => {
+            const fn = () => {};
+            fn.preBridge = true;
+            return setAtPath(obj, fnPath, fn);
+          },
+          clone(simpleObj)
+        );
+        const bridgeValue = toBridge(preBridgeVal);
+        const bridge = bridgeFromLocalFns(bridgeValue.localFns);
+        const localVal = fromBridge(bridge, bridgeValue);
+        expect(localVal).toMatchObject(simpleObj);
+      }
+    ));
   });
 });
