@@ -200,6 +200,15 @@ const setAtPath = (obj: any, path: Array<string>, val: any) => {
   return obj;
 };
 
+const getAtPath = (obj: any, path: Array<string>) => (
+  path.reduce(
+    (obj, key, idx) => (
+      !!obj && obj[key]
+    ),
+    obj
+  )
+);
+
 describe('properties', () => {
   it('should be symmetric for simple data', () => {
     fc.assert(fc.property(
@@ -211,24 +220,27 @@ describe('properties', () => {
       }
     ));
   });
-  it('should be symmetric other than functions', () => {
+  it('should be identical other than functions, which should proxy', () => {
     fc.assert(fc.property(
       // we ensure that object keys won't conflict with function keys by restricting lengths
       fc.object({ key: fc.string(0, 5) }),
-      fc.array(fc.array(fc.string(6, 8))),
+      fc.array(fc.array(fc.string(6, 8), 1, 10)),
       (simpleObj, fnPaths) => {
         const preBridgeVal = fnPaths.reduce(
-          (obj, fnPath) => {
-            const fn = () => {};
-            fn.preBridge = true;
-            return setAtPath(obj, fnPath, fn);
-          },
+          (obj, fnPath) => (
+            setAtPath(obj, fnPath, jest.fn(() => {}))
+          ),
           clone(simpleObj)
         );
         const bridgeValue = toBridge(preBridgeVal);
         const bridge = bridgeFromLocalFns(bridgeValue.localFns);
         const localVal = fromBridge(bridge, bridgeValue);
         expect(localVal).toMatchObject(simpleObj);
+        fnPaths.forEach(fnPath => {
+          expect(getAtPath(preBridgeVal, fnPath)).not.toBe(getAtPath(localVal, fnPath));
+          getAtPath(localVal, fnPath)();
+          expect(getAtPath(preBridgeVal, fnPath)).toHaveBeenCalled();
+        });
       }
     ));
   });
