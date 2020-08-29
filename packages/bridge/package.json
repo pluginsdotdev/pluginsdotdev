@@ -11,14 +11,14 @@
   "author": "Adam Berger <adam@ratchetdesigns.com>",
   "homepage": "http://plugins.dev",
   "license": "EPL-1.0",
-  "main": "dist/bridge.js",
-  "module": "dist/bridge.es5.js",
+  "main": "dist/index.js",
+  "module": "dist/index.es5.js",
   "directories": {
     "lib": "src",
     "test": "tests",
     "doc": "doc"
   },
-  "typings": "dist/types/bridge.d.ts",
+  "typings": "dist/types/index.d.ts",
   "files": [
     "dist"
   ],

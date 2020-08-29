@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import clone = require('clone');
-import { fromBridge, toBridge, pathPartsToObjectPath } from '../src/bridge';
-import type { ObjectPath, FunctionId, BridgeValue, BridgeDataContainer, LocalBridgeState } from '../src/bridge';
+import { fromBridge, toBridge, pathPartsToObjectPath } from '../src/data-bridge';
+import type { ObjectPath, FunctionId, BridgeValue, BridgeDataContainer, LocalBridgeState } from '../src/data-bridge';
 
 expect.extend({
   toMatchMap(received: Map<any, any>, expected: Map<any, any>) {
