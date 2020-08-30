@@ -8,7 +8,7 @@ jest.setTimeout(10000);
 const hostPort = 8080;
 const pluginPort = 8081;
 
-describe("createBridgeToPlugin", () => {
+describe("initializeBridge", () => {
   let browser: Browser;
   let page: Page;
   let shutdown: () => Promise<undefined>;
@@ -41,9 +41,7 @@ describe("createBridgeToPlugin", () => {
   afterEach(async () => browser.close());
 
   it("iframe created", async () => {
-    await page.evaluate(() =>
-      (<any>window).index.createBridgeToPlugin("my-plugin")
-    );
+    await page.evaluate(() => (<any>window).index.initializeBridge());
     await page.waitForSelector("iframe");
   });
 });

@@ -79,7 +79,9 @@ const resolvablePromise = () => {
   };
 };
 
-const createBridgeToPlugin = (pluginId: PluginId): Promise<Bridge> => {
+type BridgeMaker = () => Promise<Bridge>;
+
+const initializeBridge = (): Promise<BridgeMaker> => {
   let sendCommandToIntermediateFrame: null | OnReceiveCallback = null;
   let { resolve: onReady, promise: ready } = resolvablePromise();
   const onReceiveCommandFromIntermediateFrame = (command: Command) => {
@@ -96,6 +98,7 @@ const createBridgeToPlugin = (pluginId: PluginId): Promise<Bridge> => {
           if (!intermediateFrame.contentWindow) {
             throw new Error("No window access");
           }
+
           (<any>intermediateFrame.contentWindow).onReceiveCommand = (
             cb: OnReceiveCallback
           ) => {
@@ -115,12 +118,14 @@ const createBridgeToPlugin = (pluginId: PluginId): Promise<Bridge> => {
       document.body.appendChild(intermediateFrame);
     }),
     ready,
-  ]).then(() => ({
-    invokeFn: (fnId: FunctionId, args: any[]): Promise<BridgeValue> => {
-      return Promise.reject("f");
-    },
-    appendLocalState: (localState: LocalBridgeState): void => {},
-  }));
+  ]).then(() => () =>
+    Promise.resolve({
+      invokeFn: (fnId: FunctionId, args: any[]): Promise<BridgeValue> => {
+        return Promise.reject("f");
+      },
+      appendLocalState: (localState: LocalBridgeState): void => {},
+    })
+  );
 };
 
-export { createBridgeToPlugin };
+export { initializeBridge };
