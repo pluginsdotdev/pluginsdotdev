@@ -32,13 +32,13 @@
   },
   "scripts": {
     "test": "npx jest",
-    "lint": "tslint  --project tsconfig.json -t codeFrame 'src/**/*.ts' 'test/**/*.ts'",
+    "lint": "tslint  --project tsconfig.json -t codeFrame 'src/**/*.ts' 'tests/**/*.ts'",
     "prebuild": "rimraf dist",
     "build": "tsc --module commonjs && rollup -c rollup.config.ts && typedoc --out docs --target es6 --theme minimal --mode file src",
     "pre-commit": "lint-staged"
   },
   "lint-staged": {
-    "{src,test}/**/*.ts": [
+    "{src,tests}/**/*.ts": [
       "prettier --write",
       "git add"
     ]

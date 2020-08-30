@@ -1,32 +1,12 @@
-export type FunctionId = number;
+import type {
+  Bridge,
+  BridgeValue,
+  LocalBridgeState,
+  ObjectPath,
+  FunctionId,
+} from "./types";
 
-export type ObjectPath = string;
 export type ObjectPathParts = Array<string | number>;
-
-/**
- * BridgeValue contains data suitable for transmission over the bridge
- **/
-export interface BridgeValue {
-  /**
-   * bridgeData is the data that is safe to pass to the plugin
-   **/
-  bridgeData: any;
-  /**
-   * bridgeFns is a map from paths in bridgeData to function ids the host will recognize (through localFns)
-   **/
-  bridgeFns: Map<ObjectPath, FunctionId>;
-}
-
-/**
- * LocalBridgeState contains the state necessary to support invocation of functions passed
- * to a bridge through the corresponding BridgeValue.
- **/
-export interface LocalBridgeState {
-  /**
-   * localFns is a map from function ids to the actual host function
-   **/
-  localFns: Map<FunctionId, Function>;
-}
 
 /**
  * BridgeDataContainer contains data suitable for transmission over the bridge and the
@@ -105,14 +85,14 @@ const _toBridge = (
 const toBridge = (hostValue: HostValue): BridgeDataContainer => {
   const internalBdc = {
     bridgeFns: new Map<ObjectPath, FunctionId>(),
-    localFns: new Map<FunctionId, Function>()
+    localFns: new Map<FunctionId, Function>(),
   };
 
   const [bdc, bridgeData] = _toBridge(hostValue, internalBdc, []);
 
   return {
     ...bdc,
-    bridgeData
+    bridgeData,
   };
 };
 
@@ -137,11 +117,6 @@ const assignAtPath = (container: any, path: ObjectPathParts, val: any): any => {
 
   return container;
 };
-
-interface Bridge {
-  invokeFn: (fnId: FunctionId, args: any[]) => Promise<BridgeValue>;
-  appendLocalState: (localState: LocalBridgeState) => void;
-}
 
 const wrapFnFromBridge = (
   bridge: Bridge,
