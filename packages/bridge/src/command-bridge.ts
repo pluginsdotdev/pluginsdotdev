@@ -9,7 +9,6 @@ import type {
 const intermediateFrameScript = `
   window.onReceiveCommand(function(cmd) {
     var payload = cmd.payload;
-    console.log('in iframe', cmd);
     if ( cmd.cmd === 'send' ) {
       cmd.targetWindow.postMessage(payload.msg, payload.targetOrigin);
     }
@@ -63,35 +62,65 @@ type Command = ReadyCommand | SendCommand | MessageCommand;
 
 type OnReceiveCallback = (cmd: Command) => void;
 
-const createBridgeToPlugin = (pluginId: PluginId): Promise<Bridge> =>
-  new Promise((resolve, reject) => {
-    const intermediateFrame = document.createElement("iframe");
-    let onReceiveCallback: null | OnReceiveCallback = null;
-    intermediateFrame.onload = () => {
-      try {
-        if (!intermediateFrame.contentWindow) {
-          throw new Error("No window access");
-        }
-        (<any>intermediateFrame.contentWindow).onReceiveCommand = (
-          cb: OnReceiveCallback
-        ) => {
-          onReceiveCallback = cb;
-        };
-        (<any>intermediateFrame.contentWindow).sendCommand = (
-          cmd: Command
-        ): void => {
-          console.log("in parent", cmd);
-        };
-        loadSameOriginFrameScript(intermediateFrame, intermediateFrameScript);
-        resolve({
-          invokeFn: (fnId: FunctionId, args: any[]): Promise<BridgeValue> => {
-            return Promise.reject("f");
-          },
-          appendLocalState: (localState: LocalBridgeState): void => {},
-        });
-      } catch (err) {
-        reject(err);
-      }
-    };
-    document.body.appendChild(intermediateFrame);
+const resolvablePromise = () => {
+  let resolve: (val?: any) => void;
+  let reject: (err?: any) => void;
+  let promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
   });
+
+  return {
+    // @ts-ignore
+    resolve,
+    // @ts-ignore
+    reject,
+    promise,
+  };
+};
+
+const createBridgeToPlugin = (pluginId: PluginId): Promise<Bridge> => {
+  let sendCommandToIntermediateFrame: null | OnReceiveCallback = null;
+  let { resolve: onReady, promise: ready } = resolvablePromise();
+  const onReceiveCommandFromIntermediateFrame = (command: Command) => {
+    if (command.cmd === "ready") {
+      onReady();
+    }
+  };
+
+  return Promise.all([
+    new Promise((resolve, reject) => {
+      const intermediateFrame = document.createElement("iframe");
+      intermediateFrame.onload = () => {
+        try {
+          if (!intermediateFrame.contentWindow) {
+            throw new Error("No window access");
+          }
+          (<any>intermediateFrame.contentWindow).onReceiveCommand = (
+            cb: OnReceiveCallback
+          ) => {
+            sendCommandToIntermediateFrame = cb;
+          };
+          (<any>(
+            intermediateFrame.contentWindow
+          )).sendCommand = onReceiveCommandFromIntermediateFrame;
+
+          loadSameOriginFrameScript(intermediateFrame, intermediateFrameScript);
+
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      };
+      document.body.appendChild(intermediateFrame);
+    }),
+    ready,
+  ]).then(() => ({
+    invokeFn: (fnId: FunctionId, args: any[]): Promise<BridgeValue> => {
+      return Promise.reject("f");
+    },
+    appendLocalState: (localState: LocalBridgeState): void => {},
+  }));
+};
+
+export { createBridgeToPlugin };

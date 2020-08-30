@@ -1,0 +1,49 @@
+import * as puppeteer from "puppeteer";
+import { startServer as startTestServer } from "./test-server";
+
+import type { Browser, Page } from "puppeteer";
+
+jest.setTimeout(10000);
+
+const hostPort = 8080;
+const pluginPort = 8081;
+
+describe("createBridgeToPlugin", () => {
+  let browser: Browser;
+  let page: Page;
+  let shutdown: () => Promise<undefined>;
+  beforeAll(async () => {
+    const shutdown1 = await startTestServer(hostPort);
+    const shutdown2 = await startTestServer(pluginPort);
+
+    shutdown = async () => {
+      await Promise.all([shutdown1(), shutdown2()]);
+      return void 0;
+    };
+  });
+
+  afterAll(async () => shutdown());
+
+  beforeEach(async () => {
+    browser = await puppeteer.launch({
+      args: [
+        "--disable-dev-shm-usage", // running in docker with small /dev/shm
+        "--no-sandbox",
+      ],
+    });
+    page = await browser.newPage();
+    page.on("console", (c) => console.log("Log from puppeteer", c.text()));
+    await page.goto(`http://localhost:${hostPort}/tests/host.html`);
+    // our js has been loaded
+    await page.waitForFunction(() => !!(<any>window).index);
+  });
+
+  afterEach(async () => browser.close());
+
+  it("iframe created", async () => {
+    await page.evaluate(() =>
+      (<any>window).index.createBridgeToPlugin("my-plugin")
+    );
+    await page.waitForSelector("iframe");
+  });
+});
