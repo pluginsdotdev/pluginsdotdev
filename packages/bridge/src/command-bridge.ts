@@ -1,5 +1,6 @@
 import type {
   Bridge,
+  HostId,
   PluginId,
   FunctionId,
   BridgeValue,
@@ -79,20 +80,71 @@ const resolvablePromise = () => {
   };
 };
 
-type BridgeMaker = () => Promise<Bridge>;
+type BridgeMaker = (pluginId: PluginId) => Promise<Bridge>;
 
-const initializeBridge = (): Promise<BridgeMaker> => {
+const initializePluginBridge = (
+  intermediateFrame: HTMLIFrameElement,
+  hostId: HostId,
+  pluginId: PluginId
+): Promise<HTMLIFrameElement> => {
+  if (
+    !intermediateFrame.contentWindow ||
+    !intermediateFrame.contentWindow.document
+  ) {
+    return Promise.reject(new Error("Intermediate frame uninitialized"));
+  }
+
+  const url = "http://localhost:8081/tests/plugin.html"; // TODO: `https://${pluginId}.${hostId}.live.plugins.dev`;
+  const frame = intermediateFrame.contentWindow.document.createElement(
+    "iframe"
+  );
+  frame.style.display = "none";
+  frame.width = "0";
+  frame.height = "0";
+  frame.src = url;
+  frame.setAttribute("sandbox", "allow-scripts");
+  intermediateFrame.contentWindow.document.body.appendChild(frame);
+
+  // wait for ready
+  return Promise.resolve(frame);
+};
+
+const makeBridge = (
+  intermediateFrame: HTMLIFrameElement,
+  hostId: HostId,
+  pluginId: PluginId
+): Promise<Bridge> => {
+  return initializePluginBridge(intermediateFrame, hostId, pluginId).then(
+    (frame: HTMLIFrameElement) => ({
+      invokeFn: (fnId: FunctionId, args: any[]): Promise<BridgeValue> => {
+        return Promise.reject("f");
+      },
+      appendLocalState: (localState: LocalBridgeState): void => {},
+    })
+  );
+};
+
+const initializeBridge = (hostId: HostId): Promise<BridgeMaker> => {
   let sendCommandToIntermediateFrame: null | OnReceiveCallback = null;
   let { resolve: onReady, promise: ready } = resolvablePromise();
   const onReceiveCommandFromIntermediateFrame = (command: Command) => {
-    if (command.cmd === "ready") {
-      onReady();
+    switch (command.cmd) {
+      case "ready":
+        onReady();
+        return;
+      case "message":
+        const { data, origin, source } = command.payload;
+        // TODO: allow plugin bridges to register for messages from their source and check origin
+        return;
     }
   };
 
   return Promise.all([
-    new Promise((resolve, reject) => {
+    new Promise<HTMLIFrameElement>((resolve, reject) => {
       const intermediateFrame = document.createElement("iframe");
+      intermediateFrame.style.display = "none";
+      intermediateFrame.width = "0";
+      intermediateFrame.height = "0";
       intermediateFrame.onload = () => {
         try {
           if (!intermediateFrame.contentWindow) {
@@ -110,7 +162,7 @@ const initializeBridge = (): Promise<BridgeMaker> => {
 
           loadSameOriginFrameScript(intermediateFrame, intermediateFrameScript);
 
-          resolve();
+          resolve(intermediateFrame);
         } catch (err) {
           reject(err);
         }
@@ -118,13 +170,8 @@ const initializeBridge = (): Promise<BridgeMaker> => {
       document.body.appendChild(intermediateFrame);
     }),
     ready,
-  ]).then(() => () =>
-    Promise.resolve({
-      invokeFn: (fnId: FunctionId, args: any[]): Promise<BridgeValue> => {
-        return Promise.reject("f");
-      },
-      appendLocalState: (localState: LocalBridgeState): void => {},
-    })
+  ]).then(([intermediateFrame, _]: [HTMLIFrameElement, any]) =>
+    makeBridge.bind(null, intermediateFrame, hostId)
   );
 };
 

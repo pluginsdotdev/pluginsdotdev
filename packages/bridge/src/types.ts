@@ -1,3 +1,5 @@
+export type HostId = string;
+
 export type PluginId = string;
 
 export type FunctionId = number;

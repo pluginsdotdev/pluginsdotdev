@@ -1,6 +1,7 @@
 import * as puppeteer from "puppeteer";
 import { startServer as startTestServer } from "./test-server";
 
+import type { PluginId, Bridge } from "../src/types";
 import type { Browser, Page } from "puppeteer";
 
 jest.setTimeout(10000);
@@ -40,8 +41,21 @@ describe("initializeBridge", () => {
 
   afterEach(async () => browser.close());
 
-  it("iframe created", async () => {
-    await page.evaluate(() => (<any>window).index.initializeBridge());
+  it("intermediate iframe created", async () => {
+    await page.evaluate(() => (<any>window).index.initializeBridge("host"));
     await page.waitForSelector("iframe");
+    expect(await page.$("iframe")).toBeTruthy();
+  });
+
+  it("plugin iframe created", async () => {
+    await page.evaluate(() => {
+      (<any>window).index
+        .initializeBridge("host")
+        .then((makeBridge: (pluginId: PluginId) => Promise<Bridge>) =>
+          makeBridge("plugin")
+        );
+    });
+    await page.waitFor(500);
+    expect(await page.evaluate(() => window.frames[0].frames[0])).toBeTruthy();
   });
 });
