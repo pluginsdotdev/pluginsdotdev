@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>ReadyCommand | @pluginsdotdev/bridge</title>
+	<title>InvokeMessage | @pluginsdotdev/bridge</title>
 	<meta name="description" content="Documentation for @pluginsdotdev/bridge">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<style type="text/css">/*! normalize.css v1.1.3 | MIT License | git.io/normalize */
@@ -2723,10 +2723,13 @@ img {
 <nav class="tsd-navigation secondary">
 	<ul>
 		<li class="current tsd-kind-interface">
-			<a href="readycommand.html" class="tsd-kind-icon">Ready<wbr>Command</a>
+			<a href="invokemessage.html" class="tsd-kind-icon">Invoke<wbr>Message</a>
 			<ul>
 				<li class=" tsd-kind-property tsd-parent-kind-interface">
-					<a href="readycommand.html#cmd" class="tsd-kind-icon">cmd</a>
+					<a href="invokemessage.html#cmd" class="tsd-kind-icon">cmd</a>
+				</li>
+				<li class=" tsd-kind-property tsd-parent-kind-interface">
+					<a href="invokemessage.html#payload" class="tsd-kind-icon">payload</a>
 				</li>
 			</ul>
 		</li>
@@ -2738,7 +2741,7 @@ img {
 			<h3>Hierarchy</h3>
 			<ul class="tsd-hierarchy">
 				<li>
-					<span class="target">ReadyCommand</span>
+					<span class="target">InvokeMessage</span>
 				</li>
 			</ul>
 		</section>
@@ -2749,7 +2752,8 @@ img {
 					<section class="tsd-index-section ">
 						<h3>Properties</h3>
 						<ul class="tsd-index-list">
-							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="readycommand.html#cmd" class="tsd-kind-icon">cmd</a></li>
+							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="invokemessage.html#cmd" class="tsd-kind-icon">cmd</a></li>
+							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="invokemessage.html#payload" class="tsd-kind-icon">payload</a></li>
 						</ul>
 					</section>
 				</div>
@@ -2760,12 +2764,33 @@ img {
 			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
 				<a name="cmd" class="tsd-anchor"></a>
 				<h3>cmd</h3>
-				<div class="tsd-signature tsd-kind-icon">cmd<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">"ready"</span></div>
+				<div class="tsd-signature tsd-kind-icon">cmd<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">"invoke"</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/193e15e/packages/bridge/src/command-bridge.ts#L41">command-bridge.ts:41</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/193e15e/packages/bridge/src/command-bridge.ts#L124">command-bridge.ts:124</a></li>
 					</ul>
 				</aside>
+			</section>
+			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
+				<a name="payload" class="tsd-anchor"></a>
+				<h3>payload</h3>
+				<div class="tsd-signature tsd-kind-icon">payload<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">{ </span>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Array</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">; </span>fnId<span class="tsd-signature-symbol">: </span><a href="../globals.html#functionid" class="tsd-signature-type">FunctionId</a><span class="tsd-signature-symbol"> }</span></div>
+				<aside class="tsd-sources">
+					<ul>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/193e15e/packages/bridge/src/command-bridge.ts#L125">command-bridge.ts:125</a></li>
+					</ul>
+				</aside>
+				<div class="tsd-type-declaration">
+					<h4>Type declaration</h4>
+					<ul class="tsd-parameters">
+						<li class="tsd-parameter">
+							<h5>args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Array</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">&gt;</span></h5>
+						</li>
+						<li class="tsd-parameter">
+							<h5>fn<wbr>Id<span class="tsd-signature-symbol">: </span><a href="../globals.html#functionid" class="tsd-signature-type">FunctionId</a></h5>
+						</li>
+					</ul>
+				</div>
 			</section>
 		</section>
 		<footer class="with-border-bottom">

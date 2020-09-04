@@ -53,7 +53,7 @@ interface SendCommand {
 interface MessageCommand {
   cmd: "message";
   payload: {
-    data: any;
+    data: PluginMessage;
     origin: string;
     source: Window;
   };
@@ -82,17 +82,16 @@ const resolvablePromise = () => {
 
 type BridgeMaker = (pluginId: PluginId) => Promise<Bridge>;
 
-// TODO: this doesn't need to be a promise
 const initializePluginBridge = (
   intermediateFrame: HTMLIFrameElement,
   hostId: HostId,
   pluginId: PluginId
-): Promise<{ frame: HTMLIFrameElement; domain: string }> => {
+): { frame: HTMLIFrameElement; domain: string } => {
   if (
     !intermediateFrame.contentWindow ||
     !intermediateFrame.contentWindow.document
   ) {
-    return Promise.reject(new Error("Intermediate frame uninitialized"));
+    throw new Error("Intermediate frame uninitialized");
   }
 
   const url = "http://localhost:8081/tests/plugin.html"; // TODO: `https://${pluginId}.${hostId}.live.plugins.dev`;
@@ -106,10 +105,10 @@ const initializePluginBridge = (
   frame.setAttribute("sandbox", "allow-scripts");
   intermediateFrame.contentWindow.document.body.appendChild(frame);
 
-  return Promise.resolve({
+  return {
     frame,
     domain: intermediateFrame.contentWindow.document.domain,
-  });
+  };
 };
 
 interface HostBridge extends Bridge {
@@ -117,32 +116,103 @@ interface HostBridge extends Bridge {
   pluginFrameWindow: Window;
 }
 
+interface PluginReadyMessage {
+  cmd: "plugin-ready";
+}
+
+interface InvokeMessage {
+  cmd: "invoke";
+  payload: {
+    fnId: FunctionId;
+    args: Array<any>;
+  };
+}
+
+interface InvocationResponseMessage {
+  cmd: "invocation-response";
+  payload: {
+    result?: any;
+    error?: any;
+  };
+}
+
+interface RenderMessage {
+  cmd: "render";
+  payload: {
+    id: string;
+    component?: string;
+    props: { [key: string]: any };
+  };
+}
+
+interface ReconcileMessage {
+  cmd: "reconcile";
+  payload: {
+    id: string;
+    updates: Array<ReconciliationUpdate>;
+  };
+}
+
+type PluginMessage =
+  | PluginReadyMessage
+  | InvokeMessage
+  | InvocationResponseMessage
+  | RenderMessage
+  | ReconcileMessage;
+
+type NodeId = number | "root";
+
+interface ReconciliationPropUpdate {
+  op: "set" | "delete";
+  prop: string;
+  value?: string;
+}
+
+interface ReconciliationChildUpdate {
+  op: "set" | "delete";
+  childIdx: number;
+  childId: NodeId;
+}
+
+interface ReconciliationUpdate {
+  nodeId: NodeId;
+  propUpdate: ReconciliationPropUpdate;
+  childUpdate: ReconciliationChildUpdate;
+}
+
 const makeBridge = (
   intermediateFrame: HTMLIFrameElement,
   hostId: HostId,
   pluginId: PluginId
-): Promise<HostBridge> =>
-  initializePluginBridge(intermediateFrame, hostId, pluginId).then(
-    ({ frame, domain }) => ({
-      pluginFrameWindow: <Window>frame.contentWindow,
-      onReceiveMessageFromPlugin: (origin: string, data: any) => {
-        // origin should always be 'null' for sandboxed iframes and we only deal with sandboxed iframes
-        // but... older browsers ignore sandboxing and will give us an origin to check.
-        // we already know that the message was sent from the window we expect so this is somewhat redundant.
-        if (origin !== "null" || origin !== domain) {
-          return;
-        }
-
-        // TODO: handle plugin-ready message, etc.
-        // ideally, we don't even return the bridge until the plugin is ready
-        console.log("message!!!", origin, JSON.stringify(data));
-      },
-      invokeFn: (fnId: FunctionId, args: any[]): Promise<BridgeValue> => {
-        return Promise.reject("f");
-      },
-      appendLocalState: (localState: LocalBridgeState): void => {},
-    })
+): HostBridge => {
+  const { frame, domain } = initializePluginBridge(
+    intermediateFrame,
+    hostId,
+    pluginId
   );
+  const queuedMessagesToSend = [];
+  let isReady = false;
+
+  return {
+    pluginFrameWindow: <Window>frame.contentWindow,
+    onReceiveMessageFromPlugin: (origin: string, data: PluginMessage) => {
+      // origin should always be 'null' for sandboxed iframes and we only deal with sandboxed iframes
+      // but... older browsers ignore sandboxing and will give us an origin to check.
+      // we already know that the message was sent from the window we expect so this is somewhat redundant.
+      if (origin !== "null" || origin !== domain) {
+        return;
+      }
+
+      // TODO: handle plugin-ready message, etc.
+      // ideally, we don't even return the bridge until the plugin is ready
+      console.log("message!!!", origin, JSON.stringify(data));
+    },
+    invokeFn: (fnId: FunctionId, args: any[]): Promise<BridgeValue> => {
+      return Promise.reject("f");
+    },
+    appendLocalState: (localState: LocalBridgeState): void => {},
+  };
+};
 
 const initializeBridge = (hostId: HostId): Promise<BridgeMaker> => {
   let sendCommandToIntermediateFrame: null | OnReceiveCallback = null;
@@ -197,7 +267,7 @@ const initializeBridge = (hostId: HostId): Promise<BridgeMaker> => {
     ([intermediateFrame, _]: [HTMLIFrameElement, any]) => async (
       pluginId: PluginId
     ) => {
-      const bridge = await makeBridge(intermediateFrame, hostId, pluginId);
+      const bridge = makeBridge(intermediateFrame, hostId, pluginId);
       bridgeByWindow.set(bridge.pluginFrameWindow, bridge);
       return bridge;
     }
