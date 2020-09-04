@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>LocalBridgeState | @pluginsdotdev/bridge</title>
+	<title>HostBridge | @pluginsdotdev/bridge</title>
 	<meta name="description" content="Documentation for @pluginsdotdev/bridge">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<style type="text/css">/*! normalize.css v1.1.3 | MIT License | git.io/normalize */
@@ -2728,16 +2728,25 @@ img {
 		<li class=" tsd-kind-interface">
 			<a href="bridgevalue.html" class="tsd-kind-icon">Bridge<wbr>Value</a>
 		</li>
-		<li class=" tsd-kind-interface">
-			<a href="hostbridge.html" class="tsd-kind-icon">Host<wbr>Bridge</a>
-		</li>
 		<li class="current tsd-kind-interface">
-			<a href="localbridgestate.html" class="tsd-kind-icon">Local<wbr>Bridge<wbr>State</a>
+			<a href="hostbridge.html" class="tsd-kind-icon">Host<wbr>Bridge</a>
 			<ul>
+				<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-inherited">
+					<a href="hostbridge.html#appendlocalstate" class="tsd-kind-icon">append<wbr>Local<wbr>State</a>
+				</li>
+				<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-inherited">
+					<a href="hostbridge.html#invokefn" class="tsd-kind-icon">invoke<wbr>Fn</a>
+				</li>
 				<li class=" tsd-kind-property tsd-parent-kind-interface">
-					<a href="localbridgestate.html#localfns" class="tsd-kind-icon">local<wbr>Fns</a>
+					<a href="hostbridge.html#onreceivemessagefromplugin" class="tsd-kind-icon">on<wbr>Receive<wbr>Message<wbr>From<wbr>Plugin</a>
+				</li>
+				<li class=" tsd-kind-property tsd-parent-kind-interface">
+					<a href="hostbridge.html#pluginframewindow" class="tsd-kind-icon">plugin<wbr>Frame<wbr>Window</a>
 				</li>
 			</ul>
+		</li>
+		<li class=" tsd-kind-interface">
+			<a href="localbridgestate.html" class="tsd-kind-icon">Local<wbr>Bridge<wbr>State</a>
 		</li>
 		<li class=" tsd-kind-interface">
 			<a href="messagecommand.html" class="tsd-kind-icon">Message<wbr>Command</a>
@@ -2830,19 +2839,16 @@ img {
 </nav>
 <div class="container container-main">
 	<div class="content-wrap">
-		<section class="tsd-panel tsd-comment">
-			<div class="tsd-comment tsd-typography">
-				<div class="lead">
-					<p>LocalBridgeState contains the state necessary to support invocation of functions passed
-					to a bridge through the corresponding BridgeValue.</p>
-				</div>
-			</div>
-		</section>
 		<section class="tsd-panel tsd-hierarchy">
 			<h3>Hierarchy</h3>
 			<ul class="tsd-hierarchy">
 				<li>
-					<span class="target">LocalBridgeState</span>
+					<a href="bridge.html" class="tsd-signature-type">Bridge</a>
+					<ul class="tsd-hierarchy">
+						<li>
+							<span class="target">HostBridge</span>
+						</li>
+					</ul>
 				</li>
 			</ul>
 		</section>
@@ -2853,7 +2859,10 @@ img {
 					<section class="tsd-index-section ">
 						<h3>Properties</h3>
 						<ul class="tsd-index-list">
-							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="localbridgestate.html#localfns" class="tsd-kind-icon">local<wbr>Fns</a></li>
+							<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="hostbridge.html#appendlocalstate" class="tsd-kind-icon">append<wbr>Local<wbr>State</a></li>
+							<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a href="hostbridge.html#invokefn" class="tsd-kind-icon">invoke<wbr>Fn</a></li>
+							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="hostbridge.html#onreceivemessagefromplugin" class="tsd-kind-icon">on<wbr>Receive<wbr>Message<wbr>From<wbr>Plugin</a></li>
+							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="hostbridge.html#pluginframewindow" class="tsd-kind-icon">plugin<wbr>Frame<wbr>Window</a></li>
 						</ul>
 					</section>
 				</div>
@@ -2861,20 +2870,116 @@ img {
 		</section>
 		<section class="tsd-panel-group tsd-member-group ">
 			<h2>Properties</h2>
-			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-				<a name="localfns" class="tsd-anchor"></a>
-				<h3>local<wbr>Fns</h3>
-				<div class="tsd-signature tsd-kind-icon">local<wbr>Fns<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><a href="../globals.html#functionid" class="tsd-signature-type">FunctionId</a><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Function</span><span class="tsd-signature-symbol">&gt;</span></div>
+			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited">
+				<a name="appendlocalstate" class="tsd-anchor"></a>
+				<h3>append<wbr>Local<wbr>State</h3>
+				<div class="tsd-signature tsd-kind-icon">append<wbr>Local<wbr>State<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span>localState<span class="tsd-signature-symbol">: </span><a href="localbridgestate.html" class="tsd-signature-type">LocalBridgeState</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></div>
 				<aside class="tsd-sources">
+					<p>Inherited from <a href="bridge.html">Bridge</a>.<a href="bridge.html#appendlocalstate">appendLocalState</a></p>
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/12df3d4/packages/bridge/src/types.ts#L31">types.ts:31</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/12df3d4/packages/bridge/src/types.ts#L36">types.ts:36</a></li>
 					</ul>
 				</aside>
-				<div class="tsd-comment tsd-typography">
-					<div class="lead">
-						<p>localFns is a map from function ids to the actual host function</p>
-					</div>
+				<div class="tsd-type-declaration">
+					<h4>Type declaration</h4>
+					<ul class="tsd-parameters">
+						<li class="tsd-parameter-signature">
+							<ul class="tsd-signatures tsd-kind-type-literal tsd-parent-kind-property">
+								<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span>localState<span class="tsd-signature-symbol">: </span><a href="localbridgestate.html" class="tsd-signature-type">LocalBridgeState</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+							</ul>
+							<ul class="tsd-descriptions">
+								<li class="tsd-description">
+									<h4 class="tsd-parameters-title">Parameters</h4>
+									<ul class="tsd-parameters">
+										<li>
+											<h5>localState: <a href="localbridgestate.html" class="tsd-signature-type">LocalBridgeState</a></h5>
+										</li>
+									</ul>
+									<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+								</li>
+							</ul>
+						</li>
+					</ul>
 				</div>
+			</section>
+			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited">
+				<a name="invokefn" class="tsd-anchor"></a>
+				<h3>invoke<wbr>Fn</h3>
+				<div class="tsd-signature tsd-kind-icon">invoke<wbr>Fn<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span>fnId<span class="tsd-signature-symbol">: </span><a href="../globals.html#functionid" class="tsd-signature-type">FunctionId</a>, args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="bridgevalue.html" class="tsd-signature-type">BridgeValue</a><span class="tsd-signature-symbol">&gt;</span></div>
+				<aside class="tsd-sources">
+					<p>Inherited from <a href="bridge.html">Bridge</a>.<a href="bridge.html#invokefn">invokeFn</a></p>
+					<ul>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/12df3d4/packages/bridge/src/types.ts#L35">types.ts:35</a></li>
+					</ul>
+				</aside>
+				<div class="tsd-type-declaration">
+					<h4>Type declaration</h4>
+					<ul class="tsd-parameters">
+						<li class="tsd-parameter-signature">
+							<ul class="tsd-signatures tsd-kind-type-literal tsd-parent-kind-property">
+								<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span>fnId<span class="tsd-signature-symbol">: </span><a href="../globals.html#functionid" class="tsd-signature-type">FunctionId</a>, args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="bridgevalue.html" class="tsd-signature-type">BridgeValue</a><span class="tsd-signature-symbol">&gt;</span></li>
+							</ul>
+							<ul class="tsd-descriptions">
+								<li class="tsd-description">
+									<h4 class="tsd-parameters-title">Parameters</h4>
+									<ul class="tsd-parameters">
+										<li>
+											<h5>fnId: <a href="../globals.html#functionid" class="tsd-signature-type">FunctionId</a></h5>
+										</li>
+										<li>
+											<h5>args: <span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span></h5>
+										</li>
+									</ul>
+									<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="bridgevalue.html" class="tsd-signature-type">BridgeValue</a><span class="tsd-signature-symbol">&gt;</span></h4>
+								</li>
+							</ul>
+						</li>
+					</ul>
+				</div>
+			</section>
+			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
+				<a name="onreceivemessagefromplugin" class="tsd-anchor"></a>
+				<h3>on<wbr>Receive<wbr>Message<wbr>From<wbr>Plugin</h3>
+				<div class="tsd-signature tsd-kind-icon">on<wbr>Receive<wbr>Message<wbr>From<wbr>Plugin<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span>origin<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, data<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></div>
+				<aside class="tsd-sources">
+					<ul>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/12df3d4/packages/bridge/src/command-bridge.ts#L113">command-bridge.ts:113</a></li>
+					</ul>
+				</aside>
+				<div class="tsd-type-declaration">
+					<h4>Type declaration</h4>
+					<ul class="tsd-parameters">
+						<li class="tsd-parameter-signature">
+							<ul class="tsd-signatures tsd-kind-type-literal tsd-parent-kind-property">
+								<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span>origin<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, data<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+							</ul>
+							<ul class="tsd-descriptions">
+								<li class="tsd-description">
+									<h4 class="tsd-parameters-title">Parameters</h4>
+									<ul class="tsd-parameters">
+										<li>
+											<h5>origin: <span class="tsd-signature-type">string</span></h5>
+										</li>
+										<li>
+											<h5>data: <span class="tsd-signature-type">any</span></h5>
+										</li>
+									</ul>
+									<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+								</li>
+							</ul>
+						</li>
+					</ul>
+				</div>
+			</section>
+			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
+				<a name="pluginframewindow" class="tsd-anchor"></a>
+				<h3>plugin<wbr>Frame<wbr>Window</h3>
+				<div class="tsd-signature tsd-kind-icon">plugin<wbr>Frame<wbr>Window<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Window</span></div>
+				<aside class="tsd-sources">
+					<ul>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/12df3d4/packages/bridge/src/command-bridge.ts#L114">command-bridge.ts:114</a></li>
+					</ul>
+				</aside>
 			</section>
 		</section>
 		<footer class="with-border-bottom">

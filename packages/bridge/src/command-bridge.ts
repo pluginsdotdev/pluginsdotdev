@@ -16,8 +16,8 @@ const intermediateFrameScript = `
   });
   window.addEventListener(
     'message',
-    function receiveMessage(event) {
-      window.sendCommand({cmd: 'message', payload: event});
+    function receiveMessage(evt) {
+      window.sendCommand({cmd: 'message', payload: {data: evt.data, origin: evt.origin, source: evt.source}});
     },
     false
   );
@@ -82,11 +82,12 @@ const resolvablePromise = () => {
 
 type BridgeMaker = (pluginId: PluginId) => Promise<Bridge>;
 
+// TODO: this doesn't need to be a promise
 const initializePluginBridge = (
   intermediateFrame: HTMLIFrameElement,
   hostId: HostId,
   pluginId: PluginId
-): Promise<HTMLIFrameElement> => {
+): Promise<{ frame: HTMLIFrameElement; domain: string }> => {
   if (
     !intermediateFrame.contentWindow ||
     !intermediateFrame.contentWindow.document
@@ -105,28 +106,48 @@ const initializePluginBridge = (
   frame.setAttribute("sandbox", "allow-scripts");
   intermediateFrame.contentWindow.document.body.appendChild(frame);
 
-  // wait for ready
-  return Promise.resolve(frame);
+  return Promise.resolve({
+    frame,
+    domain: intermediateFrame.contentWindow.document.domain,
+  });
 };
+
+interface HostBridge extends Bridge {
+  onReceiveMessageFromPlugin: (origin: string, data: any) => void;
+  pluginFrameWindow: Window;
+}
 
 const makeBridge = (
   intermediateFrame: HTMLIFrameElement,
   hostId: HostId,
   pluginId: PluginId
-): Promise<Bridge> => {
-  return initializePluginBridge(intermediateFrame, hostId, pluginId).then(
-    (frame: HTMLIFrameElement) => ({
+): Promise<HostBridge> =>
+  initializePluginBridge(intermediateFrame, hostId, pluginId).then(
+    ({ frame, domain }) => ({
+      pluginFrameWindow: <Window>frame.contentWindow,
+      onReceiveMessageFromPlugin: (origin: string, data: any) => {
+        // origin should always be 'null' for sandboxed iframes and we only deal with sandboxed iframes
+        // but... older browsers ignore sandboxing and will give us an origin to check.
+        // we already know that the message was sent from the window we expect so this is somewhat redundant.
+        if (origin !== "null" || origin !== domain) {
+          return;
+        }
+
+        // TODO: handle plugin-ready message, etc.
+        // ideally, we don't even return the bridge until the plugin is ready
+        console.log("message!!!", origin, JSON.stringify(data));
+      },
       invokeFn: (fnId: FunctionId, args: any[]): Promise<BridgeValue> => {
         return Promise.reject("f");
       },
       appendLocalState: (localState: LocalBridgeState): void => {},
     })
   );
-};
 
 const initializeBridge = (hostId: HostId): Promise<BridgeMaker> => {
   let sendCommandToIntermediateFrame: null | OnReceiveCallback = null;
   let { resolve: onReady, promise: ready } = resolvablePromise();
+  let bridgeByWindow = new Map<Window, HostBridge>();
   const onReceiveCommandFromIntermediateFrame = (command: Command) => {
     switch (command.cmd) {
       case "ready":
@@ -134,7 +155,8 @@ const initializeBridge = (hostId: HostId): Promise<BridgeMaker> => {
         return;
       case "message":
         const { data, origin, source } = command.payload;
-        // TODO: allow plugin bridges to register for messages from their source and check origin
+        const bridge = bridgeByWindow.get(source);
+        bridge?.onReceiveMessageFromPlugin(origin, data);
         return;
     }
   };
@@ -142,6 +164,7 @@ const initializeBridge = (hostId: HostId): Promise<BridgeMaker> => {
   return Promise.all([
     new Promise<HTMLIFrameElement>((resolve, reject) => {
       const intermediateFrame = document.createElement("iframe");
+      intermediateFrame.src = "about:blank";
       intermediateFrame.style.display = "none";
       intermediateFrame.width = "0";
       intermediateFrame.height = "0";
@@ -170,8 +193,14 @@ const initializeBridge = (hostId: HostId): Promise<BridgeMaker> => {
       document.body.appendChild(intermediateFrame);
     }),
     ready,
-  ]).then(([intermediateFrame, _]: [HTMLIFrameElement, any]) =>
-    makeBridge.bind(null, intermediateFrame, hostId)
+  ]).then(
+    ([intermediateFrame, _]: [HTMLIFrameElement, any]) => async (
+      pluginId: PluginId
+    ) => {
+      const bridge = await makeBridge(intermediateFrame, hostId, pluginId);
+      bridgeByWindow.set(bridge.pluginFrameWindow, bridge);
+      return bridge;
+    }
   );
 };
 

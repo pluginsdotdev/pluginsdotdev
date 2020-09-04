@@ -34,6 +34,7 @@ describe("initializeBridge", () => {
     });
     page = await browser.newPage();
     page.on("console", (c) => console.log("Log from puppeteer", c.text()));
+    page.on("error", (e) => console.log("Error from puppeteer", e));
     await page.goto(`http://localhost:${hostPort}/tests/host.html`);
     // our js has been loaded
     await page.waitForFunction(() => !!(<any>window).index);
@@ -55,7 +56,7 @@ describe("initializeBridge", () => {
           makeBridge("plugin")
         );
     });
-    await page.waitFor(500);
+    await page.waitForFunction(() => window.frames[0].frames[0]);
     expect(await page.evaluate(() => window.frames[0].frames[0])).toBeTruthy();
   });
 });
