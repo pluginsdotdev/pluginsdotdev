@@ -117,11 +117,11 @@ interface HostBridge extends Bridge {
 }
 
 interface PluginReadyMessage {
-  cmd: "plugin-ready";
+  msg: "plugin-ready";
 }
 
 interface InvokeMessage {
-  cmd: "invoke";
+  msg: "invoke";
   payload: {
     fnId: FunctionId;
     args: Array<any>;
@@ -129,7 +129,7 @@ interface InvokeMessage {
 }
 
 interface InvocationResponseMessage {
-  cmd: "invocation-response";
+  msg: "invocation-response";
   payload: {
     result?: any;
     error?: any;
@@ -137,7 +137,7 @@ interface InvocationResponseMessage {
 }
 
 interface RenderMessage {
-  cmd: "render";
+  msg: "render";
   payload: {
     id: string;
     component?: string;
@@ -146,7 +146,7 @@ interface RenderMessage {
 }
 
 interface ReconcileMessage {
-  cmd: "reconcile";
+  msg: "reconcile";
   payload: {
     id: string;
     updates: Array<ReconciliationUpdate>;
@@ -195,17 +195,19 @@ const makeBridge = (
 
   return {
     pluginFrameWindow: <Window>frame.contentWindow,
-    onReceiveMessageFromPlugin: (origin: string, data: PluginMessage) => {
+    onReceiveMessageFromPlugin: (origin: string, pluginMsg: PluginMessage) => {
       // origin should always be 'null' for sandboxed iframes and we only deal with sandboxed iframes
       // but... older browsers ignore sandboxing and will give us an origin to check.
       // we already know that the message was sent from the window we expect so this is somewhat redundant.
-      if (origin !== "null" || origin !== domain) {
+      if (origin !== "null" && origin !== domain) {
         return;
       }
 
-      // TODO: handle plugin-ready message, etc.
-      // ideally, we don't even return the bridge until the plugin is ready
-      console.log("message!!!", origin, JSON.stringify(data));
+      switch (pluginMsg.msg) {
+        case "plugin-ready":
+          console.log("plugin-ready");
+          break;
+      }
     },
     invokeFn: (fnId: FunctionId, args: any[]): Promise<BridgeValue> => {
       return Promise.reject("f");

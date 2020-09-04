@@ -31,10 +31,10 @@
     "url": "git+https://github.com/pluginsdotdev/pluginsdotdev.git"
   },
   "scripts": {
-    "test": "tsc --module commonjs && rollup -c rollup.config.ts && npx jest",
+    "test": "tsc --module commonjs && rollup --config rollup.config.ts && npx jest",
     "lint": "tslint  --project tsconfig.json -t codeFrame 'src/**/*.ts' 'tests/**/*.ts'",
     "prebuild": "rimraf dist",
-    "build": "tsc --module commonjs && rollup -c rollup.config.ts && typedoc --out docs --target es6 --theme minimal --mode file src",
+    "build": "tsc --module commonjs && rollup --config rollup.config.ts && typedoc --out docs --target es6 --theme minimal --mode file src",
     "pre-commit": "lint-staged"
   },
   "lint-staged": {
