@@ -2,6 +2,9 @@
   <body></body>
   <script type="application/javascript" src="../dist/index.js"></script>
   <script type="application/javascript">
-    window.parent.postMessage({msg: 'plugin-ready'}, 'http://localhost:8080'); // localhost:8080 can be hard coded because we know the domain of the host
+    // localhost:8080 can be hard coded because we know the domain of the host
+    window.index.initializePluginBridge('http://localhost:8080').then(bridge => {
+      console.log('initialized plugin bridge');
+    });
   </script>
 </html>

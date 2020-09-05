@@ -61,6 +61,10 @@ interface MessageCommand {
   };
 }
 
+/**
+ * Command is the interface between the intermediate frame and the
+ * host window.
+ **/
 type Command = ReadyCommand | SendCommand | MessageCommand;
 
 type OnReceiveCallback = (cmd: Command) => void;
@@ -84,7 +88,7 @@ const resolvablePromise = () => {
 
 type BridgeMaker = (pluginId: PluginId) => Promise<Bridge>;
 
-const initializePluginBridge = (
+const initializeIntermediateToPluginBridge = (
   intermediateFrameWindow: Window,
   hostId: HostId,
   pluginId: PluginId
@@ -157,6 +161,11 @@ interface ReconcileMessage {
   };
 }
 
+/**
+ * PluginMessage is the interface between the host and the plugin frame.
+ * PluginMessages are passed through Commands (i.e. they are sent in a
+ * Command envelope through the intermediate frame).
+ **/
 type PluginMessage =
   | PluginReadyMessage
   | InvokeMessage
@@ -186,49 +195,10 @@ interface ReconciliationUpdate {
 
 type PluginMessageHandler = (msg: PluginMessage) => void;
 
-const makeBridge = async (
-  intermediateFrameWindow: Window,
-  sendCommandToIntermediateFrame: OnReceiveCallback,
-  hostId: HostId,
-  pluginId: PluginId
-): Promise<HostBridge> => {
-  const { frame, domain } = await initializePluginBridge(
-    intermediateFrameWindow,
-    hostId,
-    pluginId
-  );
-  const frameContentWindow = frame.contentWindow;
-  if (!frameContentWindow) {
-    // initializePluginBridge waits for onload so this should never happen
-    throw new Error("plugin frame content window unexpectedly null");
-  }
-  const queuedMessagesToSend = [];
-  let isReady = false;
-  let { resolve: onReady, promise: ready } = resolvablePromise();
-  ready.then(() => {
-    isReady = true;
-  });
-
+const makeCommonBridge = (
+  sendMessage: (msg: PluginMessage) => Promise<void>
+): Bridge & { handleMessage: (pluginMsg: PluginMessage) => void } => {
   let nextInvocationId = 0;
-
-  const run = (msg: PluginMessage): void => {
-    sendCommandToIntermediateFrame({
-      cmd: "send",
-      payload: {
-        msg,
-        targetWindow: frameContentWindow,
-        targetOrigin: domain,
-      },
-    });
-  };
-
-  const queueOrRun = async (msg: PluginMessage): Promise<void> => {
-    if (!isReady) {
-      await ready;
-    }
-
-    return run(msg);
-  };
 
   const msgHandlers = new Set<PluginMessageHandler>();
 
@@ -257,20 +227,7 @@ const makeBridge = async (
   };
 
   const bridge = {
-    pluginFrameWindow: <Window>frameContentWindow,
-    onReceiveMessageFromPlugin(origin: string, pluginMsg: PluginMessage) {
-      // origin should always be 'null' for sandboxed iframes and we only deal with sandboxed iframes
-      // but... older browsers ignore sandboxing and will give us an origin to check.
-      // we already know that the message was sent from the window we expect so this is somewhat redundant.
-      if (origin !== "null" && origin !== domain) {
-        return;
-      }
-
-      if (pluginMsg.msg === "plugin-ready") {
-        onReady();
-        return;
-      }
-
+    handleMessage(pluginMsg: PluginMessage) {
       msgHandlers.forEach((handler) => handler(pluginMsg));
     },
     async invokeFn(fnId: FunctionId, args: any[]): Promise<BridgeValue> {
@@ -286,20 +243,87 @@ const makeBridge = async (
           argsBridgeValue,
         },
       };
-      await queueOrRun(pluginMsg);
+      await sendMessage(pluginMsg);
       const invocationResponseMsg: InvocationResponseMessage = await waitForMsg(
         (pluginMsg: PluginMessage): pluginMsg is InvocationResponseMessage =>
           pluginMsg.msg === "invocation-response" &&
           pluginMsg.payload.invocationId === invocationId
       );
+
       const {
         payload: { result, error },
       } = invocationResponseMsg;
+
       if (error) {
-        throw fromBridge(bridge, error);
+        throw fromBridge(this, error);
       }
 
-      return fromBridge(bridge, error);
+      return fromBridge(this, error);
+    },
+  };
+
+  return bridge;
+};
+
+const makeBridge = async (
+  intermediateFrameWindow: Window,
+  sendCommandToIntermediateFrame: OnReceiveCallback,
+  hostId: HostId,
+  pluginId: PluginId
+): Promise<HostBridge> => {
+  const { frame, domain } = await initializeIntermediateToPluginBridge(
+    intermediateFrameWindow,
+    hostId,
+    pluginId
+  );
+  const frameContentWindow = frame.contentWindow;
+  if (!frameContentWindow) {
+    // initializeIntermediateToPluginBridge waits for onload so this should never happen
+    throw new Error("plugin frame content window unexpectedly null");
+  }
+  const queuedMessagesToSend = [];
+  let isReady = false;
+  let { resolve: onReady, promise: ready } = resolvablePromise();
+  ready.then(() => {
+    isReady = true;
+  });
+
+  const run = (msg: PluginMessage): void => {
+    sendCommandToIntermediateFrame({
+      cmd: "send",
+      payload: {
+        msg,
+        targetWindow: frameContentWindow,
+        targetOrigin: domain,
+      },
+    });
+  };
+
+  const queueOrRun = async (msg: PluginMessage): Promise<void> => {
+    if (!isReady) {
+      await ready;
+    }
+
+    return run(msg);
+  };
+
+  const bridge = {
+    ...makeCommonBridge(queueOrRun),
+    pluginFrameWindow: frameContentWindow,
+    onReceiveMessageFromPlugin(origin: string, pluginMsg: PluginMessage) {
+      // origin should always be 'null' for sandboxed iframes and we only deal with sandboxed iframes
+      // but... older browsers ignore sandboxing and will give us an origin to check.
+      // we already know that the message was sent from the window we expect so this is somewhat redundant.
+      if (origin !== "null" && origin !== domain) {
+        return;
+      }
+
+      if (pluginMsg.msg === "plugin-ready") {
+        onReady();
+        return;
+      }
+
+      this.handleMessage(pluginMsg);
     },
   };
   return bridge;
@@ -380,4 +404,47 @@ const initializeHostBridge = (hostId: HostId): Promise<BridgeMaker> => {
   );
 };
 
-export { initializeHostBridge };
+const initializePluginBridge = async (origin: string): Promise<Bridge> => {
+  window.addEventListener(
+    "message",
+    (evt: MessageEvent) => {
+      if (evt.source !== window.parent) {
+        console.log("Invalid message source received");
+        return;
+      }
+
+      const msg: PluginMessage = evt.data;
+
+      switch (msg.msg) {
+        case "invoke": {
+          const { invocationId, fnId, argsBridgeValue } = msg.payload;
+          break;
+        }
+        case "invocation-response": {
+          const { invocationId, result, error } = msg.payload;
+          break;
+        }
+        case "render": {
+          const { id, component, props } = msg.payload;
+          break;
+        }
+        case "reconcile": {
+          const { id, updates } = msg.payload;
+          break;
+        }
+      }
+    },
+    false
+  );
+
+  window.parent.postMessage({ msg: "plugin-ready" }, origin);
+
+  const bridge = makeCommonBridge((msg) => {
+    window.parent.postMessage(msg, origin);
+    return Promise.resolve();
+  });
+
+  return bridge;
+};
+
+export { initializeHostBridge, initializePluginBridge };
