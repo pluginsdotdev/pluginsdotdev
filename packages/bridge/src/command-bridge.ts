@@ -305,7 +305,7 @@ const makeBridge = async (
   return bridge;
 };
 
-const initializeBridge = (hostId: HostId): Promise<BridgeMaker> => {
+const initializeHostBridge = (hostId: HostId): Promise<BridgeMaker> => {
   let sendCommandToIntermediateFrame: null | OnReceiveCallback = null;
   let { resolve: onReady, promise: ready } = resolvablePromise();
   let bridgeByWindow = new Map<Window, HostBridge>();
@@ -380,4 +380,4 @@ const initializeBridge = (hostId: HostId): Promise<BridgeMaker> => {
   );
 };
 
-export { initializeBridge };
+export { initializeHostBridge };

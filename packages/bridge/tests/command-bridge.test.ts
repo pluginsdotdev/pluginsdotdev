@@ -9,7 +9,7 @@ jest.setTimeout(10000);
 const hostPort = 8080;
 const pluginPort = 8081;
 
-describe("initializeBridge", () => {
+describe("initializeHostBridge", () => {
   let browser: Browser;
   let page: Page;
   let shutdown: () => Promise<undefined>;
@@ -43,7 +43,7 @@ describe("initializeBridge", () => {
   afterEach(async () => browser.close());
 
   it("intermediate iframe created", async () => {
-    await page.evaluate(() => (<any>window).index.initializeBridge("host"));
+    await page.evaluate(() => (<any>window).index.initializeHostBridge("host"));
     await page.waitForSelector("iframe");
     expect(await page.$("iframe")).toBeTruthy();
   });
@@ -51,7 +51,7 @@ describe("initializeBridge", () => {
   it("plugin iframe created", async () => {
     await page.evaluate(() => {
       (<any>window).index
-        .initializeBridge("host")
+        .initializeHostBridge("host")
         .then((makeBridge: (pluginId: PluginId) => Promise<Bridge>) =>
           makeBridge("plugin")
         );
