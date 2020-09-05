@@ -2726,7 +2726,7 @@ img {
 			<a href="invocationresponsemessage.html" class="tsd-kind-icon">Invocation<wbr>Response<wbr>Message</a>
 			<ul>
 				<li class=" tsd-kind-property tsd-parent-kind-interface">
-					<a href="invocationresponsemessage.html#cmd" class="tsd-kind-icon">cmd</a>
+					<a href="invocationresponsemessage.html#msg" class="tsd-kind-icon">msg</a>
 				</li>
 				<li class=" tsd-kind-property tsd-parent-kind-interface">
 					<a href="invocationresponsemessage.html#payload" class="tsd-kind-icon">payload</a>
@@ -2752,7 +2752,7 @@ img {
 					<section class="tsd-index-section ">
 						<h3>Properties</h3>
 						<ul class="tsd-index-list">
-							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="invocationresponsemessage.html#cmd" class="tsd-kind-icon">cmd</a></li>
+							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="invocationresponsemessage.html#msg" class="tsd-kind-icon">msg</a></li>
 							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="invocationresponsemessage.html#payload" class="tsd-kind-icon">payload</a></li>
 						</ul>
 					</section>
@@ -2762,22 +2762,22 @@ img {
 		<section class="tsd-panel-group tsd-member-group ">
 			<h2>Properties</h2>
 			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-				<a name="cmd" class="tsd-anchor"></a>
-				<h3>cmd</h3>
-				<div class="tsd-signature tsd-kind-icon">cmd<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">"invocation-response"</span></div>
+				<a name="msg" class="tsd-anchor"></a>
+				<h3>msg</h3>
+				<div class="tsd-signature tsd-kind-icon">msg<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">"invocation-response"</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/193e15e/packages/bridge/src/command-bridge.ts#L132">command-bridge.ts:132</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/de50e0a/packages/bridge/src/command-bridge.ts#L135">command-bridge.ts:135</a></li>
 					</ul>
 				</aside>
 			</section>
 			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
 				<a name="payload" class="tsd-anchor"></a>
 				<h3>payload</h3>
-				<div class="tsd-signature tsd-kind-icon">payload<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">{ </span>error<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">; </span>result<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol"> }</span></div>
+				<div class="tsd-signature tsd-kind-icon">payload<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">{ </span>error<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">; </span>invocationId<span class="tsd-signature-symbol">: </span><a href="../globals.html#invocationid" class="tsd-signature-type">InvocationId</a><span class="tsd-signature-symbol">; </span>result<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol"> }</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/193e15e/packages/bridge/src/command-bridge.ts#L133">command-bridge.ts:133</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/de50e0a/packages/bridge/src/command-bridge.ts#L136">command-bridge.ts:136</a></li>
 					</ul>
 				</aside>
 				<div class="tsd-type-declaration">
@@ -2785,6 +2785,9 @@ img {
 					<ul class="tsd-parameters">
 						<li class="tsd-parameter">
 							<h5><span class="tsd-flag ts-flagOptional">Optional</span> error<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">any</span></h5>
+						</li>
+						<li class="tsd-parameter">
+							<h5>invocation<wbr>Id<span class="tsd-signature-symbol">: </span><a href="../globals.html#invocationid" class="tsd-signature-type">InvocationId</a></h5>
 						</li>
 						<li class="tsd-parameter">
 							<h5><span class="tsd-flag ts-flagOptional">Optional</span> result<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">any</span></h5>

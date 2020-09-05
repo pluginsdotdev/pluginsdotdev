@@ -33,5 +33,4 @@ export interface LocalBridgeState {
 
 export interface Bridge {
   invokeFn: (fnId: FunctionId, args: any[]) => Promise<BridgeValue>;
-  appendLocalState: (localState: LocalBridgeState) => void;
 }

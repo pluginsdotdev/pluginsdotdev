@@ -122,17 +122,7 @@ const wrapFnFromBridge = (
   bridge: Bridge,
   fnId: FunctionId
 ): ((...args: any[]) => any) => {
-  return (...args: any[]): any => {
-    // convert our args to something we can send over the bridge
-    const { bridgeData, localFns, bridgeFns } = toBridge({ args });
-    // update our local state to capture any passed functions
-    bridge.appendLocalState({ localFns });
-    // invoke the function
-    return bridge.invokeFn(fnId, bridgeData).then(
-      // unwrap the function's return value
-      fromBridge.bind(null, bridge)
-    ); // TODO: catch and unwrap any exception
-  };
+  return (...args: any[]): any => bridge.invokeFn(fnId, args); // TODO: catch and unwrap any exception
 };
 
 /**

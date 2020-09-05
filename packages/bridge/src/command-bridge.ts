@@ -1,3 +1,5 @@
+import { fromBridge, toBridge } from "./data-bridge";
+
 import type {
   Bridge,
   HostId,
@@ -83,38 +85,38 @@ const resolvablePromise = () => {
 type BridgeMaker = (pluginId: PluginId) => Promise<Bridge>;
 
 const initializePluginBridge = (
-  intermediateFrame: HTMLIFrameElement,
+  intermediateFrameWindow: Window,
   hostId: HostId,
   pluginId: PluginId
-): { frame: HTMLIFrameElement; domain: string } => {
-  if (
-    !intermediateFrame.contentWindow ||
-    !intermediateFrame.contentWindow.document
-  ) {
-    throw new Error("Intermediate frame uninitialized");
-  }
+): Promise<{ frame: HTMLIFrameElement; domain: string }> => {
+  return new Promise((resolve, reject) => {
+    const url = "http://localhost:8081/tests/plugin.html"; // TODO: `https://${pluginId}.${hostId}.live.plugins.dev`;
+    const frame = intermediateFrameWindow.document.createElement("iframe");
+    frame.style.display = "none";
+    frame.width = "0";
+    frame.height = "0";
+    frame.src = url;
+    frame.setAttribute("sandbox", "allow-scripts");
 
-  const url = "http://localhost:8081/tests/plugin.html"; // TODO: `https://${pluginId}.${hostId}.live.plugins.dev`;
-  const frame = intermediateFrame.contentWindow.document.createElement(
-    "iframe"
-  );
-  frame.style.display = "none";
-  frame.width = "0";
-  frame.height = "0";
-  frame.src = url;
-  frame.setAttribute("sandbox", "allow-scripts");
-  intermediateFrame.contentWindow.document.body.appendChild(frame);
+    frame.onload = () => {
+      resolve();
+    };
 
-  return {
-    frame,
-    domain: intermediateFrame.contentWindow.document.domain,
-  };
+    intermediateFrameWindow.document.body.appendChild(frame);
+
+    return {
+      frame,
+      domain: intermediateFrameWindow.document.domain,
+    };
+  });
 };
 
 interface HostBridge extends Bridge {
   onReceiveMessageFromPlugin: (origin: string, data: any) => void;
   pluginFrameWindow: Window;
 }
+
+type InvocationId = number;
 
 interface PluginReadyMessage {
   msg: "plugin-ready";
@@ -123,14 +125,16 @@ interface PluginReadyMessage {
 interface InvokeMessage {
   msg: "invoke";
   payload: {
+    invocationId: InvocationId;
     fnId: FunctionId;
-    args: Array<any>;
+    argsBridgeValue: BridgeValue;
   };
 }
 
 interface InvocationResponseMessage {
   msg: "invocation-response";
   payload: {
+    invocationId: InvocationId;
     result?: any;
     error?: any;
   };
@@ -180,22 +184,81 @@ interface ReconciliationUpdate {
   childUpdate: ReconciliationChildUpdate;
 }
 
-const makeBridge = (
-  intermediateFrame: HTMLIFrameElement,
+type PluginMessageHandler = (msg: PluginMessage) => void;
+
+const makeBridge = async (
+  intermediateFrameWindow: Window,
+  sendCommandToIntermediateFrame: OnReceiveCallback,
   hostId: HostId,
   pluginId: PluginId
-): HostBridge => {
-  const { frame, domain } = initializePluginBridge(
-    intermediateFrame,
+): Promise<HostBridge> => {
+  const { frame, domain } = await initializePluginBridge(
+    intermediateFrameWindow,
     hostId,
     pluginId
   );
+  const frameContentWindow = frame.contentWindow;
+  if (!frameContentWindow) {
+    // initializePluginBridge waits for onload so this should never happen
+    throw new Error("plugin frame content window unexpectedly null");
+  }
   const queuedMessagesToSend = [];
   let isReady = false;
+  let { resolve: onReady, promise: ready } = resolvablePromise();
+  ready.then(() => {
+    isReady = true;
+  });
 
-  return {
-    pluginFrameWindow: <Window>frame.contentWindow,
-    onReceiveMessageFromPlugin: (origin: string, pluginMsg: PluginMessage) => {
+  let nextInvocationId = 0;
+
+  const run = (msg: PluginMessage): void => {
+    sendCommandToIntermediateFrame({
+      cmd: "send",
+      payload: {
+        msg,
+        targetWindow: frameContentWindow,
+        targetOrigin: domain,
+      },
+    });
+  };
+
+  const queueOrRun = async (msg: PluginMessage): Promise<void> => {
+    if (!isReady) {
+      await ready;
+    }
+
+    return run(msg);
+  };
+
+  const msgHandlers = new Set<PluginMessageHandler>();
+
+  const waitForMsg = <M extends PluginMessage>(
+    filter: (msg: PluginMessage) => msg is M
+  ): Promise<M> => {
+    return new Promise((resolve, reject) => {
+      const handler = (msg: PluginMessage): void => {
+        if (filter(msg)) {
+          resolve(msg);
+          msgHandlers.delete(handler);
+        }
+      };
+      msgHandlers.add(handler);
+    });
+  };
+
+  const localState: LocalBridgeState = {
+    localFns: new Map(),
+  };
+
+  const appendLocalState = (localFns: Map<FunctionId, Function>): void => {
+    for (const [fnId, fn] of localFns) {
+      localState.localFns.set(fnId, fn);
+    }
+  };
+
+  const bridge = {
+    pluginFrameWindow: <Window>frameContentWindow,
+    onReceiveMessageFromPlugin(origin: string, pluginMsg: PluginMessage) {
       // origin should always be 'null' for sandboxed iframes and we only deal with sandboxed iframes
       // but... older browsers ignore sandboxing and will give us an origin to check.
       // we already know that the message was sent from the window we expect so this is somewhat redundant.
@@ -203,17 +266,43 @@ const makeBridge = (
         return;
       }
 
-      switch (pluginMsg.msg) {
-        case "plugin-ready":
-          console.log("plugin-ready");
-          break;
+      if (pluginMsg.msg === "plugin-ready") {
+        onReady();
+        return;
       }
+
+      msgHandlers.forEach((handler) => handler(pluginMsg));
     },
-    invokeFn: (fnId: FunctionId, args: any[]): Promise<BridgeValue> => {
-      return Promise.reject("f");
+    async invokeFn(fnId: FunctionId, args: any[]): Promise<BridgeValue> {
+      const invocationId = ++nextInvocationId;
+      const { bridgeData, localFns, bridgeFns } = toBridge(args);
+      appendLocalState(localFns);
+      const argsBridgeValue = { bridgeData, bridgeFns };
+      const pluginMsg: InvokeMessage = {
+        msg: "invoke",
+        payload: {
+          invocationId,
+          fnId,
+          argsBridgeValue,
+        },
+      };
+      await queueOrRun(pluginMsg);
+      const invocationResponseMsg: InvocationResponseMessage = await waitForMsg(
+        (pluginMsg: PluginMessage): pluginMsg is InvocationResponseMessage =>
+          pluginMsg.msg === "invocation-response" &&
+          pluginMsg.payload.invocationId === invocationId
+      );
+      const {
+        payload: { result, error },
+      } = invocationResponseMsg;
+      if (error) {
+        throw fromBridge(bridge, error);
+      }
+
+      return fromBridge(bridge, error);
     },
-    appendLocalState: (localState: LocalBridgeState): void => {},
   };
+  return bridge;
 };
 
 const initializeBridge = (hostId: HostId): Promise<BridgeMaker> => {
@@ -249,6 +338,11 @@ const initializeBridge = (hostId: HostId): Promise<BridgeMaker> => {
           (<any>intermediateFrame.contentWindow).onReceiveCommand = (
             cb: OnReceiveCallback
           ) => {
+            if (!cb) {
+              throw new Error(
+                "Received a null sendCommandToIntermediateFrame from the intermediate frame"
+              );
+            }
             sendCommandToIntermediateFrame = cb;
           };
           (<any>(
@@ -269,7 +363,17 @@ const initializeBridge = (hostId: HostId): Promise<BridgeMaker> => {
     ([intermediateFrame, _]: [HTMLIFrameElement, any]) => async (
       pluginId: PluginId
     ) => {
-      const bridge = makeBridge(intermediateFrame, hostId, pluginId);
+      const intermediateFrameWindow = intermediateFrame.contentWindow;
+      if (!intermediateFrameWindow || !sendCommandToIntermediateFrame) {
+        // we wait for onload so this should never happen
+        throw new Error("intermediate frame content window unexpectedly null");
+      }
+      const bridge = await makeBridge(
+        intermediateFrameWindow,
+        sendCommandToIntermediateFrame,
+        hostId,
+        pluginId
+      );
       bridgeByWindow.set(bridge.pluginFrameWindow, bridge);
       return bridge;
     }
