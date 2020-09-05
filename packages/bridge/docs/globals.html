@@ -2812,6 +2812,9 @@ img {
 		<li class=" tsd-kind-type-alias">
 			<a href="globals.html#pluginmessagehandler" class="tsd-kind-icon">Plugin<wbr>Message<wbr>Handler</a>
 		</li>
+		<li class=" tsd-kind-type-alias">
+			<a href="globals.html#renderrootid" class="tsd-kind-icon">Render<wbr>Root<wbr>Id</a>
+		</li>
 		<li class=" tsd-kind-variable">
 			<a href="globals.html#globalfnid" class="tsd-kind-icon">global<wbr>FnId</a>
 		</li>
@@ -2820,6 +2823,9 @@ img {
 		</li>
 		<li class=" tsd-kind-function">
 			<a href="globals.html#_tobridge" class="tsd-kind-icon">_to<wbr>Bridge</a>
+		</li>
+		<li class=" tsd-kind-function">
+			<a href="globals.html#assertnever" class="tsd-kind-icon">assert<wbr>Never</a>
 		</li>
 		<li class=" tsd-kind-function">
 			<a href="globals.html#assignatpath" class="tsd-kind-icon">assign<wbr>AtPath</a>
@@ -2923,6 +2929,7 @@ img {
 							<li class="tsd-kind-type-alias"><a href="globals.html#pluginid" class="tsd-kind-icon">Plugin<wbr>Id</a></li>
 							<li class="tsd-kind-type-alias"><a href="globals.html#pluginmessage" class="tsd-kind-icon">Plugin<wbr>Message</a></li>
 							<li class="tsd-kind-type-alias"><a href="globals.html#pluginmessagehandler" class="tsd-kind-icon">Plugin<wbr>Message<wbr>Handler</a></li>
+							<li class="tsd-kind-type-alias"><a href="globals.html#renderrootid" class="tsd-kind-icon">Render<wbr>Root<wbr>Id</a></li>
 						</ul>
 					</section>
 					<section class="tsd-index-section ">
@@ -2936,6 +2943,7 @@ img {
 						<h3>Functions</h3>
 						<ul class="tsd-index-list">
 							<li class="tsd-kind-function"><a href="globals.html#_tobridge" class="tsd-kind-icon">_to<wbr>Bridge</a></li>
+							<li class="tsd-kind-function"><a href="globals.html#assertnever" class="tsd-kind-icon">assert<wbr>Never</a></li>
 							<li class="tsd-kind-function"><a href="globals.html#assignatpath" class="tsd-kind-icon">assign<wbr>AtPath</a></li>
 							<li class="tsd-kind-function"><a href="globals.html#frombridge" class="tsd-kind-icon">from<wbr>Bridge</a></li>
 							<li class="tsd-kind-function"><a href="globals.html#initializehostbridge" class="tsd-kind-icon">initialize<wbr>Host<wbr>Bridge</a></li>
@@ -2963,7 +2971,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">Bridge<wbr>Data<wbr>Container<span class="tsd-signature-symbol">:</span> <a href="interfaces/bridgevalue.html" class="tsd-signature-type">BridgeValue</a><span class="tsd-signature-symbol"> &amp; </span><a href="interfaces/localbridgestate.html" class="tsd-signature-type">LocalBridgeState</a></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/data-bridge.ts#L16">data-bridge.ts:16</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/data-bridge.ts#L16">data-bridge.ts:16</a></li>
 					</ul>
 				</aside>
 				<div class="tsd-comment tsd-typography">
@@ -2980,7 +2988,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">Bridge<wbr>Maker<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span>pluginId<span class="tsd-signature-symbol">: </span><a href="globals.html#pluginid" class="tsd-signature-type">PluginId</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="interfaces/bridge.html" class="tsd-signature-type">Bridge</a><span class="tsd-signature-symbol">&gt;</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/command-bridge.ts#L89">command-bridge.ts:89</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L89">command-bridge.ts:89</a></li>
 					</ul>
 				</aside>
 				<div class="tsd-type-declaration">
@@ -3011,7 +3019,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">Command<span class="tsd-signature-symbol">:</span> <a href="interfaces/readycommand.html" class="tsd-signature-type">ReadyCommand</a><span class="tsd-signature-symbol"> | </span><a href="interfaces/sendcommand.html" class="tsd-signature-type">SendCommand</a><span class="tsd-signature-symbol"> | </span><a href="interfaces/messagecommand.html" class="tsd-signature-type">MessageCommand</a></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/command-bridge.ts#L68">command-bridge.ts:68</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L68">command-bridge.ts:68</a></li>
 					</ul>
 				</aside>
 				<div class="tsd-comment tsd-typography">
@@ -3027,7 +3035,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">Function<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/types.ts#L5">types.ts:5</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/types.ts#L5">types.ts:5</a></li>
 					</ul>
 				</aside>
 			</section>
@@ -3037,7 +3045,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">Host<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/types.ts#L1">types.ts:1</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/types.ts#L1">types.ts:1</a></li>
 					</ul>
 				</aside>
 			</section>
@@ -3047,7 +3055,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">Host<wbr>Value<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Readonly</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">null</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/data-bridge.ts#L24">data-bridge.ts:24</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/data-bridge.ts#L24">data-bridge.ts:24</a></li>
 					</ul>
 				</aside>
 			</section>
@@ -3057,7 +3065,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">Internal<wbr>Bridge<wbr>Data<wbr>Container<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><a href="globals.html#bridgedatacontainer" class="tsd-signature-type">BridgeDataContainer</a><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">"bridgeData"</span><span class="tsd-signature-symbol">&gt;</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/data-bridge.ts#L22">data-bridge.ts:22</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/data-bridge.ts#L22">data-bridge.ts:22</a></li>
 					</ul>
 				</aside>
 				<div class="tsd-comment tsd-typography">
@@ -3073,7 +3081,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">Invocation<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/command-bridge.ts#L123">command-bridge.ts:123</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L123">command-bridge.ts:123</a></li>
 					</ul>
 				</aside>
 			</section>
@@ -3083,7 +3091,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">Node<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">"root"</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/command-bridge.ts#L176">command-bridge.ts:176</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L181">command-bridge.ts:181</a></li>
 					</ul>
 				</aside>
 			</section>
@@ -3093,7 +3101,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">Object<wbr>Path<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/types.ts#L7">types.ts:7</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/types.ts#L7">types.ts:7</a></li>
 					</ul>
 				</aside>
 			</section>
@@ -3103,7 +3111,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">Object<wbr>Path<wbr>Parts<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Array</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">&gt;</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/data-bridge.ts#L9">data-bridge.ts:9</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/data-bridge.ts#L9">data-bridge.ts:9</a></li>
 					</ul>
 				</aside>
 			</section>
@@ -3113,7 +3121,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">On<wbr>Receive<wbr>Callback<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span>cmd<span class="tsd-signature-symbol">: </span><a href="globals.html#command" class="tsd-signature-type">Command</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/command-bridge.ts#L70">command-bridge.ts:70</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L70">command-bridge.ts:70</a></li>
 					</ul>
 				</aside>
 				<div class="tsd-type-declaration">
@@ -3144,7 +3152,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">Plugin<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/types.ts#L3">types.ts:3</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/types.ts#L3">types.ts:3</a></li>
 					</ul>
 				</aside>
 			</section>
@@ -3154,7 +3162,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">Plugin<wbr>Message<span class="tsd-signature-symbol">:</span> <a href="interfaces/pluginreadymessage.html" class="tsd-signature-type">PluginReadyMessage</a><span class="tsd-signature-symbol"> | </span><a href="interfaces/invokemessage.html" class="tsd-signature-type">InvokeMessage</a><span class="tsd-signature-symbol"> | </span><a href="interfaces/invocationresponsemessage.html" class="tsd-signature-type">InvocationResponseMessage</a><span class="tsd-signature-symbol"> | </span><a href="interfaces/rendermessage.html" class="tsd-signature-type">RenderMessage</a><span class="tsd-signature-symbol"> | </span><a href="interfaces/reconcilemessage.html" class="tsd-signature-type">ReconcileMessage</a></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/command-bridge.ts#L169">command-bridge.ts:169</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L174">command-bridge.ts:174</a></li>
 					</ul>
 				</aside>
 				<div class="tsd-comment tsd-typography">
@@ -3171,7 +3179,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">Plugin<wbr>Message<wbr>Handler<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span>msg<span class="tsd-signature-symbol">: </span><a href="globals.html#pluginmessage" class="tsd-signature-type">PluginMessage</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/command-bridge.ts#L196">command-bridge.ts:196</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L201">command-bridge.ts:201</a></li>
 					</ul>
 				</aside>
 				<div class="tsd-type-declaration">
@@ -3196,6 +3204,16 @@ img {
 					</ul>
 				</div>
 			</section>
+			<section class="tsd-panel tsd-member tsd-kind-type-alias">
+				<a name="renderrootid" class="tsd-anchor"></a>
+				<h3>Render<wbr>Root<wbr>Id</h3>
+				<div class="tsd-signature tsd-kind-icon">Render<wbr>Root<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
+				<aside class="tsd-sources">
+					<ul>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L124">command-bridge.ts:124</a></li>
+					</ul>
+				</aside>
+			</section>
 		</section>
 		<section class="tsd-panel-group tsd-member-group ">
 			<h2>Variables</h2>
@@ -3205,7 +3223,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">global<wbr>FnId<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 0</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/data-bridge.ts#L33">data-bridge.ts:33</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/data-bridge.ts#L33">data-bridge.ts:33</a></li>
 					</ul>
 				</aside>
 			</section>
@@ -3215,7 +3233,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">intermediate<wbr>Frame<wbr>Script<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">"window.onReceiveCommand(function(cmd) {var payload &#x3D; cmd.payload;if ( cmd.cmd &#x3D;&#x3D;&#x3D; &#x27;send&#x27; ) {cmd.targetWindow.postMessage(payload.msg, payload.targetOrigin);}});window.addEventListener(&#x27;message&#x27;,function receiveMessage(evt) {window.sendCommand({cmd: &#x27;message&#x27;, payload: {data: evt.data, origin: evt.origin, source: evt.source}});},false);window.sendCommand({cmd: &#x27;ready&#x27;});"</span><span class="tsd-signature-symbol"> = &#x60;window.onReceiveCommand(function(cmd) {var payload &#x3D; cmd.payload;if ( cmd.cmd &#x3D;&#x3D;&#x3D; &#x27;send&#x27; ) {cmd.targetWindow.postMessage(payload.msg, payload.targetOrigin);}});window.addEventListener(&#x27;message&#x27;,function receiveMessage(evt) {window.sendCommand({cmd: &#x27;message&#x27;, payload: {data: evt.data, origin: evt.origin, source: evt.source}});},false);window.sendCommand({cmd: &#x27;ready&#x27;});&#x60;</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/command-bridge.ts#L12">command-bridge.ts:12</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L12">command-bridge.ts:12</a></li>
 					</ul>
 				</aside>
 			</section>
@@ -3232,7 +3250,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/data-bridge.ts#L35">data-bridge.ts:35</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/data-bridge.ts#L35">data-bridge.ts:35</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-parameters-title">Parameters</h4>
@@ -3252,6 +3270,29 @@ img {
 				</ul>
 			</section>
 			<section class="tsd-panel tsd-member tsd-kind-function">
+				<a name="assertnever" class="tsd-anchor"></a>
+				<h3><span class="tsd-flag ts-flagConst">Const</span> assert<wbr>Never</h3>
+				<ul class="tsd-signatures tsd-kind-function">
+					<li class="tsd-signature tsd-kind-icon">assert<wbr>Never<span class="tsd-signature-symbol">(</span>n<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">never</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">never</span></li>
+				</ul>
+				<ul class="tsd-descriptions">
+					<li class="tsd-description">
+						<aside class="tsd-sources">
+							<ul>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L203">command-bridge.ts:203</a></li>
+							</ul>
+						</aside>
+						<h4 class="tsd-parameters-title">Parameters</h4>
+						<ul class="tsd-parameters">
+							<li>
+								<h5>n: <span class="tsd-signature-type">never</span></h5>
+							</li>
+						</ul>
+						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">never</span></h4>
+					</li>
+				</ul>
+			</section>
+			<section class="tsd-panel tsd-member tsd-kind-function">
 				<a name="assignatpath" class="tsd-anchor"></a>
 				<h3><span class="tsd-flag ts-flagConst">Const</span> assign<wbr>AtPath</h3>
 				<ul class="tsd-signatures tsd-kind-function">
@@ -3261,7 +3302,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/data-bridge.ts#L102">data-bridge.ts:102</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/data-bridge.ts#L102">data-bridge.ts:102</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -3295,7 +3336,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/data-bridge.ts#L134">data-bridge.ts:134</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/data-bridge.ts#L134">data-bridge.ts:134</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -3329,7 +3370,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/command-bridge.ts#L330">command-bridge.ts:330</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L383">command-bridge.ts:383</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-parameters-title">Parameters</h4>
@@ -3352,7 +3393,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/command-bridge.ts#L91">command-bridge.ts:91</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L91">command-bridge.ts:91</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-parameters-title">Parameters</h4>
@@ -3381,7 +3422,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/command-bridge.ts#L405">command-bridge.ts:405</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L458">command-bridge.ts:458</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-parameters-title">Parameters</h4>
@@ -3404,7 +3445,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/data-bridge.ts#L31">data-bridge.ts:31</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/data-bridge.ts#L31">data-bridge.ts:31</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-parameters-title">Parameters</h4>
@@ -3427,7 +3468,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/command-bridge.ts#L29">command-bridge.ts:29</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L29">command-bridge.ts:29</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-parameters-title">Parameters</h4>
@@ -3453,7 +3494,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/command-bridge.ts#L266">command-bridge.ts:266</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L319">command-bridge.ts:319</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-parameters-title">Parameters</h4>
@@ -3485,7 +3526,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/command-bridge.ts#L198">command-bridge.ts:198</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L207">command-bridge.ts:207</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-parameters-title">Parameters</h4>
@@ -3526,7 +3567,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/data-bridge.ts#L29">data-bridge.ts:29</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/data-bridge.ts#L29">data-bridge.ts:29</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-parameters-title">Parameters</h4>
@@ -3549,7 +3590,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/data-bridge.ts#L26">data-bridge.ts:26</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/data-bridge.ts#L26">data-bridge.ts:26</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-parameters-title">Parameters</h4>
@@ -3572,7 +3613,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/command-bridge.ts#L72">command-bridge.ts:72</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/command-bridge.ts#L72">command-bridge.ts:72</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-symbol">{ </span>promise<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">; </span>reject<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>err<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">; </span>resolve<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>val<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol"> }</span></h4>
@@ -3636,7 +3677,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/data-bridge.ts#L85">data-bridge.ts:85</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/data-bridge.ts#L85">data-bridge.ts:85</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -3668,7 +3709,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/0c23d01/packages/bridge/src/data-bridge.ts#L121">data-bridge.ts:121</a></li>
+								<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/data-bridge.ts#L121">data-bridge.ts:121</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-parameters-title">Parameters</h4>

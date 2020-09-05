@@ -121,6 +121,7 @@ interface HostBridge extends Bridge {
 }
 
 type InvocationId = number;
+type RenderRootId = number;
 
 interface PluginReadyMessage {
   msg: "plugin-ready";
@@ -137,17 +138,23 @@ interface InvokeMessage {
 
 interface InvocationResponseMessage {
   msg: "invocation-response";
-  payload: {
-    invocationId: InvocationId;
-    result?: any;
-    error?: any;
-  };
+  payload:
+    | {
+        resultType: "result";
+        invocationId: InvocationId;
+        resultBridgeValue: BridgeValue;
+      }
+    | {
+        resultType: "error";
+        invocationId: InvocationId;
+        errorBridgeValue: BridgeValue;
+      };
 }
 
 interface RenderMessage {
   msg: "render";
   payload: {
-    id: string;
+    rootId: RenderRootId;
     component?: string;
     props: { [key: string]: any };
   };
@@ -156,7 +163,7 @@ interface RenderMessage {
 interface ReconcileMessage {
   msg: "reconcile";
   payload: {
-    id: string;
+    rootId: RenderRootId;
     updates: Array<ReconciliationUpdate>;
   };
 }
@@ -195,6 +202,10 @@ interface ReconciliationUpdate {
 
 type PluginMessageHandler = (msg: PluginMessage) => void;
 
+const assertNever = (n: never): never => {
+  throw new Error("Unexpected branch");
+};
+
 const makeCommonBridge = (
   sendMessage: (msg: PluginMessage) => Promise<void>
 ): Bridge & { handleMessage: (pluginMsg: PluginMessage) => void } => {
@@ -226,15 +237,58 @@ const makeCommonBridge = (
     }
   };
 
+  const toThisBridge = (value: any): BridgeValue => {
+    const { bridgeData, localFns, bridgeFns } = toBridge(value);
+    appendLocalState(localFns);
+    return { bridgeData, bridgeFns };
+  };
+
+  const handleInvokeMessage = (bridge: Bridge, msg: InvokeMessage) => {
+    const { invocationId, fnId, argsBridgeValue } = msg.payload;
+    const fn = localState.localFns.get(fnId);
+    if (!fn) {
+      console.log("Unknown function invoked");
+      // TODO: return error?
+      return;
+    }
+
+    const args: Array<any> = fromBridge(bridge, argsBridgeValue);
+    try {
+      const result = fn.apply(null, args);
+      sendMessage({
+        msg: "invocation-response",
+        payload: {
+          resultType: "result",
+          invocationId,
+          resultBridgeValue: toThisBridge(result),
+        },
+      });
+    } catch (error) {
+      sendMessage({
+        msg: "invocation-response",
+        payload: {
+          resultType: "error",
+          invocationId,
+          errorBridgeValue: toThisBridge(error),
+        },
+      });
+    }
+  };
+
   const bridge = {
     handleMessage(pluginMsg: PluginMessage) {
+      // we handle all proactive (i.e. non-response) messages directly
+      if (pluginMsg.msg === "invoke") {
+        handleInvokeMessage(this, pluginMsg);
+        return;
+      }
+
+      // responses are handled by dynamic handlers
       msgHandlers.forEach((handler) => handler(pluginMsg));
     },
     async invokeFn(fnId: FunctionId, args: any[]): Promise<BridgeValue> {
       const invocationId = ++nextInvocationId;
-      const { bridgeData, localFns, bridgeFns } = toBridge(args);
-      appendLocalState(localFns);
-      const argsBridgeValue = { bridgeData, bridgeFns };
+      const argsBridgeValue = toThisBridge(args);
       const pluginMsg: InvokeMessage = {
         msg: "invoke",
         payload: {
@@ -250,15 +304,14 @@ const makeCommonBridge = (
           pluginMsg.payload.invocationId === invocationId
       );
 
-      const {
-        payload: { result, error },
-      } = invocationResponseMsg;
+      const { payload } = invocationResponseMsg;
 
-      if (error) {
-        throw fromBridge(this, error);
+      switch (payload.resultType) {
+        case "error":
+          throw fromBridge(this, payload.errorBridgeValue);
+        case "result":
+          return fromBridge(this, payload.resultBridgeValue);
       }
-
-      return fromBridge(this, error);
     },
   };
 
@@ -405,6 +458,11 @@ const initializeHostBridge = (hostId: HostId): Promise<BridgeMaker> => {
 };
 
 const initializePluginBridge = async (origin: string): Promise<Bridge> => {
+  const bridge = makeCommonBridge((msg) => {
+    window.parent.postMessage(msg, origin);
+    return Promise.resolve();
+  });
+
   window.addEventListener(
     "message",
     (evt: MessageEvent) => {
@@ -415,34 +473,12 @@ const initializePluginBridge = async (origin: string): Promise<Bridge> => {
 
       const msg: PluginMessage = evt.data;
 
-      switch (msg.msg) {
-        case "invoke": {
-          const { invocationId, fnId, argsBridgeValue } = msg.payload;
-          break;
-        }
-        case "invocation-response": {
-          const { invocationId, result, error } = msg.payload;
-          break;
-        }
-        case "render": {
-          const { id, component, props } = msg.payload;
-          break;
-        }
-        case "reconcile": {
-          const { id, updates } = msg.payload;
-          break;
-        }
-      }
+      bridge.handleMessage(msg);
     },
     false
   );
 
   window.parent.postMessage({ msg: "plugin-ready" }, origin);
-
-  const bridge = makeCommonBridge((msg) => {
-    window.parent.postMessage(msg, origin);
-    return Promise.resolve();
-  });
 
   return bridge;
 };
