@@ -10,6 +10,8 @@ import type {
   FunctionId,
   BridgeValue,
   LocalBridgeState,
+  RenderRootId,
+  Props,
 } from "../src/types";
 import type { BridgeDataContainer } from "../src/data-bridge";
 
@@ -172,10 +174,8 @@ describe("toBridge", () => {
 const bridgeFromLocalFns = (localFns: BridgeDataContainer["localFns"]) => {
   const localState = { localFns };
   return {
-    appendLocalState: ({ localFns }: LocalBridgeState) => {
-      localFns.forEach((fn, fnId) => {
-        localState.localFns.set(fnId, fn);
-      });
+    render: (rootId: RenderRootId, props: Props): Promise<void> => {
+      return Promise.resolve();
     },
     invokeFn: (fnId: FunctionId, args: any[]): Promise<BridgeValue> => {
       const fn = localFns.get(fnId);

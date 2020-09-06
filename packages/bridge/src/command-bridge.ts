@@ -3,17 +3,19 @@ import { fromBridge, toBridge } from "./data-bridge";
 import type {
   Bridge,
   HostId,
-  PluginId,
+  PluginUrl,
   FunctionId,
   BridgeValue,
   LocalBridgeState,
+  RenderRootId,
+  Props,
 } from "./types";
 
 const intermediateFrameScript = `
   window.onReceiveCommand(function(cmd) {
     var payload = cmd.payload;
     if ( cmd.cmd === 'send' ) {
-      cmd.targetWindow.postMessage(payload.msg, payload.targetOrigin);
+      payload.targetWindow.postMessage(payload.msg, payload.targetOrigin);
     }
   });
   window.addEventListener(
@@ -86,32 +88,34 @@ const resolvablePromise = () => {
   };
 };
 
-type BridgeMaker = (pluginId: PluginId) => Promise<Bridge>;
+type BridgeMaker = (pluginUrl: PluginUrl) => Promise<Bridge>;
 
 const initializeIntermediateToPluginBridge = (
   intermediateFrameWindow: Window,
   hostId: HostId,
-  pluginId: PluginId
-): Promise<{ frame: HTMLIFrameElement; domain: string }> => {
+  pluginUrl: PluginUrl
+): Promise<{ frame: HTMLIFrameElement; targetOrigin: string }> => {
   return new Promise((resolve, reject) => {
-    const url = "http://localhost:8081/tests/plugin.html"; // TODO: `https://${pluginId}.${hostId}.live.plugins.dev`;
+    const url = new URL(pluginUrl);
     const frame = intermediateFrameWindow.document.createElement("iframe");
     frame.style.display = "none";
     frame.width = "0";
     frame.height = "0";
-    frame.src = url;
-    frame.setAttribute("sandbox", "allow-scripts");
+    frame.src = pluginUrl;
+
+    const supportsSandbox = "sandbox" in frame;
+    if (supportsSandbox) {
+      frame.setAttribute("sandbox", "allow-scripts allow-same-origin");
+    }
 
     frame.onload = () => {
-      resolve();
+      resolve({
+        frame,
+        targetOrigin: url.origin,
+      });
     };
 
     intermediateFrameWindow.document.body.appendChild(frame);
-
-    return {
-      frame,
-      domain: intermediateFrameWindow.document.domain,
-    };
   });
 };
 
@@ -121,7 +125,6 @@ interface HostBridge extends Bridge {
 }
 
 type InvocationId = number;
-type RenderRootId = number;
 
 interface PluginReadyMessage {
   msg: "plugin-ready";
@@ -155,8 +158,7 @@ interface RenderMessage {
   msg: "render";
   payload: {
     rootId: RenderRootId;
-    component?: string;
-    props: { [key: string]: any };
+    props: BridgeValue;
   };
 }
 
@@ -207,7 +209,8 @@ const assertNever = (n: never): never => {
 };
 
 const makeCommonBridge = (
-  sendMessage: (msg: PluginMessage) => Promise<void>
+  sendMessage: (msg: PluginMessage) => Promise<void>,
+  firstClassHandlers?: Array<(bridge: Bridge, msg: PluginMessage) => boolean>
 ): Bridge & { handleMessage: (pluginMsg: PluginMessage) => void } => {
   let nextInvocationId = 0;
 
@@ -283,6 +286,13 @@ const makeCommonBridge = (
         return;
       }
 
+      const handled = firstClassHandlers?.filter((handler) =>
+        handler(bridge, pluginMsg)
+      );
+      if (handled && !!handled.length) {
+        return;
+      }
+
       // responses are handled by dynamic handlers
       msgHandlers.forEach((handler) => handler(pluginMsg));
     },
@@ -313,28 +323,41 @@ const makeCommonBridge = (
           return fromBridge(this, payload.resultBridgeValue);
       }
     },
+    async render(rootId: RenderRootId, props: Props): Promise<void> {
+      const pluginMsg: RenderMessage = {
+        msg: "render",
+        payload: {
+          rootId,
+          props: toThisBridge(props),
+        },
+      };
+      await sendMessage(pluginMsg);
+    },
   };
 
   return bridge;
 };
 
-const makeBridge = async (
+const makeHostBridge = async (
   intermediateFrameWindow: Window,
   sendCommandToIntermediateFrame: OnReceiveCallback,
+  reconcile: (
+    rootId: RenderRootId,
+    updates: Array<ReconciliationUpdate>
+  ) => void,
   hostId: HostId,
-  pluginId: PluginId
+  pluginUrl: PluginUrl
 ): Promise<HostBridge> => {
-  const { frame, domain } = await initializeIntermediateToPluginBridge(
+  const { frame, targetOrigin } = await initializeIntermediateToPluginBridge(
     intermediateFrameWindow,
     hostId,
-    pluginId
+    pluginUrl
   );
   const frameContentWindow = frame.contentWindow;
   if (!frameContentWindow) {
     // initializeIntermediateToPluginBridge waits for onload so this should never happen
     throw new Error("plugin frame content window unexpectedly null");
   }
-  const queuedMessagesToSend = [];
   let isReady = false;
   let { resolve: onReady, promise: ready } = resolvablePromise();
   ready.then(() => {
@@ -346,8 +369,8 @@ const makeBridge = async (
       cmd: "send",
       payload: {
         msg,
+        targetOrigin,
         targetWindow: frameContentWindow,
-        targetOrigin: domain,
       },
     });
   };
@@ -360,14 +383,24 @@ const makeBridge = async (
     return run(msg);
   };
 
+  const reconcileHandler = (msg: PluginMessage): boolean => {
+    if (msg.msg !== "reconcile") {
+      return false;
+    }
+
+    reconcile(msg.payload.rootId, msg.payload.updates);
+
+    return true;
+  };
+
   const bridge = {
     ...makeCommonBridge(queueOrRun),
     pluginFrameWindow: frameContentWindow,
     onReceiveMessageFromPlugin(origin: string, pluginMsg: PluginMessage) {
-      // origin should always be 'null' for sandboxed iframes and we only deal with sandboxed iframes
-      // but... older browsers ignore sandboxing and will give us an origin to check.
+      // origin should always be 'null' for sandboxed, non-allow-same-origin
+      // iframes but should match targetOrigin otherwise
       // we already know that the message was sent from the window we expect so this is somewhat redundant.
-      if (origin !== "null" && origin !== domain) {
+      if (origin !== "null" && origin !== targetOrigin) {
         return;
       }
 
@@ -382,7 +415,13 @@ const makeBridge = async (
   return bridge;
 };
 
-const initializeHostBridge = (hostId: HostId): Promise<BridgeMaker> => {
+const initializeHostBridge = (
+  hostId: HostId,
+  reconcile: (
+    rootId: RenderRootId,
+    updates: Array<ReconciliationUpdate>
+  ) => void
+): Promise<BridgeMaker> => {
   let sendCommandToIntermediateFrame: null | OnReceiveCallback = null;
   let { resolve: onReady, promise: ready } = resolvablePromise();
   let bridgeByWindow = new Map<Window, HostBridge>();
@@ -438,18 +477,19 @@ const initializeHostBridge = (hostId: HostId): Promise<BridgeMaker> => {
     ready,
   ]).then(
     ([intermediateFrame, _]: [HTMLIFrameElement, any]) => async (
-      pluginId: PluginId
+      pluginUrl: PluginUrl
     ) => {
       const intermediateFrameWindow = intermediateFrame.contentWindow;
       if (!intermediateFrameWindow || !sendCommandToIntermediateFrame) {
         // we wait for onload so this should never happen
         throw new Error("intermediate frame content window unexpectedly null");
       }
-      const bridge = await makeBridge(
+      const bridge = await makeHostBridge(
         intermediateFrameWindow,
         sendCommandToIntermediateFrame,
+        reconcile,
         hostId,
-        pluginId
+        pluginUrl
       );
       bridgeByWindow.set(bridge.pluginFrameWindow, bridge);
       return bridge;
@@ -457,11 +497,25 @@ const initializeHostBridge = (hostId: HostId): Promise<BridgeMaker> => {
   );
 };
 
-const initializePluginBridge = async (origin: string): Promise<Bridge> => {
-  const bridge = makeCommonBridge((msg) => {
+const initializePluginBridge = async (
+  origin: string,
+  render: (rootId: RenderRootId, props: Props) => void
+): Promise<Bridge> => {
+  const renderHandler = (bridge: Bridge, msg: PluginMessage): boolean => {
+    if (msg.msg !== "render") {
+      return false;
+    }
+
+    const { rootId, props } = msg.payload;
+    render(rootId, fromBridge(bridge, props));
+    return true;
+  };
+  const firstClassHandlers = [renderHandler];
+  const sendMessage = (msg: PluginMessage) => {
     window.parent.postMessage(msg, origin);
     return Promise.resolve();
-  });
+  };
+  const bridge = makeCommonBridge(sendMessage, firstClassHandlers);
 
   window.addEventListener(
     "message",

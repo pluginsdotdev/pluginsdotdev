@@ -1,6 +1,6 @@
 export type HostId = string;
 
-export type PluginId = string;
+export type PluginUrl = string;
 
 export type FunctionId = number;
 
@@ -31,6 +31,12 @@ export interface LocalBridgeState {
   localFns: Map<FunctionId, Function>;
 }
 
+export type RenderRootId = number;
+
+export type Props = { [key: string]: any };
+
 export interface Bridge {
   invokeFn: (fnId: FunctionId, args: any[]) => Promise<BridgeValue>;
+  // TODO: render should really only be on a HostBridge
+  render: (rootId: RenderRootId, props: Props) => Promise<void>;
 }

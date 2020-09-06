@@ -2728,6 +2728,9 @@ img {
 				<li class=" tsd-kind-property tsd-parent-kind-interface">
 					<a href="bridge.html#invokefn" class="tsd-kind-icon">invoke<wbr>Fn</a>
 				</li>
+				<li class=" tsd-kind-property tsd-parent-kind-interface">
+					<a href="bridge.html#render" class="tsd-kind-icon">render</a>
+				</li>
 			</ul>
 		</li>
 	</ul>
@@ -2755,6 +2758,7 @@ img {
 						<h3>Properties</h3>
 						<ul class="tsd-index-list">
 							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="bridge.html#invokefn" class="tsd-kind-icon">invoke<wbr>Fn</a></li>
+							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="bridge.html#render" class="tsd-kind-icon">render</a></li>
 						</ul>
 					</section>
 				</div>
@@ -2768,7 +2772,7 @@ img {
 				<div class="tsd-signature tsd-kind-icon">invoke<wbr>Fn<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span>fnId<span class="tsd-signature-symbol">: </span><a href="../globals.html#functionid" class="tsd-signature-type">FunctionId</a>, args<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="bridgevalue.html" class="tsd-signature-type">BridgeValue</a><span class="tsd-signature-symbol">&gt;</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/46eb494/packages/bridge/src/types.ts#L35">types.ts:35</a></li>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/34d3ac6/packages/bridge/src/types.ts#L39">types.ts:39</a></li>
 					</ul>
 				</aside>
 				<div class="tsd-type-declaration">
@@ -2790,6 +2794,40 @@ img {
 										</li>
 									</ul>
 									<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="bridgevalue.html" class="tsd-signature-type">BridgeValue</a><span class="tsd-signature-symbol">&gt;</span></h4>
+								</li>
+							</ul>
+						</li>
+					</ul>
+				</div>
+			</section>
+			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
+				<a name="render" class="tsd-anchor"></a>
+				<h3>render</h3>
+				<div class="tsd-signature tsd-kind-icon">render<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span>rootId<span class="tsd-signature-symbol">: </span><a href="../globals.html#renderrootid" class="tsd-signature-type">RenderRootId</a>, props<span class="tsd-signature-symbol">: </span><a href="../globals.html#props" class="tsd-signature-type">Props</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></div>
+				<aside class="tsd-sources">
+					<ul>
+						<li>Defined in <a href="https://github.com/pluginsdotdev/pluginsdotdev/blob/34d3ac6/packages/bridge/src/types.ts#L41">types.ts:41</a></li>
+					</ul>
+				</aside>
+				<div class="tsd-type-declaration">
+					<h4>Type declaration</h4>
+					<ul class="tsd-parameters">
+						<li class="tsd-parameter-signature">
+							<ul class="tsd-signatures tsd-kind-type-literal tsd-parent-kind-property">
+								<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span>rootId<span class="tsd-signature-symbol">: </span><a href="../globals.html#renderrootid" class="tsd-signature-type">RenderRootId</a>, props<span class="tsd-signature-symbol">: </span><a href="../globals.html#props" class="tsd-signature-type">Props</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></li>
+							</ul>
+							<ul class="tsd-descriptions">
+								<li class="tsd-description">
+									<h4 class="tsd-parameters-title">Parameters</h4>
+									<ul class="tsd-parameters">
+										<li>
+											<h5>rootId: <a href="../globals.html#renderrootid" class="tsd-signature-type">RenderRootId</a></h5>
+										</li>
+										<li>
+											<h5>props: <a href="../globals.html#props" class="tsd-signature-type">Props</a></h5>
+										</li>
+									</ul>
+									<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
 								</li>
 							</ul>
 						</li>

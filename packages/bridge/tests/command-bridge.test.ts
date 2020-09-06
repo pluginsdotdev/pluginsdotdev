@@ -1,13 +1,14 @@
 import * as puppeteer from "puppeteer";
 import { startServer as startTestServer } from "./test-server";
 
-import type { PluginId, Bridge } from "../src/types";
+import type { PluginUrl, Bridge } from "../src/types";
 import type { Browser, Page } from "puppeteer";
 
 jest.setTimeout(10000);
 
 const hostPort = 8080;
 const pluginPort = 8081;
+const pluginUrl = "http://localhost:8081/tests/plugin.html";
 
 describe("initializeHostBridge", () => {
   let browser: Browser;
@@ -52,11 +53,39 @@ describe("initializeHostBridge", () => {
     await page.evaluate(() => {
       (<any>window).index
         .initializeHostBridge("host")
-        .then((makeBridge: (pluginId: PluginId) => Promise<Bridge>) =>
-          makeBridge("plugin")
+        .then((makeBridge: (pluginUrl: PluginUrl) => Bridge) =>
+          makeBridge("http://localhost:8081/tests/plugin.html")
         );
     });
-    await page.waitForFunction(() => window.frames[0].frames[0]);
-    expect(await page.evaluate(() => window.frames[0].frames[0])).toBeTruthy();
+    await page.waitForSelector("iframe");
+    await page.mainFrame().childFrames()[0].waitForSelector("iframe");
+    expect(await page.mainFrame().childFrames()[0].$("iframe"));
+  });
+
+  it("render works", async () => {
+    await page.evaluate(() => {
+      (<any>window).index
+        .initializeHostBridge("host")
+        .then((makeBridge: (pluginUrl: PluginUrl) => Bridge) => {
+          return makeBridge("http://localhost:8081/tests/plugin.html");
+        })
+        .then((bridge: Bridge) => {
+          return bridge.render(234, { hello: "world" });
+        });
+    });
+    await page.waitForSelector("iframe");
+    await page.mainFrame().childFrames()[0].waitForSelector("iframe");
+    await page
+      .mainFrame()
+      .childFrames()[0]
+      .childFrames()[0]
+      .waitForSelector(`div[data-root-id="${234}"]`);
+    expect(
+      await page
+        .mainFrame()
+        .childFrames()[0]
+        .childFrames()[0]
+        .$(`div[data-root-id="${234}"]`)
+    ).toBeTruthy();
   });
 });

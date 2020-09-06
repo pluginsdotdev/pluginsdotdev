@@ -2,8 +2,15 @@
   <body></body>
   <script type="application/javascript" src="../dist/index.js"></script>
   <script type="application/javascript">
+    function render(rootId, props) {
+      console.log('render', rootId, props);
+      const div = document.createElement('div');
+      div.setAttribute('data-root-id', rootId);
+      document.body.appendChild(div);
+    }
+
     // localhost:8080 can be hard coded because we know the domain of the host
-    window.index.initializePluginBridge('http://localhost:8080').then(bridge => {
+    window.index.initializePluginBridge('http://localhost:8080', render).then(bridge => {
       console.log('initialized plugin bridge');
     });
   </script>
