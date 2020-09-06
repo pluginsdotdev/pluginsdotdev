@@ -105,3 +105,6 @@ dist
 
 # VIM
 .*.swp
+
+# Docs
+docs
