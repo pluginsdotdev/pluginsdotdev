@@ -143,6 +143,28 @@ describe("toBridge", () => {
       new Map([[pathPartsToObjectPath([]), fn]])
     );
   });
+  it("should dedup functions", () => {
+    const localState = {
+      localFns: new Map<FunctionId, Function>(),
+      knownFns: new Map<Function, FunctionId>(),
+    };
+
+    const fn = () => {};
+    const bridgeVal = toBridge(localState, { f1: fn, f2: fn });
+    expect(bridgeVal).toMatchBridgeValue({
+      bridgeData: {},
+      bridgeFns: new Map([
+        [pathPartsToObjectPath(["f1"]), expect.any(Number)],
+        [pathPartsToObjectPath(["f2"]), expect.any(Number)],
+      ]),
+    });
+    expect(localState.localFns.size).toEqual(1);
+    expect(localState.knownFns.size).toEqual(1);
+
+    expect(toBridge(localState, { f1: fn, f2: fn })).toMatchObject(bridgeVal);
+    expect(localState.localFns.size).toEqual(1);
+    expect(localState.knownFns.size).toEqual(1);
+  });
   it("nested examples", () => {
     const localState = {
       localFns: new Map<FunctionId, Function>(),
