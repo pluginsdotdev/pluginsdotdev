@@ -232,18 +232,11 @@ const makeCommonBridge = (
 
   const localState: LocalBridgeState = {
     localFns: new Map(),
-  };
-
-  const appendLocalState = (localFns: Map<FunctionId, Function>): void => {
-    for (const [fnId, fn] of localFns) {
-      localState.localFns.set(fnId, fn);
-    }
+    knownFns: new Map(),
   };
 
   const toThisBridge = (value: any): BridgeValue => {
-    const { bridgeData, localFns, bridgeFns } = toBridge(value);
-    appendLocalState(localFns);
-    return { bridgeData, bridgeFns };
+    return toBridge(localState, value);
   };
 
   const handleInvokeMessage = (bridge: Bridge, msg: InvokeMessage) => {

@@ -8,19 +8,6 @@ import type {
 
 export type ObjectPathParts = Array<string | number>;
 
-/**
- * BridgeDataContainer contains data suitable for transmission over the bridge and the
- * state required to be kept to facilitate further invocations of any transmitted
- * functions.
- **/
-export type BridgeDataContainer = BridgeValue & LocalBridgeState;
-
-/**
- * InternalBridgeDataContainer is an implementation detail we use because
- * we fill in the bridgeData after filling in bridgeFns and localFns.
- **/
-type InternalBridgeDataContainer = Omit<BridgeDataContainer, "bridgeData">;
-
 type HostValue = Readonly<any> | number | string | boolean | null;
 
 const pathPartsToObjectPath = (parts: ObjectPathParts): ObjectPath =>
@@ -33,66 +20,70 @@ const isObject = (o: any) => Object(o) === o;
 let globalFnId = 0;
 
 const _toBridge = (
+  localState: LocalBridgeState,
+  bridgeFns: Map<ObjectPath, FunctionId>,
   hostValue: HostValue,
-  bdc: InternalBridgeDataContainer,
   path: Array<string | number>
-): [InternalBridgeDataContainer, any] => {
+): any => {
   if (typeof hostValue === "function") {
-    // functions are referred to by fnId on the plugin side and are looked up and invoked by fnId on the host side.
-    // a map of json path in the bridgeData to fnId is passed alongside bridgeData to avoid any possibility of
-    // contamination by hosts
-    const fnId = ++globalFnId;
-    bdc.bridgeFns.set(pathPartsToObjectPath(path), fnId);
-    bdc.localFns.set(fnId, hostValue);
-    return [bdc, null];
+    // functions are replaced by ids, which are used to communicate invocations
+    // in future messages.
+    // a map of json path in the bridgeData to fnId is passed alongside bridgeData
+    const fnId = localState.knownFns.get(hostValue) ?? ++globalFnId;
+    bridgeFns.set(pathPartsToObjectPath(path), fnId);
+    localState.localFns.set(fnId, hostValue);
+    localState.knownFns.set(hostValue, fnId);
+    return null;
   } else if (Array.isArray(hostValue)) {
-    // arrays are traversed item by item, each is converted from host->plugin
+    // arrays are traversed item by item, each is converted from host->bridge
     // TODO: for large arrays, we may want to bail if they are monomorphic (by declaration or partial testing)
-    const pluginObj = hostValue.map((hostVal, idx) => {
-      const [_bdc, pluginVal] = _toBridge(hostVal, bdc, path.concat(idx));
-      bdc = _bdc;
-      return pluginVal;
-    });
-    return [bdc, pluginObj];
+    const bridgeVal = hostValue.map((hostVal, idx) =>
+      _toBridge(localState, bridgeFns, hostVal, path.concat(idx))
+    );
+    return bridgeVal;
   } else if (
     typeof hostValue === "object" &&
     hostValue &&
     isObject(hostValue)
   ) {
-    // objects are traversed property by property, each is converted from host->plugin
-    const pluginObj = Object.keys(hostValue).reduce(
+    // objects are traversed property by property, each is converted from host->bridge
+    const bridgeVal = Object.keys(hostValue).reduce(
       (p: { [key: string]: any }, key: string) => {
-        const [_bdc, val] = _toBridge(hostValue[key], bdc, path.concat(key));
-        p[key] = val;
-        bdc = _bdc;
+        p[key] = _toBridge(
+          localState,
+          bridgeFns,
+          hostValue[key],
+          path.concat(key)
+        );
         return p;
       },
       {}
     );
-    return [bdc, pluginObj];
+    return bridgeVal;
   }
 
-  return [bdc, hostValue];
+  return hostValue;
 };
 
 /**
- * Construct a BridgeDataContainer from a host object.
- * The BridgeDataContainer contains a representation of hostValue suitable for
- * transport to across domains and the state needed to bridge further interactions
- * between the host and plugin. This state can be used, for example, to lookup a
- * function by ID.
+ * Construct a BridgeValue from local state and a host object.
+ * The BridgeValue contains a representation of hostValue suitable for
+ * transport to across domains.
+ * The local state is needed to bridge further interactions
+ * between the host and plugin. This state can be used, for example,
+ * to lookup a function by ID.
  **/
-const toBridge = (hostValue: HostValue): BridgeDataContainer => {
-  const internalBdc = {
-    bridgeFns: new Map<ObjectPath, FunctionId>(),
-    localFns: new Map<FunctionId, Function>(),
-  };
+const toBridge = (
+  localState: LocalBridgeState,
+  hostValue: HostValue
+): BridgeValue => {
+  const bridgeFns = new Map<ObjectPath, FunctionId>();
 
-  const [bdc, bridgeData] = _toBridge(hostValue, internalBdc, []);
+  const bridgeData = _toBridge(localState, bridgeFns, hostValue, []);
 
   return {
-    ...bdc,
     bridgeData,
+    bridgeFns,
   };
 };
 

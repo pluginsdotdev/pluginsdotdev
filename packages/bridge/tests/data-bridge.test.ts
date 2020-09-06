@@ -13,7 +13,6 @@ import type {
   RenderRootId,
   Props,
 } from "../src/types";
-import type { BridgeDataContainer } from "../src/data-bridge";
 
 expect.extend({
   toMatchMap(received: Map<any, any>, expected: Map<any, any>) {
@@ -50,39 +49,32 @@ expect.extend({
       pass: true,
     };
   },
-  toMatchBridgeDataContainer(
-    received: BridgeDataContainer,
-    expected: Omit<BridgeDataContainer, "localFns"> & {
-      localFnsByPath: Map<ObjectPath, Function>;
-    }
-  ) {
+  toMatchBridgeValue(received: BridgeValue, expected: BridgeValue) {
     expect(received).toMatchObject({
       bridgeData: expected.bridgeData,
     });
     expect(received.bridgeFns).toMatchMap(expected.bridgeFns);
+    return {
+      message: () => "Expected matching BridgeDataContainers",
+      pass: true,
+    };
+  },
+  toMatchLocalState(
+    received: LocalBridgeState,
+    bridgeValue: BridgeValue,
+    localFnsByPath: Map<ObjectPath, Function>
+  ) {
     const expectedLocalFns = new Map<FunctionId, Function>();
-    const bridgeIter = expected.bridgeFns.keys();
-    for (let next = bridgeIter.next(); !next.done; next = bridgeIter.next()) {
-      const path = next.value;
-      const fnId = received.bridgeFns.get(path);
-      if (!fnId) {
-        return {
-          message: () =>
-            `Could not find received.bridgeFns.get(${path}), but '${path}' was specified in bridgeFns`,
-          pass: false,
-        };
-      }
-      const fn = expected.localFnsByPath.get(path);
-      if (!fn) {
-        return {
-          message: () =>
-            `Could not find localFnsByPath.get(${path}), but '${path}' was specified in bridgeFns`,
-          pass: false,
-        };
-      }
-      expectedLocalFns.set(fnId, fn);
+    const expectedKnownFns = new Map<Function, FunctionId>();
+
+    for (const [path, fnId] of bridgeValue.bridgeFns) {
+      const fn = localFnsByPath.get(path);
+      expect(fn).toBeTruthy();
+
+      expect(received.localFns.get(fnId)).toBe(fn);
+      expect(received.knownFns.get(fn!)).toEqual(fnId);
     }
-    expect(received.localFns).toMatchMap(expectedLocalFns);
+
     return {
       message: () => "Expected matching BridgeDataContainers",
       pass: true,
@@ -94,10 +86,10 @@ declare global {
   namespace jest {
     interface Matchers<R> {
       toMatchMap(expected: Map<any, any>): R;
-      toMatchBridgeDataContainer(
-        expected: Omit<BridgeDataContainer, "localFns"> & {
-          localFnsByPath: Map<ObjectPath, Function>;
-        }
+      toMatchBridgeValue(expected: BridgeValue): R;
+      toMatchLocalState(
+        bridgeValue: BridgeValue,
+        localFnsByPath: Map<ObjectPath, Function>
       ): R;
     }
   }
@@ -105,42 +97,62 @@ declare global {
 
 describe("toBridge", () => {
   it("basic examples", () => {
-    expect(toBridge(4)).toMatchBridgeDataContainer({
+    const localState = {
+      localFns: new Map<FunctionId, Function>(),
+      knownFns: new Map<Function, FunctionId>(),
+    };
+
+    expect(toBridge(localState, 4)).toMatchBridgeValue({
       bridgeData: 4,
       bridgeFns: new Map(),
-      localFnsByPath: new Map(),
     });
-    expect(toBridge(true)).toMatchBridgeDataContainer({
+    expect(localState.localFns.size).toEqual(0);
+    expect(localState.knownFns.size).toEqual(0);
+
+    expect(toBridge(localState, true)).toMatchBridgeValue({
       bridgeData: true,
       bridgeFns: new Map(),
-      localFnsByPath: new Map(),
     });
-    expect(toBridge("hello world")).toMatchBridgeDataContainer({
+    expect(localState.localFns.size).toEqual(0);
+    expect(localState.knownFns.size).toEqual(0);
+
+    expect(toBridge(localState, "hello world")).toMatchBridgeValue({
       bridgeData: "hello world",
       bridgeFns: new Map(),
-      localFnsByPath: new Map(),
     });
+    expect(localState.localFns.size).toEqual(0);
+    expect(localState.knownFns.size).toEqual(0);
+
     expect(
-      toBridge({ aString: "a", aBool: true, aNumber: 7.34 })
-    ).toMatchBridgeDataContainer({
+      toBridge(localState, { aString: "a", aBool: true, aNumber: 7.34 })
+    ).toMatchBridgeValue({
       bridgeData: { aString: "a", aBool: true, aNumber: 7.34 },
       bridgeFns: new Map(),
-      localFnsByPath: new Map(),
     });
+    expect(localState.localFns.size).toEqual(0);
+    expect(localState.knownFns.size).toEqual(0);
 
     const fn = () => 4;
-    const fnBridge = toBridge(fn);
-    expect(fnBridge).toMatchBridgeDataContainer({
+    const fnBridge = toBridge(localState, fn);
+    expect(fnBridge).toMatchBridgeValue({
       bridgeData: null,
       bridgeFns: new Map([[pathPartsToObjectPath([]), expect.any(Number)]]),
-      localFnsByPath: new Map([[pathPartsToObjectPath([]), fn]]),
     });
+    expect(localState).toMatchLocalState(
+      fnBridge,
+      new Map([[pathPartsToObjectPath([]), fn]])
+    );
   });
   it("nested examples", () => {
+    const localState = {
+      localFns: new Map<FunctionId, Function>(),
+      knownFns: new Map<Function, FunctionId>(),
+    };
+
     const fn1 = () => {};
     const fn2 = () => {};
     const fn3 = () => {};
-    const nestedBridge = toBridge({
+    const nestedBridge = toBridge(localState, {
       a: "hi",
       b: 4,
       c: fn1,
@@ -149,7 +161,7 @@ describe("toBridge", () => {
         f: [fn3, "hello"],
       },
     });
-    expect(nestedBridge).toMatchBridgeDataContainer({
+    expect(nestedBridge).toMatchBridgeValue({
       bridgeData: {
         a: "hi",
         b: 4,
@@ -162,25 +174,29 @@ describe("toBridge", () => {
         [pathPartsToObjectPath(["d", "e"]), expect.any(Number)],
         [pathPartsToObjectPath(["d", "f", 0]), expect.any(Number)],
       ]),
-      localFnsByPath: new Map([
+    });
+    expect(localState).toMatchLocalState(
+      nestedBridge,
+      new Map([
         [pathPartsToObjectPath(["c"]), fn1],
         [pathPartsToObjectPath(["d", "e"]), fn2],
         [pathPartsToObjectPath(["d", "f", 0]), fn3],
-      ]),
-    });
+      ])
+    );
   });
 });
 
-const bridgeFromLocalFns = (localFns: BridgeDataContainer["localFns"]) => {
-  const localState = { localFns };
+const bridgeFromLocalState = (localState: LocalBridgeState) => {
   return {
     render: (rootId: RenderRootId, props: Props): Promise<void> => {
       return Promise.resolve();
     },
     invokeFn: (fnId: FunctionId, args: any[]): Promise<BridgeValue> => {
-      const fn = localFns.get(fnId);
+      const fn = localState.localFns.get(fnId);
       return !!fn
-        ? Promise.resolve(fn.apply(null, args)).then(toBridge)
+        ? Promise.resolve(fn.apply(null, args)).then(
+            toBridge.bind(null, localState)
+          )
         : Promise.reject(`No function with id '${fnId}'`);
     },
   };
@@ -188,10 +204,15 @@ const bridgeFromLocalFns = (localFns: BridgeDataContainer["localFns"]) => {
 
 describe("fromBridge", () => {
   it("basic examples", () => {
+    const localState = {
+      localFns: new Map<FunctionId, Function>(),
+      knownFns: new Map<Function, FunctionId>(),
+    };
+
     const fn1 = () => {};
     const fn2 = () => {};
     const fn3 = () => {};
-    const bridgeValue = toBridge({
+    const bridgeValue = toBridge(localState, {
       a: "hi",
       b: 4,
       c: fn1,
@@ -200,7 +221,7 @@ describe("fromBridge", () => {
         f: [fn3, "hello"],
       },
     });
-    const bridge = bridgeFromLocalFns(bridgeValue.localFns);
+    const bridge = bridgeFromLocalState(localState);
     expect(fromBridge(bridge, bridgeValue)).toMatchObject({
       a: "hi",
       b: 4,
@@ -234,8 +255,12 @@ describe("properties", () => {
   it("should be symmetric for simple data", () => {
     fc.assert(
       fc.property(fc.object(), (obj) => {
-        const bridgeValue = toBridge(obj);
-        const bridge = bridgeFromLocalFns(bridgeValue.localFns);
+        const localState = {
+          localFns: new Map<FunctionId, Function>(),
+          knownFns: new Map<Function, FunctionId>(),
+        };
+        const bridgeValue = toBridge(localState, obj);
+        const bridge = bridgeFromLocalState(localState);
         expect(fromBridge(bridge, bridgeValue)).toEqual(obj);
       })
     );
@@ -247,6 +272,10 @@ describe("properties", () => {
         fc.object({ key: fc.string(0, 5) }),
         fc.array(fc.array(fc.string(6, 8), 1, 10)),
         (simpleObj, fnPaths) => {
+          const localState = {
+            localFns: new Map<FunctionId, Function>(),
+            knownFns: new Map<Function, FunctionId>(),
+          };
           const preBridgeVal = fnPaths.reduce(
             (obj, fnPath) =>
               setAtPath(
@@ -256,8 +285,8 @@ describe("properties", () => {
               ),
             clone(simpleObj)
           );
-          const bridgeValue = toBridge(preBridgeVal);
-          const bridge = bridgeFromLocalFns(bridgeValue.localFns);
+          const bridgeValue = toBridge(localState, preBridgeVal);
+          const bridge = bridgeFromLocalState(localState);
           const localVal = fromBridge(bridge, bridgeValue);
           expect(localVal).toMatchObject(simpleObj);
           fnPaths.forEach((fnPath) => {

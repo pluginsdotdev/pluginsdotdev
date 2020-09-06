@@ -29,6 +29,11 @@ export interface LocalBridgeState {
    * localFns is a map from function ids to the actual host function
    **/
   localFns: Map<FunctionId, Function>;
+  /**
+   * knownFns is a map from functions to function ids. This allows us
+   * to re-use function ids for known functions.
+   **/
+  knownFns: Map<Function, FunctionId>;
 }
 
 export type RenderRootId = number;
