@@ -165,6 +165,23 @@ describe("toBridge", () => {
     expect(localState.localFns.size).toEqual(1);
     expect(localState.knownFns.size).toEqual(1);
   });
+  it("should reject custom prototypes in development but not in production", () => {
+    const localState = {
+      localFns: new Map<FunctionId, Function>(),
+      knownFns: new Map<Function, FunctionId>(),
+    };
+
+    const a = Object.create({ myInheritedProp: 4 });
+
+    process.env.NODE_ENV = "development";
+    expect(() => toBridge(localState, a)).toThrow();
+
+    process.env.NODE_ENV = "production";
+    expect(toBridge(localState, a)).toMatchBridgeValue({
+      bridgeData: {},
+      bridgeFns: new Map(),
+    });
+  });
   it("nested examples", () => {
     const localState = {
       localFns: new Map<FunctionId, Function>(),

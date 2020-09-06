@@ -23,6 +23,11 @@
     "dist"
   ],
   "sideEffects": false,
+  "browserify": {
+    "transform": [
+      "loose-envify"
+    ]
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -46,5 +51,8 @@
   },
   "bugs": {
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
+  },
+  "dependencies": {
+    "loose-envify": "^1.4.0"
   }
 }

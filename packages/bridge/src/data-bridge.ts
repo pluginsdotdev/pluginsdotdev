@@ -17,6 +17,43 @@ const objectPathToPathParts = (p: ObjectPath): ObjectPathParts => JSON.parse(p);
 
 const isObject = (o: any) => Object(o) === o;
 
+/**
+ * Check if we have a custom prototype.
+ * No custom prototypes will make it over the bridge
+ * (and we don't want them to)
+ * Prototypes taken from the structured clone docs:
+ * https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm
+ **/
+const hasValidPrototype = (v: object): boolean => {
+  const p = Object.getPrototypeOf(v);
+  const idx = [
+    typeof Object !== "undefined" && Object.prototype,
+    typeof Date !== "undefined" && Date.prototype,
+    typeof String !== "undefined" && String.prototype,
+    typeof Boolean !== "undefined" && Boolean.prototype,
+    typeof RegExp !== "undefined" && RegExp.prototype,
+    typeof Blob !== "undefined" && Blob.prototype,
+    typeof File !== "undefined" && File.prototype,
+    typeof FileList !== "undefined" && FileList.prototype,
+    typeof ArrayBuffer !== "undefined" && ArrayBuffer.prototype,
+    typeof Int8Array !== "undefined" && Int8Array.prototype,
+    typeof Uint8Array !== "undefined" && Uint8Array.prototype,
+    typeof Uint8ClampedArray !== "undefined" && Uint8ClampedArray.prototype,
+    typeof Int16Array !== "undefined" && Int16Array.prototype,
+    typeof Uint16Array !== "undefined" && Uint16Array.prototype,
+    typeof Int32Array !== "undefined" && Int32Array.prototype,
+    typeof Uint32Array !== "undefined" && Uint32Array.prototype,
+    typeof Float32Array !== "undefined" && Float32Array.prototype,
+    typeof Float64Array !== "undefined" && Float64Array.prototype,
+    typeof DataView !== "undefined" && DataView.prototype,
+    typeof ImageBitmap !== "undefined" && ImageBitmap.prototype,
+    typeof ImageData !== "undefined" && ImageData.prototype,
+    typeof Map !== "undefined" && Map.prototype,
+    typeof Set !== "undefined" && Set.prototype,
+  ].indexOf(p);
+  return idx >= 0;
+};
+
 let globalFnId = 0;
 
 const _toBridge = (
@@ -46,6 +83,18 @@ const _toBridge = (
     hostValue &&
     isObject(hostValue)
   ) {
+    if (process.env.NODE_ENV !== "production") {
+      if (!hasValidPrototype(hostValue)) {
+        console.error(
+          "Attempted to send an object with a custom prototype over the bridge.",
+          hostValue
+        );
+        throw new Error(
+          "Attempted to send an object with a custom prototype over the bridge."
+        );
+      }
+    }
+
     // objects are traversed property by property, each is converted from host->bridge
     const bridgeVal = Object.keys(hostValue).reduce(
       (p: { [key: string]: any }, key: string) => {
