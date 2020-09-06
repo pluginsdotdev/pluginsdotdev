@@ -79,13 +79,59 @@ describe("initializeHostBridge", () => {
       .mainFrame()
       .childFrames()[0]
       .childFrames()[0]
-      .waitForSelector(`div[data-root-id="${234}"]`);
+      .waitForSelector('div[data-root-id="234"]');
     expect(
       await page
         .mainFrame()
         .childFrames()[0]
         .childFrames()[0]
-        .$(`div[data-root-id="${234}"]`)
+        .$('div[data-root-id="234"]')
     ).toBeTruthy();
+  });
+
+  it("render and function invocations work", async () => {
+    await page.evaluate(() => {
+      const basicPropFn = (s: string) => {
+        const d = document.createElement("div");
+        d.setAttribute("data-prop-fn", s);
+        document.body.appendChild(d);
+      };
+      return (<any>window).index
+        .initializeHostBridge("host")
+        .then((makeBridge: (pluginUrl: PluginUrl) => Bridge) => {
+          return makeBridge("http://localhost:8081/tests/plugin.html");
+        })
+        .then((bridge: Bridge) => {
+          return bridge.render(234, { basicPropFn });
+        });
+    });
+    await page.waitForSelector('div[data-prop-fn="hello"]');
+    expect(await page.$('div[data-prop-fn="hello"]')).toBeTruthy();
+  });
+
+  it("render and function 3-level invocations work", async () => {
+    await page.evaluate(() => {
+      const callback2 = (s: string) => {
+        const d = document.createElement("div");
+        d.setAttribute("data-prop-fn", s);
+        document.body.appendChild(d);
+      };
+      const callbackFn = (
+        s: string,
+        fn: (val: string, cb2: (s: string) => void) => void
+      ) => {
+        fn(s + " world", callback2);
+      };
+      return (<any>window).index
+        .initializeHostBridge("host")
+        .then((makeBridge: (pluginUrl: PluginUrl) => Bridge) => {
+          return makeBridge("http://localhost:8081/tests/plugin.html");
+        })
+        .then((bridge: Bridge) => {
+          return bridge.render(234, { callbackFn });
+        });
+    });
+    await page.waitForSelector('div[data-prop-fn="hello world!"]');
+    expect(await page.$('div[data-prop-fn="hello world!"]')).toBeTruthy();
   });
 });
