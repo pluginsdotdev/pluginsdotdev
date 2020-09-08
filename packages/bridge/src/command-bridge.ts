@@ -3,6 +3,7 @@ import { fromBridge, toBridge } from "./data-bridge";
 import type {
   Bridge,
   HostBridge,
+  PluginBridge,
   HostId,
   PluginUrl,
   FunctionId,
@@ -487,7 +488,7 @@ const initializeHostBridge = (
 const initializePluginBridge = async (
   origin: string,
   render: (rootId: RenderRootId, props: Props) => void
-): Promise<Bridge> => {
+): Promise<PluginBridge> => {
   const renderHandler = (bridge: Bridge, msg: PluginMessage): boolean => {
     if (msg.msg !== "render") {
       return false;
@@ -502,10 +503,27 @@ const initializePluginBridge = async (
     window.parent.postMessage(msg, origin);
     return Promise.resolve();
   };
-  const { bridge, fromThisBridge, toThisBridge } = makeCommonBridge(
-    sendMessage,
-    firstClassHandlers
-  );
+  const {
+    bridge: commonBridge,
+    fromThisBridge,
+    toThisBridge,
+  } = makeCommonBridge(sendMessage, firstClassHandlers);
+
+  const bridge = {
+    ...commonBridge,
+    async reconcile(
+      rootId: RenderRootId,
+      updates: Array<ReconciliationUpdate>
+    ) {
+      return sendMessage({
+        msg: "reconcile",
+        payload: {
+          rootId,
+          updates,
+        },
+      });
+    },
+  };
 
   window.addEventListener(
     "message",

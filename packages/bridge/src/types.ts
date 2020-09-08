@@ -52,6 +52,13 @@ export interface HostBridge extends Bridge {
   render: (rootId: RenderRootId, props: Props) => Promise<void>;
 }
 
+export interface PluginBridge extends Bridge {
+  reconcile: (
+    rootId: RenderRootId,
+    updates: Array<ReconciliationUpdate>
+  ) => Promise<void>;
+}
+
 export type NodeId = number | "root";
 
 export interface ReconciliationPropUpdate {
