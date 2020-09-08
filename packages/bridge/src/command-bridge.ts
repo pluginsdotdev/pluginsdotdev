@@ -9,6 +9,7 @@ import type {
   LocalBridgeState,
   RenderRootId,
   Props,
+  ReconciliationUpdate,
 } from "./types";
 
 const intermediateFrameScript = `
@@ -181,26 +182,6 @@ type PluginMessage =
   | InvocationResponseMessage
   | RenderMessage
   | ReconcileMessage;
-
-type NodeId = number | "root";
-
-interface ReconciliationPropUpdate {
-  op: "set" | "delete";
-  prop: string;
-  value?: string;
-}
-
-interface ReconciliationChildUpdate {
-  op: "set" | "delete";
-  childIdx: number;
-  childId: NodeId;
-}
-
-interface ReconciliationUpdate {
-  nodeId: NodeId;
-  propUpdate: ReconciliationPropUpdate;
-  childUpdate: ReconciliationChildUpdate;
-}
 
 type PluginMessageHandler = (msg: PluginMessage) => void;
 

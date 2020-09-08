@@ -45,3 +45,43 @@ export interface Bridge {
   // TODO: render should really only be on a HostBridge
   render: (rootId: RenderRootId, props: Props) => Promise<void>;
 }
+
+export type NodeId = number | "root";
+
+export interface ReconciliationPropUpdate {
+  op: "set" | "delete";
+  prop: string;
+  value?: string;
+}
+
+export interface ReconciliationSetChildUpdate {
+  op: "set";
+  childIdx: number;
+  childId: NodeId;
+}
+
+export interface ReconciliationDeleteChildUpdate {
+  op: "delete";
+  childId: NodeId;
+}
+
+export type ReconciliationChildUpdate =
+  | ReconciliationSetChildUpdate
+  | ReconciliationDeleteChildUpdate;
+
+export interface ReconciliationTextUpdate {
+  text: string;
+}
+
+export type ReconciliationUpdateTypes =
+  | { propUpdates: Array<ReconciliationPropUpdate> }
+  | { childUpdates: Array<ReconciliationChildUpdate> }
+  | { textUpdate: ReconciliationTextUpdate };
+
+export interface BaseReconciliationUpdate {
+  nodeId: NodeId;
+  type: string;
+}
+
+export type ReconciliationUpdate = BaseReconciliationUpdate &
+  ReconciliationUpdateTypes;
