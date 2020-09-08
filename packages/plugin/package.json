@@ -53,6 +53,14 @@
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
   },
   "dependencies": {
-    "loose-envify": "^1.4.0"
+    "@pluginsdotdev/bridge": "^0.0.1",
+    "loose-envify": "^1.4.0",
+    "react-reconciler": "^0.25.1"
+  },
+  "devDependencies": {
+    "react": "^16.13.1"
+  },
+  "peerDependencies": {
+    "react": "16.x"
   }
 }
