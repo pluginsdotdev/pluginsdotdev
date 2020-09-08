@@ -6,6 +6,8 @@ export type FunctionId = number;
 
 export type ObjectPath = string;
 
+export type HostValue = Readonly<any> | number | string | boolean | null;
+
 /**
  * BridgeValue contains data suitable for transmission over the bridge
  **/
@@ -42,7 +44,11 @@ export type Props = { [key: string]: any };
 
 export interface Bridge {
   invokeFn: (fnId: FunctionId, args: any[]) => Promise<BridgeValue>;
-  // TODO: render should really only be on a HostBridge
+}
+
+export interface HostBridge extends Bridge {
+  onReceiveMessageFromPlugin: (origin: string, data: any) => void;
+  pluginFrameWindow: Window;
   render: (rootId: RenderRootId, props: Props) => Promise<void>;
 }
 

@@ -2,6 +2,7 @@ import { fromBridge, toBridge } from "./data-bridge";
 
 import type {
   Bridge,
+  HostBridge,
   HostId,
   PluginUrl,
   FunctionId,
@@ -10,6 +11,7 @@ import type {
   RenderRootId,
   Props,
   ReconciliationUpdate,
+  HostValue,
 } from "./types";
 
 const intermediateFrameScript = `
@@ -89,7 +91,7 @@ const resolvablePromise = () => {
   };
 };
 
-type BridgeMaker = (pluginUrl: PluginUrl) => Promise<Bridge>;
+type HostBridgeMaker = (pluginUrl: PluginUrl) => Promise<HostBridge>;
 
 const initializeIntermediateToPluginBridge = (
   intermediateFrameWindow: Window,
@@ -119,11 +121,6 @@ const initializeIntermediateToPluginBridge = (
     intermediateFrameWindow.document.body.appendChild(frame);
   });
 };
-
-interface HostBridge extends Bridge {
-  onReceiveMessageFromPlugin: (origin: string, data: any) => void;
-  pluginFrameWindow: Window;
-}
 
 type InvocationId = number;
 
@@ -192,7 +189,11 @@ const assertNever = (n: never): never => {
 const makeCommonBridge = (
   sendMessage: (msg: PluginMessage) => Promise<void>,
   firstClassHandlers?: Array<(bridge: Bridge, msg: PluginMessage) => boolean>
-): Bridge & { handleMessage: (pluginMsg: PluginMessage) => void } => {
+): {
+  bridge: Bridge & { handleMessage: (pluginMsg: PluginMessage) => void };
+  fromThisBridge: (bridgeValue: Readonly<BridgeValue>) => any;
+  toThisBridge: (hostValue: HostValue) => BridgeValue;
+} => {
   let nextInvocationId = 0;
 
   const msgHandlers = new Set<PluginMessageHandler>();
@@ -297,19 +298,15 @@ const makeCommonBridge = (
           return fromBridge(this, payload.resultBridgeValue);
       }
     },
-    async render(rootId: RenderRootId, props: Props): Promise<void> {
-      const pluginMsg: RenderMessage = {
-        msg: "render",
-        payload: {
-          rootId,
-          props: toThisBridge(props),
-        },
-      };
-      await sendMessage(pluginMsg);
-    },
   };
 
-  return bridge;
+  const fromThisBridge = fromBridge.bind(null, bridge);
+
+  return {
+    bridge,
+    toThisBridge,
+    fromThisBridge,
+  };
 };
 
 const makeHostBridge = async (
@@ -367,8 +364,14 @@ const makeHostBridge = async (
     return true;
   };
 
+  const {
+    bridge: commonBridge,
+    fromThisBridge,
+    toThisBridge,
+  } = makeCommonBridge(queueOrRun);
+
   const bridge = {
-    ...makeCommonBridge(queueOrRun),
+    ...commonBridge,
     pluginFrameWindow: frameContentWindow,
     onReceiveMessageFromPlugin(origin: string, pluginMsg: PluginMessage) {
       // origin should always be 'null' for sandboxed, non-allow-same-origin
@@ -385,6 +388,16 @@ const makeHostBridge = async (
 
       this.handleMessage(pluginMsg);
     },
+    async render(rootId: RenderRootId, props: Props): Promise<void> {
+      const pluginMsg: RenderMessage = {
+        msg: "render",
+        payload: {
+          rootId,
+          props: toThisBridge(props),
+        },
+      };
+      await queueOrRun(pluginMsg);
+    },
   };
   return bridge;
 };
@@ -395,7 +408,7 @@ const initializeHostBridge = (
     rootId: RenderRootId,
     updates: Array<ReconciliationUpdate>
   ) => void
-): Promise<BridgeMaker> => {
+): Promise<HostBridgeMaker> => {
   let sendCommandToIntermediateFrame: null | OnReceiveCallback = null;
   let { resolve: onReady, promise: ready } = resolvablePromise();
   let bridgeByWindow = new Map<Window, HostBridge>();
@@ -489,7 +502,10 @@ const initializePluginBridge = async (
     window.parent.postMessage(msg, origin);
     return Promise.resolve();
   };
-  const bridge = makeCommonBridge(sendMessage, firstClassHandlers);
+  const { bridge, fromThisBridge, toThisBridge } = makeCommonBridge(
+    sendMessage,
+    firstClassHandlers
+  );
 
   window.addEventListener(
     "message",

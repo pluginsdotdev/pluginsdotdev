@@ -1,7 +1,7 @@
 import * as puppeteer from "puppeteer";
 import { startServer as startTestServer } from "./test-server";
 
-import type { PluginUrl, Bridge } from "../src/types";
+import type { PluginUrl, HostBridge } from "../src/types";
 import type { Browser, Page } from "puppeteer";
 
 jest.setTimeout(10000);
@@ -53,7 +53,7 @@ describe("initializeHostBridge", () => {
     await page.evaluate(() => {
       (<any>window).index
         .initializeHostBridge("host")
-        .then((makeBridge: (pluginUrl: PluginUrl) => Bridge) =>
+        .then((makeBridge: (pluginUrl: PluginUrl) => HostBridge) =>
           makeBridge("http://localhost:8081/tests/plugin.html")
         );
     });
@@ -66,10 +66,10 @@ describe("initializeHostBridge", () => {
     await page.evaluate(() => {
       (<any>window).index
         .initializeHostBridge("host")
-        .then((makeBridge: (pluginUrl: PluginUrl) => Bridge) => {
+        .then((makeBridge: (pluginUrl: PluginUrl) => HostBridge) => {
           return makeBridge("http://localhost:8081/tests/plugin.html");
         })
-        .then((bridge: Bridge) => {
+        .then((bridge: HostBridge) => {
           return bridge.render(234, { hello: "world" });
         });
     });
@@ -98,10 +98,10 @@ describe("initializeHostBridge", () => {
       };
       return (<any>window).index
         .initializeHostBridge("host")
-        .then((makeBridge: (pluginUrl: PluginUrl) => Bridge) => {
+        .then((makeBridge: (pluginUrl: PluginUrl) => HostBridge) => {
           return makeBridge("http://localhost:8081/tests/plugin.html");
         })
-        .then((bridge: Bridge) => {
+        .then((bridge: HostBridge) => {
           return bridge.render(234, { basicPropFn });
         });
     });
@@ -124,10 +124,10 @@ describe("initializeHostBridge", () => {
       };
       return (<any>window).index
         .initializeHostBridge("host")
-        .then((makeBridge: (pluginUrl: PluginUrl) => Bridge) => {
+        .then((makeBridge: (pluginUrl: PluginUrl) => HostBridge) => {
           return makeBridge("http://localhost:8081/tests/plugin.html");
         })
-        .then((bridge: Bridge) => {
+        .then((bridge: HostBridge) => {
           return bridge.render(234, { callbackFn });
         });
     });

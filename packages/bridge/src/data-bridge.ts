@@ -4,11 +4,10 @@ import type {
   LocalBridgeState,
   ObjectPath,
   FunctionId,
+  HostValue,
 } from "./types";
 
 export type ObjectPathParts = Array<string | number>;
-
-type HostValue = Readonly<any> | number | string | boolean | null;
 
 const pathPartsToObjectPath = (parts: ObjectPathParts): ObjectPath =>
   JSON.stringify(parts);
