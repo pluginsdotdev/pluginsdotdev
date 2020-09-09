@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import type {
   ReconciliationUpdate,
+  ReconciliationCombinedUpdate,
   ReconciliationPropUpdate,
 } from "@pluginsdotdev/bridge";
 
@@ -14,8 +15,10 @@ interface Props {
   [key: string]: Prop;
 }
 
+type NodeId = number;
+
 interface Instance {
-  id: number;
+  id: NodeId;
   type: ElementType;
   children: Array<Instance | TextInstance>;
   props: Props;
@@ -30,12 +33,12 @@ interface Instance {
 
 interface RootInstance extends Instance {
   fireCommit: () => void;
-  nextId: () => number;
+  nextId: () => NodeId;
   recordUpdate: (update: ReconciliationUpdate) => void;
 }
 
 interface TextInstance {
-  id: number;
+  id: NodeId;
   type: string;
   text: string;
 }
@@ -67,7 +70,7 @@ const isIgnoredChildrenType = (children: any) =>
 
 class Node implements Instance {
   props: Props = {};
-  id: number;
+  id: NodeId;
   children: Array<PublicInstance>;
 
   constructor(
@@ -164,17 +167,49 @@ class Node implements Instance {
   }
 }
 
+const coalesceUpdates = (
+  updates: Array<ReconciliationUpdate>
+): Array<ReconciliationUpdate> => {
+  const updatesById = new Map<NodeId, ReconciliationUpdate>();
+  const newUpdates = [];
+  for (const update_ of updates) {
+    const update = update_ as ReconciliationCombinedUpdate;
+    if (!updatesById.has(update.nodeId)) {
+      updatesById.set(update.nodeId, update);
+      newUpdates.push(update);
+    } else {
+      const priorUpdate = updatesById.get(
+        update.nodeId
+      )! as ReconciliationCombinedUpdate;
+      if (update.propUpdates) {
+        priorUpdate.propUpdates = (priorUpdate.propUpdates || []).concat(
+          update.propUpdates
+        );
+      }
+      if (update.childUpdates) {
+        priorUpdate.childUpdates = (priorUpdate.childUpdates || []).concat(
+          update.childUpdates
+        );
+      }
+      if (update.textUpdate) {
+        priorUpdate.textUpdate = update.textUpdate;
+      }
+    }
+  }
+  return newUpdates;
+};
+
 // TODO: RootNode is very similar to Node; consider factoring
 //       nextId and recordUpdate/fireCommit out into two separate things
 class RootNode implements RootInstance {
   container: OpaqueRoot;
 
   props: Props = {};
-  id: number = 0;
+  id: NodeId = 0;
   children: Array<PublicInstance> = [];
   type: "root" = "root";
 
-  private _nextId: number = 1;
+  private _nextId: NodeId = 1;
   private updates: Array<ReconciliationUpdate> = [];
 
   constructor(public onCommit: RootNodeCommitCallback) {
@@ -231,7 +266,7 @@ class RootNode implements RootInstance {
   }
 
   fireCommit() {
-    this.onCommit(this, this.updates);
+    this.onCommit(this, coalesceUpdates(this.updates));
     this.updates = [];
   }
 
@@ -245,7 +280,7 @@ class RootNode implements RootInstance {
 }
 
 class TextNode implements TextInstance {
-  id: number;
+  id: NodeId;
   type: string;
 
   constructor(private rootInstance: RootInstance, public text: string) {

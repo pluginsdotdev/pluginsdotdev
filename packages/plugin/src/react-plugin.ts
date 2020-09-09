@@ -60,7 +60,9 @@ const makeExposedComponents = (
   exposedComponentsList: Array<keyof ExposedComponents>
 ): ExposedComponents => {
   return exposedComponentsList.reduce((exposedComponents, component) => {
-    exposedComponents[component] = component;
+    exposedComponents[
+      component
+    ] = `host:${component}` as keyof JSX.IntrinsicElements;
     return exposedComponents;
   }, {} as ExposedComponents);
 };

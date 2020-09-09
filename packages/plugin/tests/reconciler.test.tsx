@@ -17,11 +17,7 @@ describe('reconcile', () => {
         expect(updates).toContainEqual({
           nodeId: expect.any(Number),
           type: 'p',
-          propUpdates: []
-        });
-        expect(updates).toContainEqual({
-          nodeId: expect.any(Number),
-          type: 'p',
+          propUpdates: [],
           childUpdates: [{
             op: 'set',
             childIdx: 0,
@@ -35,11 +31,7 @@ describe('reconcile', () => {
             op: 'set',
             prop: 'className',
             value: 'helloWorld'
-          }]
-        });
-        expect(updates).toContainEqual({
-          nodeId: expect.any(Number),
-          type: 'div',
+          }],
           childUpdates: [{
             op: 'set',
             childIdx: 0,

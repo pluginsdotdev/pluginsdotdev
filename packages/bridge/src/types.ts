@@ -59,7 +59,7 @@ export interface PluginBridge extends Bridge {
   ) => Promise<void>;
 }
 
-export type NodeId = number | "root";
+export type NodeId = number;
 
 export interface ReconciliationPropUpdate {
   op: "set" | "delete";
@@ -82,14 +82,31 @@ export type ReconciliationChildUpdate =
   | ReconciliationSetChildUpdate
   | ReconciliationDeleteChildUpdate;
 
-export interface ReconciliationTextUpdate {
-  text: string;
+export interface ReconciliationPropUpdates {
+  propUpdates: Array<ReconciliationPropUpdate>;
 }
 
+export interface ReconciliationChildUpdates {
+  childUpdates: Array<ReconciliationChildUpdate>;
+}
+
+export interface ReconciliationTextUpdate {
+  textUpdate: {
+    text: string;
+  };
+}
+
+export type ReconciliationCombinedUpdates = Partial<
+  ReconciliationPropUpdates &
+    ReconciliationChildUpdates &
+    ReconciliationTextUpdate
+>;
+
 export type ReconciliationUpdateTypes =
-  | { propUpdates: Array<ReconciliationPropUpdate> }
-  | { childUpdates: Array<ReconciliationChildUpdate> }
-  | { textUpdate: ReconciliationTextUpdate };
+  | ReconciliationPropUpdates
+  | ReconciliationChildUpdates
+  | ReconciliationTextUpdate
+  | ReconciliationCombinedUpdates;
 
 export interface BaseReconciliationUpdate {
   nodeId: NodeId;
@@ -98,3 +115,6 @@ export interface BaseReconciliationUpdate {
 
 export type ReconciliationUpdate = BaseReconciliationUpdate &
   ReconciliationUpdateTypes;
+
+export type ReconciliationCombinedUpdate = BaseReconciliationUpdate &
+  ReconciliationCombinedUpdates;
