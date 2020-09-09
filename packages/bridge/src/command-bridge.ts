@@ -355,7 +355,7 @@ const makeHostBridge = async (
     return run(msg);
   };
 
-  const reconcileHandler = (msg: PluginMessage): boolean => {
+  const reconcileHandler = (bridge: Bridge, msg: PluginMessage): boolean => {
     if (msg.msg !== "reconcile") {
       return false;
     }
@@ -365,11 +365,12 @@ const makeHostBridge = async (
     return true;
   };
 
+  const firstClassHandlers = [reconcileHandler];
   const {
     bridge: commonBridge,
     fromThisBridge,
     toThisBridge,
-  } = makeCommonBridge(queueOrRun);
+  } = makeCommonBridge(queueOrRun, firstClassHandlers);
 
   const bridge = {
     ...commonBridge,
