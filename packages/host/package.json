@@ -11,15 +11,22 @@
   "author": "Adam Berger <adam@ratchetdesigns.com>",
   "homepage": "https://plugins.dev",
   "license": "EPL-1.0",
-  "main": "dist/host.js",
+  "main": "dist/index.js",
+  "module": "dist/index.es5.js",
   "directories": {
     "lib": "src",
     "test": "tests"
   },
-  "typings": "dist/types/host.d.ts",
+  "typings": "dist/types/index.d.ts",
   "files": [
     "dist"
   ],
+  "sideEffects": false,
+  "browserify": {
+    "transform": [
+      "loose-envify"
+    ]
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -28,7 +35,18 @@
     "url": "git+https://github.com/pluginsdotdev/pluginsdotdev.git"
   },
   "scripts": {
-    "test": "echo \"No tests for host yet\""
+    "test": "tsc --module commonjs && rollup --config rollup.config.ts && npx jest",
+    "lint": "tslint  --project tsconfig.json -t codeFrame 'src/**/*.ts' 'tests/**/*.ts'",
+    "prebuild": "rimraf dist",
+    "build": "tsc --module commonjs && rollup --config rollup.config.ts",
+    "build-docs": "typedoc --out docs --target es6 --theme minimal --mode file src",
+    "pre-commit": "lint-staged"
+  },
+  "lint-staged": {
+    "{src,tests}/**/*.ts": [
+      "prettier --write",
+      "git add"
+    ]
   },
   "bugs": {
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
