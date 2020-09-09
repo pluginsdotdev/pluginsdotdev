@@ -50,5 +50,8 @@
   },
   "bugs": {
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
+  },
+  "dependencies": {
+    "@pluginsdotdev/bridge": "^0.0.1"
   }
 }
