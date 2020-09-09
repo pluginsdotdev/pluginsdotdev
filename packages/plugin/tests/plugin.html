@@ -1,0 +1,22 @@
+<html>
+  <body
+    data-plugin-id="plugin-id"
+    data-host-id="host-id"
+    data-user-id="user-id"
+    data-host-origin="http://localhost:8080"
+    data-exposed-components="[&quot;MyComponent&quot;]"></body>
+  <script type="application/javascript" src="../dist/index.js"></script>
+  <script type="application/javascript" src="../node_modules/react/umd/react.development.js"></script>
+  <script type="application/javascript">
+    window.index.exposeReactPlugin(
+      function pluginFactory(pluginConfig) {
+        return function(props) {
+          const R = window.React;
+          return R.createElement('div', { className: props.className },
+            R.createElement('p', {}, props.title)
+          );
+        }
+      }
+    );
+  </script>
+</html>

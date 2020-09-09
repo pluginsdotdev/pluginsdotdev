@@ -83,3 +83,5 @@ const exposeReactPlugin = async (pluginFactory: PluginFactory) => {
   };
   const pluginBridge = await initializePluginBridge(hostOrigin, onRender);
 };
+
+export { exposeReactPlugin };

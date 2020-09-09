@@ -3,7 +3,7 @@ import { render, createRootNode } from '../src/reconciler';
 import type { ReconciliationUpdate } from '@pluginsdotdev/bridge';
 
 describe('reconcile', () => {
-  it('should work', () => {
+  it('basic rendering', () => {
     return new Promise((resolve, reject) => {
       const onCommit = (_: any, updates: Array<ReconciliationUpdate>) => {
         // TODO: write an expect.anyCapture that can capture named values
