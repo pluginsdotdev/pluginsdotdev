@@ -28,7 +28,7 @@
   "bugs": {
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
   },
-  "homepage": "https://github.com/pluginsdotdev/pluginsdotdev#readme",
+  "homepage": "https://plugins.dev",
   "husky": {
     "hooks": {
       "pre-commit": "lerna run pre-commit"

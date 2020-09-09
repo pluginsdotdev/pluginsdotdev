@@ -9,7 +9,7 @@
     "programming"
   ],
   "author": "Adam Berger <adam@ratchetdesigns.com>",
-  "homepage": "http://plugins.dev",
+  "homepage": "https://plugins.dev",
   "license": "EPL-1.0",
   "main": "dist/index.js",
   "module": "dist/index.es5.js",
