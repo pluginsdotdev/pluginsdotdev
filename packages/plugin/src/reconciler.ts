@@ -171,16 +171,13 @@ const coalesceUpdates = (
   updates: Array<ReconciliationUpdate>
 ): Array<ReconciliationUpdate> => {
   const updatesById = new Map<NodeId, ReconciliationUpdate>();
-  const newUpdates = [];
-  for (const update_ of updates) {
-    const update = update_ as ReconciliationCombinedUpdate;
+  const newUpdates: Array<ReconciliationUpdate> = [];
+  for (const update of updates) {
     if (!updatesById.has(update.nodeId)) {
       updatesById.set(update.nodeId, update);
       newUpdates.push(update);
     } else {
-      const priorUpdate = updatesById.get(
-        update.nodeId
-      )! as ReconciliationCombinedUpdate;
+      const priorUpdate = updatesById.get(update.nodeId)!;
       if (update.propUpdates) {
         priorUpdate.propUpdates = (priorUpdate.propUpdates || []).concat(
           update.propUpdates

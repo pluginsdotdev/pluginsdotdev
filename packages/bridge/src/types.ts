@@ -61,11 +61,21 @@ export interface PluginBridge extends Bridge {
 
 export type NodeId = number;
 
-export interface ReconciliationPropUpdate {
-  op: "set" | "delete";
+export interface ReconciliationSetPropUpdate {
+  op: "set";
   prop: string;
-  value?: string;
+  value: string;
 }
+
+export interface ReconciliationDeletePropUpdate {
+  op: "delete";
+  prop: string;
+  value?: undefined;
+}
+
+export type ReconciliationPropUpdate =
+  | ReconciliationSetPropUpdate
+  | ReconciliationDeletePropUpdate;
 
 export interface ReconciliationSetChildUpdate {
   op: "set";
@@ -84,16 +94,22 @@ export type ReconciliationChildUpdate =
 
 export interface ReconciliationPropUpdates {
   propUpdates: Array<ReconciliationPropUpdate>;
+  childUpdates?: undefined;
+  textUpdate?: undefined;
 }
 
 export interface ReconciliationChildUpdates {
   childUpdates: Array<ReconciliationChildUpdate>;
+  propUpdates?: undefined;
+  textUpdate?: undefined;
 }
 
 export interface ReconciliationTextUpdate {
   textUpdate: {
     text: string;
   };
+  propUpdates?: undefined;
+  childUpdates?: undefined;
 }
 
 export type ReconciliationCombinedUpdates = Partial<
