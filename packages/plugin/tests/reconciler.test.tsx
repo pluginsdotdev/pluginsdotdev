@@ -1,4 +1,5 @@
 import React from 'react';
+import fc from "fast-check";
 import { render, createRootNode } from '../src/reconciler';
 import type { ReconciliationUpdate } from '@pluginsdotdev/bridge';
 
@@ -59,5 +60,53 @@ describe('reconcile', () => {
         root
       );
     });
+  });
+});
+
+describe('properties', () => {
+  it('should produce updates with the right props', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(
+          fc.record({
+            type: fc.constantFrom('div', 'p', 'a', 'img'),
+            props: fc.dictionary(
+              fc.string(),
+              fc.anything({ values: [fc.boolean(), fc.integer(), fc.string(), fc.constant(null)] })
+            )
+          })
+        ),
+        async (items: Array<{type: string, props: Record<string, any>}>) => {
+          const updates = await new Promise<Array<ReconciliationUpdate>>((resolve, reject) => {
+            const onCommit = (_: any, updates: Array<ReconciliationUpdate>) => {
+              resolve(updates);
+            };
+            const root = createRootNode(onCommit);
+            render(
+              React.createElement(
+                'div', 
+                {},
+                items.map(({ type, props }, key) => (
+                  React.createElement(type, { key, ...props })
+                ))
+              ),
+              root
+            );
+          });
+
+          items.forEach(({ type, props }) => {
+            expect(updates).toContainEqual({
+              nodeId: expect.any(Number),
+              type,
+              propUpdates: Object.keys(props).map(prop => ({
+                op: 'set',
+                prop,
+                value: props[prop]
+              }))
+            });
+          });
+        }
+      )
+    );
   });
 });
