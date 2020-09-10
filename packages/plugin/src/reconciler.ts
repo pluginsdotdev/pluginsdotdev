@@ -359,18 +359,6 @@ const Reconciler = ReactReconciler<
     // noop
   },
 
-  prepareUpdate(
-    instance: Instance,
-    type: ElementType,
-    oldProps: Props,
-    newProps: Props,
-    rootContainerInstance: Container,
-    hostContext: HostContext
-  ): null | UpdatePayload {
-    // TODO: whatever is returned from here is passed as updatePayload to commitUpdate. Any advantage in filtering here instead?
-    return newProps;
-  },
-
   resetAfterCommit(containerInfo: Container): void {
     containerInfo.fireCommit();
   },
@@ -438,6 +426,26 @@ const Reconciler = ReactReconciler<
   },
 
   now: Date.now,
+
+  prepareUpdate(
+    instance: Instance,
+    type: ElementType,
+    oldProps: Props,
+    newProps: Props,
+    rootContainerInstance: Container,
+    hostContext: HostContext
+  ): null | UpdatePayload {
+    const allKeys = new Set(
+      Object.keys(oldProps).concat(Object.keys(newProps))
+    );
+    return Array.from(allKeys).reduce((props, key) => {
+      if (oldProps[key] === newProps[key]) {
+        return props;
+      }
+      props[key] = newProps[key];
+      return props;
+    }, {} as Record<string, any>);
+  },
 
   commitUpdate(
     instance: Instance,
