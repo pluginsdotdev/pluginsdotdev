@@ -77,10 +77,43 @@ const applyUpdates = (rootNode: RootNode, updates: ReconciliationUpdate[]): Root
   }, rootNode)
 );
 
+type NodeComponentProps = {
+  node: Node | undefined,
+  nodesById: Map<NodeId, Node>
+};
+const NodeComponent: React.FC<NodeComponentProps> = ({ node, nodesById }) => {
+  return node
+    ? React.createElement(
+      node.type === 'root' ? React.Fragment : node.type,
+      node.props,
+      node.text ?? node.children.map((childId: NodeId) => (
+        React.createElement(
+          NodeComponent,
+          {
+            key: childId,
+            node: nodesById.get(childId),
+            nodesById
+          }
+        )
+      ))
+    ) : null;
+};
+
 const PluginPoint = <P extends {}>(props: PluginPointProps<P>) => {
   const [bridge, setBridge] = useState<HostBridge | null>(null);
-  const [rootNodesById, setRootNodesById] = useState<Map<RenderRootId, RootNode>>(new Map());
- const onReconcile = (rootId: RenderRootId, updates: ReconciliationUpdate[]) => {
+  const root = {
+    id: 0,
+    type: 'root',
+    props: {},
+    children: [],
+    nodesById: new Map<NodeId, Node>()
+  };
+  const rootId = 1;
+  const [rootNodesById, setRootNodesById] = useState<Map<RenderRootId, RootNode>>(new Map([
+    [rootId, root]
+  ]));
+
+  const onReconcile = (rootId: RenderRootId, updates: ReconciliationUpdate[]) => {
     const rootNode = rootNodesById.get(rootId);
     if ( !rootNode ) {
       // TODO: log?
@@ -88,24 +121,29 @@ const PluginPoint = <P extends {}>(props: PluginPointProps<P>) => {
     }
     setRootNodesById(rootNodesById.set(rootId, applyUpdates(rootNode, updates)));
   };
+
   useEffect(() => {
     initializeHostBridge(props.hostId, onReconcile)
     .then(bridgeMaker => bridgeMaker(props.pluginUrl))
-    .then(setBridge)
+    .then(bridge => {
+      setBridge(bridge);
+      bridge.render(rootId, props.props);
+    });
   }, [props.hostId, props.pluginUrl]);
+
   useEffect(() => {
-    const root = {
-      id: 0,
-      type: 'root',
-      props: {},
-      children: [],
-      nodesById: new Map<NodeId, Node>()
-    };
-    rootNodesById.set(1, root)
-    setRootNodesById(rootNodesById);
+    if ( bridge ) {
+      bridge.render(rootId, props.props);
+    }
   }, [props.props]);
 
-  return (
-    <div></div>
+  const rootNode = rootNodesById.get(rootId);
+  if ( !rootNode ) {
+    return null;
+  }
+
+  return React.createElement(
+    NodeComponent,
+    { node: rootNode, nodesById: rootNode.nodesById }
   );
 };
