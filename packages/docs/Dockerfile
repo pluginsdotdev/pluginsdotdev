@@ -9,6 +9,7 @@ RUN apt-get update \
   && cd /usr/src/app \
   && gem install bundler \
   && bundle install \
+  && chmod -R 777 /usr/src/app \
   && apt-get remove -y build-essential \
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/*
