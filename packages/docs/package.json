@@ -1,0 +1,28 @@
+{
+  "name": "@pluginsdotdev/docs",
+  "version": "0.0.0",
+  "description": "Documentation for plugins.dev",
+  "author": "Adam Berger <adam.g.berger@gmail.com>",
+  "homepage": "https://plugins.dev/packages/docs",
+  "license": "ISC",
+  "directories": {
+    "lib": "src",
+    "test": "tests"
+  },
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pluginsdotdev/pluginsdotdev.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1"
+  },
+  "bugs": {
+    "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
+  }
+}

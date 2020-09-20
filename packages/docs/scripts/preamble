@@ -1,0 +1,20 @@
+#!/bin/bash
+
+src="$(dirname $0)/../src"
+dest="/usr/src/app/source"
+
+# copy any regular files in the root to source
+for p in ${src}/*
+do
+  if [ ! -d "${p}" ]; then
+    b="$(basename "${p}")"
+    cp "${p}" "${dest}/${b}"
+  fi
+done
+
+# copy any nested files to source (assume same directory structure already exists)
+for p in ${src}/**/*
+do
+  rp="$(realpath --relative-to "${src}" "${p}")"
+  cp "${p}" "${dest}/${rp}"
+done
