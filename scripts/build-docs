@@ -1,0 +1,23 @@
+#!/bin/bash -e
+
+root="$(readlink -f "$(dirname $0)/..")"
+
+# build slate docs
+cd "${root}/packages/docs"
+CURRENT_USER="$UID" docker-compose run --rm slate-build
+
+# build all other docs
+CURRENT_USER="$UID" docker-compose run --rm npm run lerna run docs
+
+# coalesce
+rm -rf "${root}/docs"
+cp -r "${root}/packages/docs/dist" "${root}/docs"
+for doc in ${root}/packages/*/docs;
+do
+  if [ -d "${doc}" ]; then
+    package_name="$(basename "$(dirname "${doc}")")"
+    api_dir="${root}/docs/api/${package_name}"
+    mkdir -p "${api_dir}"
+    cp -r "${doc}" "${api_dir}"
+  fi
+done
