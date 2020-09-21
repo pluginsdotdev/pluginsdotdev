@@ -64,7 +64,7 @@ export type NodeId = number;
 export interface ReconciliationSetPropUpdate {
   op: "set";
   prop: string;
-  value: string;
+  value: any;
 }
 
 export interface ReconciliationDeletePropUpdate {
