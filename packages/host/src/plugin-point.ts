@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { initializeHostBridge } from "@pluginsdotdev/bridge";
 import { applyUpdates, emptyRootNode } from "./update-utils";
 
@@ -12,12 +12,12 @@ import type {
 } from "@pluginsdotdev/bridge";
 import type { Node, RootNode } from "./update-utils";
 
-interface PluginPointProps<P> {
+export interface PluginPointProps<P> {
   hostId: HostId;
   pluginPoint: string;
   jwt: string;
   pluginUrl: string;
-  exposedComponents: Record<string, ComponentType>;
+  exposedComponents?: Record<string, ComponentType>;
   props: P;
 }
 
@@ -26,45 +26,51 @@ type NodeComponentProps = {
   nodesById: Map<NodeId, Node>;
 };
 const NodeComponent: React.FC<NodeComponentProps> = ({ node, nodesById }) => {
-  return node
-    ? React.createElement(
-        node.type === "root" ? React.Fragment : node.type,
-        node.props,
-        node.text ??
-          node.children.map((childId: NodeId) =>
-            React.createElement(NodeComponent, {
-              key: childId,
-              node: nodesById.get(childId),
-              nodesById,
-            })
-          )
+  if (!node) {
+    return null;
+  }
+
+  const nodeType =
+    node.type === "root" || node.type === "text" ? React.Fragment : node.type;
+
+  return React.createElement(
+    nodeType,
+    node.props,
+    node.text ??
+      node.children.map((childId: NodeId) =>
+        React.createElement(NodeComponent, {
+          key: childId,
+          node: nodesById.get(childId),
+          nodesById,
+        })
       )
-    : null;
+  );
 };
 
 const PluginPoint = <P extends {}>(props: PluginPointProps<P>) => {
-  const [bridge, setBridge] = useState<HostBridge | null>(null);
+  const [bridge, setBridge] = React.useState<HostBridge | null>(null);
   const root = emptyRootNode();
   const rootId = 1;
-  const [rootNodesById, setRootNodesById] = useState<
-    Map<RenderRootId, RootNode>
-  >(new Map([[rootId, root]]));
+  const [rootNodesById, setRootNodesById] = React.useState<
+    Record<RenderRootId, RootNode>
+  >({ [rootId]: root });
 
   const onReconcile = (
     rootId: RenderRootId,
     updates: ReconciliationUpdate[]
   ) => {
-    const rootNode = rootNodesById.get(rootId);
+    const rootNode = rootNodesById[rootId];
     if (!rootNode) {
       // TODO: log?
       return;
     }
-    setRootNodesById(
-      rootNodesById.set(rootId, applyUpdates(rootNode, updates))
-    );
+    setRootNodesById({
+      ...rootNodesById,
+      [rootId]: applyUpdates(rootNode, updates),
+    });
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     initializeHostBridge(props.hostId, onReconcile)
       .then((bridgeMaker) => bridgeMaker(props.pluginUrl))
       .then((bridge) => {
@@ -73,13 +79,13 @@ const PluginPoint = <P extends {}>(props: PluginPointProps<P>) => {
       });
   }, [props.hostId, props.pluginUrl]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (bridge) {
       bridge.render(rootId, props.props);
     }
   }, [props.props]);
 
-  const rootNode = rootNodesById.get(rootId);
+  const rootNode = rootNodesById[rootId];
   if (!rootNode) {
     return null;
   }
@@ -89,3 +95,5 @@ const PluginPoint = <P extends {}>(props: PluginPointProps<P>) => {
     nodesById: rootNode.nodesById,
   });
 };
+
+export { PluginPoint };

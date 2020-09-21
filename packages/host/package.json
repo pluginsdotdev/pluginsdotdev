@@ -8,7 +8,7 @@
     "end-user",
     "programming"
   ],
-  "author": "Adam Berger <adam@ratchetdesigns.com>",
+  "author": "Adam Berger <adam@plugins.dev>",
   "homepage": "https://plugins.dev",
   "license": "EPL-1.0",
   "main": "dist/index.js",
@@ -53,5 +53,14 @@
   },
   "dependencies": {
     "@pluginsdotdev/bridge": "^0.0.1"
+  },
+  "devDependencies": {
+    "@pluginsdotdev/test-utils": "^0.0.0",
+    "@pluginsdotdev/plugin": "^0.0.1",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1"
+  },
+  "peerDependencies": {
+    "react": "16.x"
   }
 }
