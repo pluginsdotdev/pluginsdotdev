@@ -13,10 +13,10 @@ const libraryName = 'index'
 export default {
   input: `src/${libraryName}.ts`,
   output: [
-    { file: pkg.main, name: camelCase(libraryName), format: 'umd', sourcemap: true, globals: { react: 'React' } },
-    { file: pkg.module, format: 'es', sourcemap: true, globals: { react: 'React' } },
+    { file: pkg.main, name: camelCase(libraryName), format: 'umd', sourcemap: true },
+    { file: pkg.module, format: 'es', sourcemap: true },
   ],
-  external: ['react'],
+  external: [],
   watch: {
     include: 'src/**',
   },
