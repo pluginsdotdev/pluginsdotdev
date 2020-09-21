@@ -1,0 +1,27 @@
+name: Build-Docs
+
+on:
+  push:
+    tags: [ "*" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: NPM install
+        run: docker-compose run --rm npm install
+      - name: Lerna bootstrap
+        run: docker-compose run --rm npm run lerna bootstrap
+      - name: Build
+        run: docker-compose run --rm npm run lerna run build
+      - name: Build docs
+        run: $GITHUB_WORKSPACE/scripts/build-docs
+        env:
+          CURRENT_USER: 0
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+

@@ -2,12 +2,15 @@
 
 root="$(readlink -f "$(dirname $0)/..")"
 
+USER="${CURRENT_USER:-$UID}"
+
 # build slate docs
 cd "${root}/packages/docs"
-CURRENT_USER="$UID" docker-compose run --rm slate-build
+CURRENT_USER="$USER" docker-compose run --rm slate-build
 
 # build all other docs
-CURRENT_USER="$UID" docker-compose run --rm npm run lerna run docs
+cd "${root}"
+CURRENT_USER="$USER" docker-compose run --rm npm run lerna run build-docs
 
 # coalesce
 rm -rf "${root}/docs"
