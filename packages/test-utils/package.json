@@ -1,0 +1,41 @@
+{
+  "name": "@pluginsdotdev/test-utils",
+  "version": "0.0.0",
+  "description": "Test utilities for pluginsdotdev",
+  "author": "Adam Berger <adam@plugins.dev>",
+  "homepage": "https://plugins.dev",
+  "license": "ISC",
+  "private": true,
+  "main": "dist/index.js",
+  "directories": {
+    "lib": "src"
+  },
+  "typings": "dist/types/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pluginsdotdev/pluginsdotdev.git"
+  },
+  "scripts": {
+    "test": "tsc --module commonjs && npx jest",
+    "lint": "tslint  --project tsconfig.json -t codeFrame 'src/**/*.ts' 'tests/**/*.ts'",
+    "prebuild": "rimraf dist",
+    "build": "tsc --module commonjs",
+    "build-docs": "typedoc --out docs --target es6 --theme minimal --mode file src",
+    "pre-commit": "lint-staged"
+  },
+  "lint-staged": {
+    "{src,tests}/**/*.ts": [
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "bugs": {
+    "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
+  }
+}
