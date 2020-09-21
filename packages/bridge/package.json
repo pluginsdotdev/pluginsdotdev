@@ -53,7 +53,9 @@
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
   },
   "dependencies": {
-    "@pluginsdotdev/test-utils": "^0.0.0",
     "loose-envify": "^1.4.0"
+  },
+  "devDependencies": {
+    "@pluginsdotdev/test-utils": "^0.0.0"
   }
 }

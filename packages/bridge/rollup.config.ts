@@ -16,8 +16,7 @@ export default {
     { file: pkg.main, name: camelCase(libraryName), format: 'umd', sourcemap: true },
     { file: pkg.module, format: 'es', sourcemap: true },
   ],
-  // Indicate here external modules you don't want to include in your bundle (i.e.: 'lodash')
-  external: ['React'],
+  external: [],
   watch: {
     include: 'src/**',
   },
