@@ -1,8 +1,6 @@
-import * as puppeteer from "puppeteer";
-import { startServer as startTestServer } from "./test-server";
+import { browserTest } from "@pluginsdotdev/test-utils";
 
 import type { PluginUrl, HostBridge } from "../src/types";
-import type { Browser, Page } from "puppeteer";
 
 jest.setTimeout(10000);
 
@@ -10,46 +8,29 @@ const hostPort = 8080;
 const pluginPort = 8081;
 const pluginUrl = "http://localhost:8081/tests/plugin.html";
 
+const t = browserTest(
+  [hostPort, pluginPort],
+  `http://localhost:${hostPort}/tests/host.html`
+);
+
 describe("initializeHostBridge", () => {
-  let browser: Browser;
-  let page: Page;
-  let shutdown: () => Promise<undefined>;
-  beforeAll(async () => {
-    const shutdown1 = await startTestServer(hostPort);
-    const shutdown2 = await startTestServer(pluginPort);
+  beforeAll(t.beforeAll);
 
-    shutdown = async () => {
-      await Promise.all([shutdown1(), shutdown2()]);
-      return void 0;
-    };
-  });
+  afterAll(t.afterAll);
 
-  afterAll(async () => shutdown());
+  beforeEach(t.beforeEach);
 
-  beforeEach(async () => {
-    browser = await puppeteer.launch({
-      args: [
-        "--disable-dev-shm-usage", // running in docker with small /dev/shm
-        "--no-sandbox",
-      ],
-    });
-    page = await browser.newPage();
-    page.on("console", (c) => console.log("Log from puppeteer", c.text()));
-    page.on("error", (e) => console.log("Error from puppeteer", e));
-    await page.goto(`http://localhost:${hostPort}/tests/host.html`);
-    // our js has been loaded
-    await page.waitForFunction(() => !!(<any>window).index);
-  });
-
-  afterEach(async () => browser.close());
+  afterEach(t.afterEach);
 
   it("intermediate iframe created", async () => {
+    const page = t.page();
     await page.evaluate(() => (<any>window).index.initializeHostBridge("host"));
     await page.waitForSelector("iframe");
     expect(await page.$("iframe")).toBeTruthy();
   });
 
   it("plugin iframe created", async () => {
+    const page = t.page();
     await page.evaluate(() => {
       (<any>window).index
         .initializeHostBridge("host")
@@ -63,6 +44,7 @@ describe("initializeHostBridge", () => {
   });
 
   it("render works", async () => {
+    const page = t.page();
     await page.evaluate(() => {
       (<any>window).index
         .initializeHostBridge("host")
@@ -90,6 +72,7 @@ describe("initializeHostBridge", () => {
   });
 
   it("render and function invocations work", async () => {
+    const page = t.page();
     await page.evaluate(() => {
       const basicPropFn = (s: string) => {
         const d = document.createElement("div");
@@ -110,6 +93,7 @@ describe("initializeHostBridge", () => {
   });
 
   it("render and function 3-level invocations work", async () => {
+    const page = t.page();
     await page.evaluate(() => {
       const callback2 = (s: string) => {
         const d = document.createElement("div");
