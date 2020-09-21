@@ -2,9 +2,10 @@
   "name": "@pluginsdotdev/docs",
   "version": "0.0.0",
   "description": "Documentation for plugins.dev",
-  "author": "Adam Berger <adam.g.berger@gmail.com>",
-  "homepage": "https://plugins.dev/packages/docs",
+  "author": "Adam Berger <adam@plugins.dev>",
+  "homepage": "https://plugins.dev",
   "license": "ISC",
+  "private": true,
   "directories": {
     "lib": "src",
     "test": "tests"
@@ -13,7 +14,7 @@
     "src"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "restricted"
   },
   "repository": {
     "type": "git",
