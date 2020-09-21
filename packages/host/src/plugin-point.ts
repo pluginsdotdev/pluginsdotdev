@@ -48,12 +48,11 @@ const NodeComponent: React.FC<NodeComponentProps> = ({ node, nodesById }) => {
 };
 
 const PluginPoint = <P extends {}>(props: PluginPointProps<P>) => {
-  const [bridge, setBridge] = React.useState<HostBridge | null>(null);
-  const root = emptyRootNode();
   const rootId = 1;
+  const [bridge, setBridge] = React.useState<HostBridge | null>(null);
   const [rootNodesById, setRootNodesById] = React.useState<
     Record<RenderRootId, RootNode>
-  >({ [rootId]: root });
+  >({ [rootId]: emptyRootNode() });
 
   const onReconcile = (
     rootId: RenderRootId,

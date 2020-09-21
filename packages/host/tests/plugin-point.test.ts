@@ -36,6 +36,8 @@ describe("plugin-point", () => {
     });
     await page.waitForSelector("div.hello");
     expect(await page.$("div.hello")).toBeTruthy();
-    expect(await page.$eval("p", (p) => p.innerHTML)).toEqual("world");
+    expect(await page.$eval("div.hello > p", (p) => p.innerHTML)).toEqual(
+      "world"
+    );
   });
 });
