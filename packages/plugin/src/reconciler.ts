@@ -64,9 +64,10 @@ type RootNodeCommitCallback = (
   updates: Array<ReconciliationUpdate>
 ) => void;
 
-// these children will be added to our node array anyway. no need to keep them as props.
-const isIgnoredChildrenType = (children: any) =>
+const isReactChildType = (children: any) =>
   Array.isArray(children) || (!!children && !!children.$$typeof);
+
+const isSingleStringChildType = (children: any) => typeof children === "string";
 
 class Node implements Instance {
   props: Props = {};
@@ -87,9 +88,20 @@ class Node implements Instance {
   }
 
   applyProps(props: { [key: string]: any }) {
-    const propUpdates: Array<ReconciliationPropUpdate> = Object.keys(props).map(
+    const { children, ...normalProps } = props;
+    // weirdly, the reconciler doesn't create a text node for a single block of text, we do for consistency
+    const isSingleStringChild = isSingleStringChildType(children);
+    const isReactChild = isReactChildType(children);
+    const ps = isReactChild || isSingleStringChild ? normalProps : props;
+
+    if (isSingleStringChild) {
+      this.children.slice().forEach(this.removeChild.bind(this));
+      this.appendChild(new TextNode(this.rootInstance, children));
+    }
+
+    const propUpdates: Array<ReconciliationPropUpdate> = Object.keys(ps).map(
       (prop) => {
-        const value = props[prop];
+        const value = ps[prop];
 
         if (typeof value === "undefined") {
           delete this.props[prop];
@@ -314,19 +326,7 @@ const Reconciler = ReactReconciler<
     rootContainerInstance: Container,
     hostContext: HostContext
   ): Instance {
-    const { children, ...normalProps } = props;
-    const isSingleStringChild = typeof children === "string";
-    const adjustedProps =
-      isIgnoredChildrenType(children) || isSingleStringChild
-        ? normalProps
-        : props;
-    // weirdly, the reconciler doesn't create a text node for a single block of text, we do for consistency
-    return new Node(
-      rootContainerInstance,
-      type,
-      adjustedProps,
-      isSingleStringChild ? [new TextNode(rootContainerInstance, children)] : []
-    );
+    return new Node(rootContainerInstance, type, props, []);
   },
 
   appendInitialChild(parentInstance: Instance, child: PublicInstance): void {
@@ -348,6 +348,7 @@ const Reconciler = ReactReconciler<
     rootContainerInstance: Container,
     hostContext: HostContext
   ): TextInstance {
+    console.log("text instance", text);
     return new TextNode(rootContainerInstance, text);
   },
 
@@ -373,6 +374,8 @@ const Reconciler = ReactReconciler<
     newText: string
   ): void {
     textInstance.text = newText;
+    console.log("update text", newText, oldText);
+    // TODO: save the text update
   },
 
   removeChild(parentInstance: Instance, child: PublicInstance): void {
@@ -442,6 +445,10 @@ const Reconciler = ReactReconciler<
       if (oldProps[key] === newProps[key]) {
         return props;
       }
+      if (key === "children" && isReactChildType(newProps[key])) {
+        // we don't need to handle react children as props
+        return props;
+      }
       props[key] = newProps[key];
       return props;
     }, {} as Record<string, any>);
@@ -454,7 +461,9 @@ const Reconciler = ReactReconciler<
     oldProps: Props,
     newProps: Props
   ): void {
-    instance.applyProps(updatePayload);
+    if (Object.keys(updatePayload).length > 0) {
+      instance.applyProps(updatePayload);
+    }
   },
 
   commitMount(instance: Instance, type: ElementType, newProps: Props): void {

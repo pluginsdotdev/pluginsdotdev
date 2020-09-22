@@ -3,10 +3,30 @@ import fc from "fast-check";
 import { render, createRootNode } from '../src/reconciler';
 import type { ReconciliationUpdate, ReconciliationSetPropUpdate, ReconciliationPropUpdate } from '@pluginsdotdev/bridge';
 
+type RootNode = ReturnType<typeof createRootNode>;
+type ReconciliationUpdatesPromise = Promise<ReconciliationUpdate[]>;
+type UpdatesForRenderResult = Promise<{ root: RootNode, updates: ReconciliationUpdate[] }>;
+
+const updatesForRender = (
+  el: React.ReactNode,
+  rootNode?: RootNode
+): UpdatesForRenderResult => {
+  return new Promise((resolve, reject) => {
+    const onCommit = (_: any, updates: ReconciliationUpdate[]) => {
+      resolve({ root, updates });
+    };
+    if ( rootNode ) {
+      rootNode.onCommit = onCommit;
+    }
+    const root = rootNode ?? createRootNode(onCommit);
+    render(el, root);
+  });
+}
+
 describe('reconcile', () => {
   it('basic rendering', () => {
     return new Promise((resolve, reject) => {
-      const onCommit = (_: any, updates: Array<ReconciliationUpdate>) => {
+      const onCommit = (_: any, updates: ReconciliationUpdate[]) => {
         // TODO: write an expect.anyCapture that can capture named values
         //       to assert that they are the same when used multiple times.
         //       unification for the win.
@@ -61,6 +81,82 @@ describe('reconcile', () => {
       );
     });
   });
+
+  it('rendering for updates', async () => {
+    const { updates, root } = await updatesForRender(
+      <div className="helloWorld">
+        <p>
+          This is me!
+        </p>
+      </div>
+    );
+
+    expect(updates).toContainEqual({
+      nodeId: expect.any(Number),
+      type: 'text',
+      textUpdate: {
+        text: 'This is me!'
+      }
+    });
+
+    const { updates: updates2 } = await updatesForRender(
+      <div className="helloWorld">
+        <p>
+          This is me?
+        </p>
+      </div>,
+      root
+    );
+    expect(updates2.length).toEqual(2);
+    expect(updates2).toContainEqual({
+      nodeId: expect.any(Number),
+      type: 'p',
+      childUpdates: [
+        { op: 'delete', childId: expect.any(Number) },
+        { op: 'set', childId: expect.any(Number), childIdx: 0 }
+      ],
+      propUpdates: []
+    });
+    expect(updates2).toContainEqual({
+      nodeId: expect.any(Number),
+      type: 'text',
+      textUpdate: {
+        text: 'This is me?'
+      }
+    });
+
+    const { updates: updates3 } = await updatesForRender(
+      <div className="helloWorld">
+        <div>
+          This is me?
+        </div>
+      </div>,
+      root
+    );
+    expect(updates3).toContainEqual({
+      nodeId: expect.any(Number),
+      type: "text",
+      textUpdate: {
+        text: "This is me?"
+      }
+    });
+    expect(updates3).toContainEqual({
+      nodeId: expect.any(Number),
+      type: 'div',
+      childUpdates: [
+        { op: 'set', childId: expect.any(Number), childIdx: 0 }
+      ],
+      propUpdates: []
+    });
+    expect(updates3).toContainEqual({
+      nodeId: expect.any(Number),
+      type: 'div',
+      childUpdates: [
+        { op: 'delete', childId: expect.any(Number) },
+        { op: 'set', childId: expect.any(Number), childIdx: 0 }
+      ]
+    });
+  });
 });
 
 describe('properties', () => {
@@ -76,9 +172,9 @@ describe('properties', () => {
             )
           })
         ),
-        async (items: Array<{type: string, props: Record<string, any>}>) => {
-          const updates = await new Promise<Array<ReconciliationUpdate>>((resolve, reject) => {
-            const onCommit = (_: any, updates: Array<ReconciliationUpdate>) => {
+        async (items: {type: string, props: Record<string, any>}[]) => {
+          const updates = await new Promise((resolve, reject) => {
+            const onCommit = (_: any, updates: ReconciliationUpdate[]) => {
               resolve(updates);
             };
             const root = createRootNode(onCommit);
@@ -135,8 +231,8 @@ describe('properties', () => {
             }
           };
           const root = createRootNode(onCommit);
-          const getUpdates = () => (
-            new Promise<ReconciliationUpdate[]>((resolve, reject) => {
+          const getUpdates = (): ReconciliationUpdatesPromise => (
+            new Promise((resolve, reject) => {
               if ( updateBatches.length ) {
                 resolve(updateBatches.pop());
                 return;
