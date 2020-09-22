@@ -82,6 +82,24 @@ describe('reconcile', () => {
     });
   });
 
+  it('numeric children', async () => {
+    const { updates, root } = await updatesForRender(
+      <div className="helloWorld">
+        <p>
+          {4}
+        </p>
+      </div>
+    );
+
+    expect(updates).toContainEqual({
+      nodeId: expect.any(Number),
+      type: 'text',
+      textUpdate: {
+        text: '4'
+      }
+    });
+  });
+
   it('rendering for updates', async () => {
     const { updates, root } = await updatesForRender(
       <div className="helloWorld">

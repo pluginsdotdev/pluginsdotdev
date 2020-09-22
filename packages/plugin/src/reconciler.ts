@@ -67,7 +67,8 @@ type RootNodeCommitCallback = (
 const isReactChildType = (children: any) =>
   Array.isArray(children) || (!!children && !!children.$$typeof);
 
-const isSingleStringChildType = (children: any) => typeof children === "string";
+const isSingleStringChildType = (children: any) =>
+  typeof children === "string" || typeof children === "number";
 
 class Node implements Instance {
   props: Props = {};
@@ -96,7 +97,7 @@ class Node implements Instance {
 
     if (isSingleStringChild) {
       this.children.slice().forEach(this.removeChild.bind(this));
-      this.appendChild(new TextNode(this.rootInstance, children));
+      this.appendChild(new TextNode(this.rootInstance, "" + children));
     }
 
     const propUpdates: Array<ReconciliationPropUpdate> = Object.keys(ps).map(
