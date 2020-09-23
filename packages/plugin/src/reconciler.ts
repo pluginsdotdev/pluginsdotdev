@@ -184,29 +184,28 @@ const coalesceUpdates = (
   updates: Array<ReconciliationUpdate>
 ): Array<ReconciliationUpdate> => {
   const updatesById = new Map<NodeId, ReconciliationUpdate>();
-  const newUpdates: Array<ReconciliationUpdate> = [];
-  for (const update of updates) {
+  return updates.reduce((newUpdates, update) => {
     if (!updatesById.has(update.nodeId)) {
       updatesById.set(update.nodeId, update);
-      newUpdates.push(update);
-    } else {
-      const priorUpdate = updatesById.get(update.nodeId)!;
-      if (update.propUpdates) {
-        priorUpdate.propUpdates = (priorUpdate.propUpdates || []).concat(
-          update.propUpdates
-        );
-      }
-      if (update.childUpdates) {
-        priorUpdate.childUpdates = (priorUpdate.childUpdates || []).concat(
-          update.childUpdates
-        );
-      }
-      if (update.textUpdate) {
-        priorUpdate.textUpdate = update.textUpdate;
-      }
+      return newUpdates.concat([update]);
     }
-  }
-  return newUpdates;
+
+    const priorUpdate = updatesById.get(update.nodeId)!;
+    if (update.propUpdates) {
+      priorUpdate.propUpdates = (priorUpdate.propUpdates || []).concat(
+        update.propUpdates
+      );
+    }
+    if (update.childUpdates) {
+      priorUpdate.childUpdates = (priorUpdate.childUpdates || []).concat(
+        update.childUpdates
+      );
+    }
+    if (update.textUpdate) {
+      priorUpdate.textUpdate = update.textUpdate;
+    }
+    return newUpdates;
+  }, [] as Array<ReconciliationUpdate>);
 };
 
 // TODO: RootNode is very similar to Node; consider factoring
