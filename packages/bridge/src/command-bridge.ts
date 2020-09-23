@@ -165,7 +165,7 @@ interface ReconcileMessage {
   msg: "reconcile";
   payload: {
     rootId: RenderRootId;
-    updates: Array<ReconciliationUpdate>;
+    updates: BridgeValue;
   };
 }
 
@@ -360,7 +360,7 @@ const makeHostBridge = async (
       return false;
     }
 
-    reconcile(msg.payload.rootId, msg.payload.updates);
+    reconcile(msg.payload.rootId, fromBridge(bridge, msg.payload.updates));
 
     return true;
   };
@@ -520,7 +520,7 @@ const initializePluginBridge = async (
         msg: "reconcile",
         payload: {
           rootId,
-          updates,
+          updates: toThisBridge(updates),
         },
       });
     },
