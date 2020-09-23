@@ -2,7 +2,10 @@ export type HostId = string;
 
 export type PluginUrl = string;
 
-export type FunctionId = number;
+export type Opaque<K, T> = T & { __TYPE__: K };
+
+export type ProxyType = Opaque<"ProxyType", string>;
+export type ProxyId = { id: number; type: ProxyType };
 
 export type ObjectPath = string;
 
@@ -16,10 +19,14 @@ export interface BridgeValue {
    * bridgeData is the data that is safe to pass to the plugin
    **/
   bridgeData: any;
+
   /**
-   * bridgeFns is a map from paths in bridgeData to function ids the host will recognize (through localFns)
+   * bridgeProxyIds is a map from paths in bridgeData to ids.
+   * This allows for proxying non-cloneable objects across the bridge.
+   * For example, functions are automatically maintained in a map and
+   * referenced by id.
    **/
-  bridgeFns: Map<ObjectPath, FunctionId>;
+  bridgeProxyIds: Map<ObjectPath, ProxyId>;
 }
 
 /**
@@ -28,14 +35,17 @@ export interface BridgeValue {
  **/
 export interface LocalBridgeState {
   /**
-   * localFns is a map from function ids to the actual host function
+   * localProxies is a map from proxy ids to the actual host object.
+   * For example, this would map from an id to a function, to allow invocation
+   * of functions across the bridge.
    **/
-  localFns: Map<FunctionId, Function>;
+  localProxies: Map<ProxyId, Function>;
+
   /**
-   * knownFns is a map from functions to function ids. This allows us
-   * to re-use function ids for known functions.
+   * knownProxies is a map from proxies to proxy ids. This allows us
+   * to re-use proxy ids for known proxies.
    **/
-  knownFns: Map<Function, FunctionId>;
+  knownProxies: Map<Function, ProxyId>;
 }
 
 export type RenderRootId = number;
@@ -43,7 +53,7 @@ export type RenderRootId = number;
 export type Props = { [key: string]: any };
 
 export interface Bridge {
-  invokeFn: (fnId: FunctionId, args: any[]) => Promise<BridgeValue>;
+  invokeFn: (fnId: ProxyId, args: any[]) => Promise<BridgeValue>;
 }
 
 export interface HostBridge extends Bridge {

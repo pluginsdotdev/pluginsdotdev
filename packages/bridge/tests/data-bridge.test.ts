@@ -7,7 +7,7 @@ import {
 } from "../src/data-bridge";
 import type {
   ObjectPath,
-  FunctionId,
+  ProxyId,
   BridgeValue,
   LocalBridgeState,
   RenderRootId,
@@ -53,7 +53,7 @@ expect.extend({
     expect(received).toMatchObject({
       bridgeData: expected.bridgeData,
     });
-    expect(received.bridgeFns).toMatchMap(expected.bridgeFns);
+    expect(received.bridgeProxyIds).toMatchMap(expected.bridgeProxyIds);
     return {
       message: () => "Expected matching BridgeDataContainers",
       pass: true,
@@ -62,17 +62,17 @@ expect.extend({
   toMatchLocalState(
     received: LocalBridgeState,
     bridgeValue: BridgeValue,
-    localFnsByPath: Map<ObjectPath, Function>
+    localProxiesByPath: Map<ObjectPath, Function>
   ) {
-    const expectedLocalFns = new Map<FunctionId, Function>();
-    const expectedKnownFns = new Map<Function, FunctionId>();
+    const expectedLocalProxies = new Map<ProxyId, Function>();
+    const expectedKnownProxies = new Map<Function, ProxyId>();
 
-    for (const [path, fnId] of bridgeValue.bridgeFns) {
-      const fn = localFnsByPath.get(path);
+    for (const [path, fnId] of bridgeValue.bridgeProxyIds) {
+      const fn = localProxiesByPath.get(path);
       expect(fn).toBeTruthy();
 
-      expect(received.localFns.get(fnId)).toBe(fn);
-      expect(received.knownFns.get(fn!)).toEqual(fnId);
+      expect(received.localProxies.get(fnId)).toBe(fn);
+      expect(received.knownProxies.get(fn!)).toEqual(fnId);
     }
 
     return {
@@ -89,7 +89,7 @@ declare global {
       toMatchBridgeValue(expected: BridgeValue): R;
       toMatchLocalState(
         bridgeValue: BridgeValue,
-        localFnsByPath: Map<ObjectPath, Function>
+        localProxiesByPath: Map<ObjectPath, Function>
       ): R;
     }
   }
@@ -98,45 +98,47 @@ declare global {
 describe("toBridge", () => {
   it("basic examples", () => {
     const localState = {
-      localFns: new Map<FunctionId, Function>(),
-      knownFns: new Map<Function, FunctionId>(),
+      localProxies: new Map<ProxyId, Function>(),
+      knownProxies: new Map<Function, ProxyId>(),
     };
 
     expect(toBridge(localState, 4)).toMatchBridgeValue({
       bridgeData: 4,
-      bridgeFns: new Map(),
+      bridgeProxyIds: new Map(),
     });
-    expect(localState.localFns.size).toEqual(0);
-    expect(localState.knownFns.size).toEqual(0);
+    expect(localState.localProxies.size).toEqual(0);
+    expect(localState.knownProxies.size).toEqual(0);
 
     expect(toBridge(localState, true)).toMatchBridgeValue({
       bridgeData: true,
-      bridgeFns: new Map(),
+      bridgeProxyIds: new Map(),
     });
-    expect(localState.localFns.size).toEqual(0);
-    expect(localState.knownFns.size).toEqual(0);
+    expect(localState.localProxies.size).toEqual(0);
+    expect(localState.knownProxies.size).toEqual(0);
 
     expect(toBridge(localState, "hello world")).toMatchBridgeValue({
       bridgeData: "hello world",
-      bridgeFns: new Map(),
+      bridgeProxyIds: new Map(),
     });
-    expect(localState.localFns.size).toEqual(0);
-    expect(localState.knownFns.size).toEqual(0);
+    expect(localState.localProxies.size).toEqual(0);
+    expect(localState.knownProxies.size).toEqual(0);
 
     expect(
       toBridge(localState, { aString: "a", aBool: true, aNumber: 7.34 })
     ).toMatchBridgeValue({
       bridgeData: { aString: "a", aBool: true, aNumber: 7.34 },
-      bridgeFns: new Map(),
+      bridgeProxyIds: new Map(),
     });
-    expect(localState.localFns.size).toEqual(0);
-    expect(localState.knownFns.size).toEqual(0);
+    expect(localState.localProxies.size).toEqual(0);
+    expect(localState.knownProxies.size).toEqual(0);
 
     const fn = () => 4;
     const fnBridge = toBridge(localState, fn);
     expect(fnBridge).toMatchBridgeValue({
       bridgeData: null,
-      bridgeFns: new Map([[pathPartsToObjectPath([]), expect.any(Number)]]),
+      bridgeProxyIds: new Map([
+        [pathPartsToObjectPath([]), expect.any(Number)],
+      ]),
     });
     expect(localState).toMatchLocalState(
       fnBridge,
@@ -145,30 +147,30 @@ describe("toBridge", () => {
   });
   it("should dedup functions", () => {
     const localState = {
-      localFns: new Map<FunctionId, Function>(),
-      knownFns: new Map<Function, FunctionId>(),
+      localProxies: new Map<ProxyId, Function>(),
+      knownProxies: new Map<Function, ProxyId>(),
     };
 
     const fn = () => {};
     const bridgeVal = toBridge(localState, { f1: fn, f2: fn });
     expect(bridgeVal).toMatchBridgeValue({
       bridgeData: {},
-      bridgeFns: new Map([
+      bridgeProxyIds: new Map([
         [pathPartsToObjectPath(["f1"]), expect.any(Number)],
         [pathPartsToObjectPath(["f2"]), expect.any(Number)],
       ]),
     });
-    expect(localState.localFns.size).toEqual(1);
-    expect(localState.knownFns.size).toEqual(1);
+    expect(localState.localProxies.size).toEqual(1);
+    expect(localState.knownProxies.size).toEqual(1);
 
     expect(toBridge(localState, { f1: fn, f2: fn })).toMatchObject(bridgeVal);
-    expect(localState.localFns.size).toEqual(1);
-    expect(localState.knownFns.size).toEqual(1);
+    expect(localState.localProxies.size).toEqual(1);
+    expect(localState.knownProxies.size).toEqual(1);
   });
   it("should reject custom prototypes in development but not in production", () => {
     const localState = {
-      localFns: new Map<FunctionId, Function>(),
-      knownFns: new Map<Function, FunctionId>(),
+      localProxies: new Map<ProxyId, Function>(),
+      knownProxies: new Map<Function, ProxyId>(),
     };
 
     const a = Object.create({ myInheritedProp: 4 });
@@ -179,13 +181,13 @@ describe("toBridge", () => {
     process.env.NODE_ENV = "production";
     expect(toBridge(localState, a)).toMatchBridgeValue({
       bridgeData: {},
-      bridgeFns: new Map(),
+      bridgeProxyIds: new Map(),
     });
   });
   it("nested examples", () => {
     const localState = {
-      localFns: new Map<FunctionId, Function>(),
-      knownFns: new Map<Function, FunctionId>(),
+      localProxies: new Map<ProxyId, Function>(),
+      knownProxies: new Map<Function, ProxyId>(),
     };
 
     const fn1 = () => {};
@@ -208,7 +210,7 @@ describe("toBridge", () => {
           f: [null, "hello"],
         },
       },
-      bridgeFns: new Map([
+      bridgeProxyIds: new Map([
         [pathPartsToObjectPath(["c"]), expect.any(Number)],
         [pathPartsToObjectPath(["d", "e"]), expect.any(Number)],
         [pathPartsToObjectPath(["d", "f", 0]), expect.any(Number)],
@@ -230,8 +232,8 @@ const bridgeFromLocalState = (localState: LocalBridgeState) => {
     render: (rootId: RenderRootId, props: Props): Promise<void> => {
       return Promise.resolve();
     },
-    invokeFn: (fnId: FunctionId, args: any[]): Promise<BridgeValue> => {
-      const fn = localState.localFns.get(fnId);
+    invokeFn: (fnId: ProxyId, args: any[]): Promise<BridgeValue> => {
+      const fn = localState.localProxies.get(fnId);
       return !!fn
         ? Promise.resolve(fn.apply(null, args)).then(
             toBridge.bind(null, localState)
@@ -244,8 +246,8 @@ const bridgeFromLocalState = (localState: LocalBridgeState) => {
 describe("fromBridge", () => {
   it("basic examples", () => {
     const localState = {
-      localFns: new Map<FunctionId, Function>(),
-      knownFns: new Map<Function, FunctionId>(),
+      localProxies: new Map<ProxyId, Function>(),
+      knownProxies: new Map<Function, ProxyId>(),
     };
 
     const fn1 = () => {};
@@ -295,8 +297,8 @@ describe("properties", () => {
     fc.assert(
       fc.property(fc.object(), (obj) => {
         const localState = {
-          localFns: new Map<FunctionId, Function>(),
-          knownFns: new Map<Function, FunctionId>(),
+          localProxies: new Map<ProxyId, Function>(),
+          knownProxies: new Map<Function, ProxyId>(),
         };
         const bridgeValue = toBridge(localState, obj);
         const bridge = bridgeFromLocalState(localState);
@@ -312,8 +314,8 @@ describe("properties", () => {
         fc.array(fc.array(fc.string(6, 8), 1, 10)),
         (simpleObj, fnPaths) => {
           const localState = {
-            localFns: new Map<FunctionId, Function>(),
-            knownFns: new Map<Function, FunctionId>(),
+            localProxies: new Map<ProxyId, Function>(),
+            knownProxies: new Map<Function, ProxyId>(),
           };
           const preBridgeVal = fnPaths.reduce(
             (obj, fnPath) =>

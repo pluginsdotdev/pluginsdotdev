@@ -3,8 +3,9 @@ import type {
   BridgeValue,
   LocalBridgeState,
   ObjectPath,
-  FunctionId,
+  ProxyId,
   HostValue,
+  ProxyType,
 } from "./types";
 
 export type ObjectPathParts = Array<string | number>;
@@ -53,11 +54,51 @@ const hasValidPrototype = (v: object): boolean => {
   return idx >= 0;
 };
 
-let globalFnId = 0;
+/**
+ * DuplicateProxyTypeError indicates that multiple proxy types were registered
+ * for the same type identifier.
+ **/
+export class DuplicateProxyTypeError extends Error {
+  static _code = "DuplicateProxyTypeError";
+
+  code = DuplicateProxyTypeError._code;
+
+  static is(error: Error) {
+    return (error as any).code === DuplicateProxyTypeError._code;
+  }
+
+  constructor(public type: string) {
+    super(`Duplicate proxy type: ${type}`);
+  }
+}
+
+const proxyTypes = new Set<string>();
+
+/**
+ * registerProxyType expects a namespaced type ("namespace/name") and returns
+ * a factory for generating ProxyIds of that type.
+ *
+ * @throws DuplicateProxyTypeError if multiple proxies of the same type are registered.
+ **/
+export const registerProxyType = (type: string): (() => ProxyId) => {
+  if (proxyTypes.has(type)) {
+    throw new DuplicateProxyTypeError(type);
+  }
+  proxyTypes.add(type);
+
+  let nextId = 0;
+
+  return () => ({
+    id: ++nextId,
+    type: type as ProxyType,
+  });
+};
+
+const fnProxyId = registerProxyType("pluginsdotdev/function");
 
 const _toBridge = (
   localState: LocalBridgeState,
-  bridgeFns: Map<ObjectPath, FunctionId>,
+  bridgeProxyIds: Map<ObjectPath, ProxyId>,
   hostValue: HostValue,
   path: Array<string | number>
 ): any => {
@@ -65,16 +106,16 @@ const _toBridge = (
     // functions are replaced by ids, which are used to communicate invocations
     // in future messages.
     // a map of json path in the bridgeData to fnId is passed alongside bridgeData
-    const fnId = localState.knownFns.get(hostValue) ?? ++globalFnId;
-    bridgeFns.set(pathPartsToObjectPath(path), fnId);
-    localState.localFns.set(fnId, hostValue);
-    localState.knownFns.set(hostValue, fnId);
+    const fnId = localState.knownProxies.get(hostValue) ?? fnProxyId();
+    bridgeProxyIds.set(pathPartsToObjectPath(path), fnId);
+    localState.localProxies.set(fnId, hostValue);
+    localState.knownProxies.set(hostValue, fnId);
     return null;
   } else if (Array.isArray(hostValue)) {
     // arrays are traversed item by item, each is converted from host->bridge
     // TODO: for large arrays, we may want to bail if they are monomorphic (by declaration or partial testing)
     const bridgeVal = hostValue.map((hostVal, idx) =>
-      _toBridge(localState, bridgeFns, hostVal, path.concat(idx))
+      _toBridge(localState, bridgeProxyIds, hostVal, path.concat(idx))
     );
     return bridgeVal;
   } else if (
@@ -99,7 +140,7 @@ const _toBridge = (
       (p: { [key: string]: any }, key: string) => {
         p[key] = _toBridge(
           localState,
-          bridgeFns,
+          bridgeProxyIds,
           hostValue[key],
           path.concat(key)
         );
@@ -125,13 +166,13 @@ const toBridge = (
   localState: LocalBridgeState,
   hostValue: HostValue
 ): BridgeValue => {
-  const bridgeFns = new Map<ObjectPath, FunctionId>();
+  const bridgeProxyIds = new Map<ObjectPath, ProxyId>();
 
-  const bridgeData = _toBridge(localState, bridgeFns, hostValue, []);
+  const bridgeData = _toBridge(localState, bridgeProxyIds, hostValue, []);
 
   return {
     bridgeData,
-    bridgeFns,
+    bridgeProxyIds,
   };
 };
 
@@ -159,7 +200,7 @@ const assignAtPath = (container: any, path: ObjectPathParts, val: any): any => {
 
 const wrapFnFromBridge = (
   bridge: Bridge,
-  fnId: FunctionId
+  fnId: ProxyId
 ): ((...args: any[]) => any) => {
   return (...args: any[]): any => bridge.invokeFn(fnId, args); // TODO: catch and unwrap any exception
 };
@@ -174,9 +215,9 @@ const fromBridge = (
   bridge: Bridge,
   bridgeValue: Readonly<BridgeValue>
 ): any => {
-  const { bridgeFns } = bridgeValue;
+  const { bridgeProxyIds } = bridgeValue;
   let stubbedBridgeValue = bridgeValue.bridgeData;
-  const iter = bridgeValue.bridgeFns.entries();
+  const iter = bridgeValue.bridgeProxyIds.entries();
   for (let next = iter.next(); !next.done; next = iter.next()) {
     const [path, fn] = next.value;
     stubbedBridgeValue = assignAtPath(
