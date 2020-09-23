@@ -13,7 +13,14 @@
         return function(props) {
           const R = window.React;
           return R.createElement('div', { className: props.className },
-            R.createElement('p', {}, props.title)
+            R.createElement('p', {}, props.title),
+            props.onClick
+              ? R.createElement(
+                  'button',
+                  { onClick: () => props.onClick() },
+                  'click'
+              ) : null,
+            props.count ? props.count : 0
           );
         }
       }
