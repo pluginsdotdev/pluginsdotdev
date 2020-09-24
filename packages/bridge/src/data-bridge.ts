@@ -105,6 +105,18 @@ const toBridgeProxyHandlers: Array<{
 }> = [];
 const fromBridgeProxyHandlers = new Map<ProxyType, FromBridgeProxyHandler>();
 
+type UnwrappedProxyId = {
+  id: number;
+  type: ProxyType;
+};
+
+const wrapProxyId = (unwrapped: UnwrappedProxyId): ProxyId =>
+  JSON.stringify(unwrapped) as ProxyId;
+
+const unwrapProxyId = (proxyId: ProxyId): UnwrappedProxyId =>
+  JSON.parse(proxyId) as UnwrappedProxyId;
+
+// TODO: proxy id needs to be a string. maps don't handle object equality
 const makeProxyIdFactory = (type: ProxyType) => {
   let nextId = 0;
 
@@ -115,10 +127,10 @@ const makeProxyIdFactory = (type: ProxyType) => {
     }
 
     const id = ++nextId;
-    return {
+    return wrapProxyId({
       id,
       type,
-    };
+    });
   };
 };
 
@@ -167,7 +179,7 @@ const fromBridgeFnProxyHandler = (bridge: Bridge, proxyId: ProxyId) => {
 };
 
 registerFromBridgeProxyHandler(
-  "pluginsdotdev/function",
+  "plugins.dev/function",
   fromBridgeFnProxyHandler
 );
 
@@ -189,7 +201,7 @@ const toBridgeFnProxyHandler = (
   };
 };
 
-registerToBridgeProxyHandler("pluginsdotdev/function", toBridgeFnProxyHandler);
+registerToBridgeProxyHandler("plugins.dev/function", toBridgeFnProxyHandler);
 
 const _toBridge = (
   localState: LocalBridgeState,
@@ -205,6 +217,7 @@ const _toBridge = (
   if (handlerValue) {
     if (typeof handlerValue.proxyId !== "undefined") {
       const { proxyId } = handlerValue;
+      console.log("set local proxy", JSON.stringify(proxyId));
       localState.localProxies.set(proxyId, hostValue);
       localState.knownProxies.set(hostValue, proxyId);
       bridgeProxyIds.set(pathPartsToObjectPath(path), proxyId);
@@ -316,7 +329,7 @@ export const fromBridge = (
   const iter = bridgeValue.bridgeProxyIds.entries();
   for (let next = iter.next(); !next.done; next = iter.next()) {
     const [path, proxyId] = next.value;
-    const { type } = proxyId;
+    const { type } = unwrapProxyId(proxyId);
     if (!fromBridgeProxyHandlers.has(type)) {
       throw new UnregisteredProxyTypeError(type);
     }

@@ -5,7 +5,7 @@ export type PluginUrl = string;
 export type Opaque<K, T> = T & { __TYPE__: K };
 
 export type ProxyType = Opaque<"ProxyType", string>;
-export type ProxyId = { id: number; type: ProxyType };
+export type ProxyId = Opaque<"ProxyId", string>;
 
 export type ObjectPath = string;
 

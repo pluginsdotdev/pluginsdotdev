@@ -6,7 +6,7 @@ import type {
   PluginBridge,
   HostId,
   PluginUrl,
-  FunctionId,
+  ProxyId,
   BridgeValue,
   LocalBridgeState,
   RenderRootId,
@@ -133,7 +133,7 @@ interface InvokeMessage {
   msg: "invoke";
   payload: {
     invocationId: InvocationId;
-    fnId: FunctionId;
+    fnId: ProxyId;
     argsBridgeValue: BridgeValue;
   };
 }
@@ -214,8 +214,8 @@ const makeCommonBridge = (
   };
 
   const localState: LocalBridgeState = {
-    localFns: new Map(),
-    knownFns: new Map(),
+    localProxies: new Map(),
+    knownProxies: new Map(),
   };
 
   const toThisBridge = (value: any): BridgeValue => {
@@ -224,7 +224,8 @@ const makeCommonBridge = (
 
   const handleInvokeMessage = (bridge: Bridge, msg: InvokeMessage) => {
     const { invocationId, fnId, argsBridgeValue } = msg.payload;
-    const fn = localState.localFns.get(fnId);
+    const fn = localState.localProxies.get(fnId);
+    console.log("get local proxy", JSON.stringify(fnId));
     if (!fn) {
       console.log("Unknown function invoked");
       // TODO: return error?
@@ -272,7 +273,7 @@ const makeCommonBridge = (
       // responses are handled by dynamic handlers
       msgHandlers.forEach((handler) => handler(pluginMsg));
     },
-    async invokeFn(fnId: FunctionId, args: any[]): Promise<BridgeValue> {
+    async invokeFn(fnId: ProxyId, args: any[]): Promise<BridgeValue> {
       const invocationId = ++nextInvocationId;
       const argsBridgeValue = toThisBridge(args);
       const pluginMsg: InvokeMessage = {
