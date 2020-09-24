@@ -66,24 +66,28 @@ export type ToBridgeProxyValue =
   | null;
 
 /**
+ * ProxyIdFactory generates a new ProxyId
+ **/
+export type ProxyIdFactory = (
+  localState: LocalBridgeState,
+  hostValue: HostValue
+) => ProxyId;
+
+/**
  * ToBridgeProxyHandler is a handler for a proxy type.
  * This allows the implementer to handle custom proxying to the bridge.
  **/
-export interface ToBridgeProxyHandler {
-  maybeToBridge: (
-    localState: LocalBridgeState,
-    hostValue: HostValue
-  ) => ToBridgeProxyValue | null;
-}
+export type ToBridgeProxyHandler = (
+  proxyIdFactory: ProxyIdFactory,
+  localState: LocalBridgeState,
+  hostValue: HostValue
+) => ToBridgeProxyValue | null;
 
 /**
  * FromBridgeProxyHandler is a handler for a proxy type.
  * This allows the implementer to handle custom proxying from the bridge.
  **/
-export interface FromBridgeProxyHandler {
-  type: ProxyType;
-  fromBridge: (bridge: Bridge, proxyId: ProxyId) => any;
-}
+export type FromBridgeProxyHandler = (bridge: Bridge, proxyId: ProxyId) => any;
 
 export type RenderRootId = number;
 
