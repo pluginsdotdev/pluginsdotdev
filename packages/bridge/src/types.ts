@@ -11,6 +11,8 @@ export type ObjectPath = string;
 
 export type HostValue = Readonly<any> | number | string | boolean | null;
 
+export type ProxyValue = any;
+
 /**
  * BridgeValue contains data suitable for transmission over the bridge
  **/
@@ -39,13 +41,48 @@ export interface LocalBridgeState {
    * For example, this would map from an id to a function, to allow invocation
    * of functions across the bridge.
    **/
-  localProxies: Map<ProxyId, Function>;
+  localProxies: Map<ProxyId, ProxyValue>;
 
   /**
    * knownProxies is a map from proxies to proxy ids. This allows us
    * to re-use proxy ids for known proxies.
    **/
-  knownProxies: Map<Function, ProxyId>;
+  knownProxies: Map<ProxyValue, ProxyId>;
+}
+
+export interface ToBridgeProxyValueId {
+  proxyId: ProxyId;
+  replacementValue?: undefined;
+}
+
+export interface ToBridgeProxyValueReplacement {
+  proxyId?: undefined;
+  replacementValue: HostValue;
+}
+
+export type ToBridgeProxyValue =
+  | ToBridgeProxyValueId
+  | ToBridgeProxyValueReplacement
+  | null;
+
+/**
+ * ToBridgeProxyHandler is a handler for a proxy type.
+ * This allows the implementer to handle custom proxying to the bridge.
+ **/
+export interface ToBridgeProxyHandler {
+  maybeToBridge: (
+    localState: LocalBridgeState,
+    hostValue: HostValue
+  ) => ToBridgeProxyValue | null;
+}
+
+/**
+ * FromBridgeProxyHandler is a handler for a proxy type.
+ * This allows the implementer to handle custom proxying from the bridge.
+ **/
+export interface FromBridgeProxyHandler {
+  type: ProxyType;
+  fromBridge: (bridge: Bridge, proxyId: ProxyId) => any;
 }
 
 export type RenderRootId = number;

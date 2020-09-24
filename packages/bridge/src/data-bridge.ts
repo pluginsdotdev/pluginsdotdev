@@ -6,6 +6,9 @@ import type {
   ProxyId,
   HostValue,
   ProxyType,
+  FromBridgeProxyHandler,
+  ToBridgeProxyHandler,
+  ToBridgeProxyValue,
 } from "./types";
 
 export type ObjectPathParts = Array<string | number>;
@@ -72,7 +75,31 @@ export class DuplicateProxyTypeError extends Error {
   }
 }
 
+/**
+ * UnregisteredProxyTypeError indicates that a proxy type was encountered
+ * that was not previously registered.
+ **/
+export class UnregisteredProxyTypeError extends Error {
+  static _code = "UnregisteredProxyTypeError";
+
+  code = UnregisteredProxyTypeError._code;
+
+  static is(error: Error) {
+    return (error as any).code === UnregisteredProxyTypeError._code;
+  }
+
+  constructor(public type: string) {
+    super(`Unregistered proxy type: ${type}`);
+  }
+}
+
 const proxyTypes = new Set<string>();
+
+export interface ProxyIdFactory {
+  (localState: LocalBridgeState, hostValue: HostValue): ProxyId;
+
+  proxyType: ProxyType;
+}
 
 /**
  * registerProxyType expects a namespaced type ("namespace/name") and returns
@@ -80,42 +107,71 @@ const proxyTypes = new Set<string>();
  *
  * @throws DuplicateProxyTypeError if multiple proxies of the same type are registered.
  **/
-export const registerProxyType = (type: string): (() => ProxyId) => {
-  if (proxyTypes.has(type)) {
-    throw new DuplicateProxyTypeError(type);
+export const registerProxyType = (proxyType: string): ProxyIdFactory => {
+  if (proxyTypes.has(proxyType)) {
+    throw new DuplicateProxyTypeError(proxyType);
   }
-  proxyTypes.add(type);
+  proxyTypes.add(proxyType);
 
   let nextId = 0;
 
-  return () => ({
-    id: ++nextId,
-    type: type as ProxyType,
-  });
+  const type = proxyType as ProxyType;
+
+  const f = (localState: LocalBridgeState, hostValue: HostValue): ProxyId => {
+    const knownProxy = localState.knownProxies.get(hostValue);
+    if (knownProxy) {
+      return knownProxy;
+    }
+
+    const id = ++nextId;
+    return {
+      id,
+      type,
+    };
+  };
+
+  f.proxyType = type;
+
+  return f;
 };
 
 const fnProxyId = registerProxyType("pluginsdotdev/function");
 
 const _toBridge = (
   localState: LocalBridgeState,
+  proxyHandlers: Array<ToBridgeProxyHandler>,
   bridgeProxyIds: Map<ObjectPath, ProxyId>,
   hostValue: HostValue,
   path: Array<string | number>
 ): any => {
-  if (typeof hostValue === "function") {
-    // functions are replaced by ids, which are used to communicate invocations
-    // in future messages.
-    // a map of json path in the bridgeData to fnId is passed alongside bridgeData
-    const fnId = localState.knownProxies.get(hostValue) ?? fnProxyId();
-    bridgeProxyIds.set(pathPartsToObjectPath(path), fnId);
-    localState.localProxies.set(fnId, hostValue);
-    localState.knownProxies.set(hostValue, fnId);
-    return null;
+  const handlerValue = proxyHandlers.reduce(
+    (value, proxy) => value || proxy.maybeToBridge(localState, hostValue),
+    null as ToBridgeProxyValue | null
+  );
+
+  if (handlerValue) {
+    if (typeof handlerValue.proxyId !== "undefined") {
+      const { proxyId } = handlerValue;
+      localState.localProxies.set(proxyId, hostValue);
+      localState.knownProxies.set(hostValue, proxyId);
+      bridgeProxyIds.set(pathPartsToObjectPath(path), proxyId);
+      return null;
+    }
+
+    if (typeof handlerValue.replacementValue !== "undefined") {
+      return handlerValue.replacementValue;
+    }
   } else if (Array.isArray(hostValue)) {
     // arrays are traversed item by item, each is converted from host->bridge
     // TODO: for large arrays, we may want to bail if they are monomorphic (by declaration or partial testing)
     const bridgeVal = hostValue.map((hostVal, idx) =>
-      _toBridge(localState, bridgeProxyIds, hostVal, path.concat(idx))
+      _toBridge(
+        localState,
+        proxyHandlers,
+        bridgeProxyIds,
+        hostVal,
+        path.concat(idx)
+      )
     );
     return bridgeVal;
   } else if (
@@ -140,6 +196,7 @@ const _toBridge = (
       (p: { [key: string]: any }, key: string) => {
         p[key] = _toBridge(
           localState,
+          proxyHandlers,
           bridgeProxyIds,
           hostValue[key],
           path.concat(key)
@@ -154,6 +211,31 @@ const _toBridge = (
   return hostValue;
 };
 
+const fromBridgeFnProxyHandler: FromBridgeProxyHandler = {
+  type: fnProxyId.proxyType,
+
+  fromBridge(bridge: Bridge, proxyId: ProxyId) {
+    // TODO: catch and unwrap any exception
+    return (...args: any[]): Promise<any> => bridge.invokeFn(proxyId, args);
+  },
+};
+
+const toBridgeFnProxyHandler: ToBridgeProxyHandler = {
+  maybeToBridge(localState: LocalBridgeState, hostValue: HostValue) {
+    if (typeof hostValue !== "function") {
+      return null;
+    }
+
+    // functions are replaced by ids, which are used to communicate
+    // invocations in future messages.
+    // a map of json path in the bridgeData to proxyId is passed alongside
+    // bridgeData
+    return {
+      proxyId: fnProxyId(localState, hostValue),
+    };
+  },
+};
+
 /**
  * Construct a BridgeValue from local state and a host object.
  * The BridgeValue contains a representation of hostValue suitable for
@@ -164,11 +246,18 @@ const _toBridge = (
  **/
 const toBridge = (
   localState: LocalBridgeState,
-  hostValue: HostValue
+  hostValue: HostValue,
+  proxyHandlers?: Array<ToBridgeProxyHandler>
 ): BridgeValue => {
   const bridgeProxyIds = new Map<ObjectPath, ProxyId>();
 
-  const bridgeData = _toBridge(localState, bridgeProxyIds, hostValue, []);
+  const bridgeData = _toBridge(
+    localState,
+    [toBridgeFnProxyHandler].concat(proxyHandlers || []),
+    bridgeProxyIds,
+    hostValue,
+    []
+  );
 
   return {
     bridgeData,
@@ -198,13 +287,6 @@ const assignAtPath = (container: any, path: ObjectPathParts, val: any): any => {
   return container;
 };
 
-const wrapFnFromBridge = (
-  bridge: Bridge,
-  fnId: ProxyId
-): ((...args: any[]) => any) => {
-  return (...args: any[]): any => bridge.invokeFn(fnId, args); // TODO: catch and unwrap any exception
-};
-
 /**
  * Given a bridge and a bridgeValue, construct a regular object with all
  * functions on the bridgeValue proxied back over the bridge.
@@ -213,17 +295,30 @@ const wrapFnFromBridge = (
  **/
 const fromBridge = (
   bridge: Bridge,
-  bridgeValue: Readonly<BridgeValue>
+  bridgeValue: Readonly<BridgeValue>,
+  proxyHandlers?: Array<FromBridgeProxyHandler>
 ): any => {
+  const proxyHandlersByType = [fromBridgeFnProxyHandler]
+    .concat(proxyHandlers || [])
+    .reduce((m, h) => {
+      m.set(h.type, h);
+      return m;
+    }, new Map<ProxyType, FromBridgeProxyHandler>());
+
   const { bridgeProxyIds } = bridgeValue;
   let stubbedBridgeValue = bridgeValue.bridgeData;
   const iter = bridgeValue.bridgeProxyIds.entries();
   for (let next = iter.next(); !next.done; next = iter.next()) {
-    const [path, fn] = next.value;
+    const [path, proxyId] = next.value;
+    const { type } = proxyId;
+    if (!proxyHandlersByType.has(type)) {
+      throw new UnregisteredProxyTypeError(type);
+    }
+    const handler = proxyHandlersByType.get(type)!;
     stubbedBridgeValue = assignAtPath(
       stubbedBridgeValue,
       objectPathToPathParts(path),
-      wrapFnFromBridge(bridge, fn)
+      handler.fromBridge(bridge, proxyId)
     );
   }
 
