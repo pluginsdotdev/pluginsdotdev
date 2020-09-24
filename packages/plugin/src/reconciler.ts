@@ -18,8 +18,8 @@ interface Props {
 type NodeId = number;
 
 interface Instance {
-  id: NodeId;
-  type: ElementType;
+  id: Readonly<NodeId>;
+  type: Readonly<ElementType>;
   children: Array<Instance | TextInstance>;
   props: Props;
   appendChild(child: Instance | TextInstance): void;
@@ -38,9 +38,11 @@ interface RootInstance extends Instance {
 }
 
 interface TextInstance {
-  id: NodeId;
-  type: string;
-  text: string;
+  id: Readonly<NodeId>;
+  type: Readonly<string>;
+  text: Readonly<string>;
+
+  setText: (text: string) => void;
 }
 
 type Container = RootInstance;
@@ -304,6 +306,17 @@ class TextNode implements TextInstance {
       },
     });
   }
+
+  setText(text: string) {
+    this.text = text;
+    this.rootInstance.recordUpdate({
+      nodeId: this.id,
+      type: this.type,
+      textUpdate: {
+        text,
+      },
+    });
+  }
 }
 
 const Reconciler = ReactReconciler<
@@ -348,7 +361,6 @@ const Reconciler = ReactReconciler<
     rootContainerInstance: Container,
     hostContext: HostContext
   ): TextInstance {
-    console.log("text instance", text);
     return new TextNode(rootContainerInstance, text);
   },
 
@@ -373,9 +385,7 @@ const Reconciler = ReactReconciler<
     oldText: string,
     newText: string
   ): void {
-    textInstance.text = newText;
-    console.log("update text", newText, oldText);
-    // TODO: save the text update
+    textInstance.setText(newText);
   },
 
   removeChild(parentInstance: Instance, child: PublicInstance): void {

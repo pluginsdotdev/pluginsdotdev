@@ -175,6 +175,40 @@ describe('reconcile', () => {
       ]
     });
   });
+
+  it('rendering for text updates', async () => {
+    const { updates, root } = await updatesForRender(
+      <div className="helloWorld">
+        <p>
+          yo {"hi"}
+        </p>
+      </div>
+    );
+
+    expect(updates).toContainEqual({
+      nodeId: expect.any(Number),
+      type: 'text',
+      textUpdate: {
+        text: 'hi'
+      }
+    });
+
+    const { updates: updates2 } = await updatesForRender(
+      <div className="helloWorld">
+        <p>
+          yo {"bye"}
+        </p>
+      </div>,
+      root
+    );
+    expect(updates2).toContainEqual({
+      nodeId: expect.any(Number),
+      type: 'text',
+      textUpdate: {
+        text: 'bye'
+      }
+    });
+  });
 });
 
 describe('properties', () => {
