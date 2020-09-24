@@ -217,7 +217,6 @@ const _toBridge = (
   if (handlerValue) {
     if (typeof handlerValue.proxyId !== "undefined") {
       const { proxyId } = handlerValue;
-      console.log("set local proxy", JSON.stringify(proxyId));
       localState.localProxies.set(proxyId, hostValue);
       localState.knownProxies.set(hostValue, proxyId);
       bridgeProxyIds.set(pathPartsToObjectPath(path), proxyId);
