@@ -118,4 +118,34 @@ describe("initializeHostBridge", () => {
     await page.waitForSelector('div[data-prop-fn="hello world!"]');
     expect(await page.$('div[data-prop-fn="hello world!"]')).toBeTruthy();
   });
+
+  it("render and promise-returning invocations work", async () => {
+    const page = t.page();
+    await page.evaluate(() => {
+      const promiseFn = (s: string) => {
+        return Promise.resolve(s + " world");
+      };
+
+      return (<any>window).index
+        .initializeHostBridge("host")
+        .then((makeBridge: (pluginUrl: PluginUrl) => HostBridge) => {
+          return makeBridge("http://localhost:8081/tests/plugin.html");
+        })
+        .then((bridge: HostBridge) => {
+          return bridge.render(234, { promiseFn });
+        });
+    });
+    await page
+      .mainFrame()
+      .childFrames()[0]
+      .childFrames()[0]
+      .waitForSelector('div[data-promise-result="hello world"]');
+    expect(
+      await page
+        .mainFrame()
+        .childFrames()[0]
+        .childFrames()[0]
+        .$('div[data-promise-result="hello world"]')
+    ).toBeTruthy();
+  });
 });

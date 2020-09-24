@@ -14,6 +14,14 @@
       if ( props.callbackFn ) {
         props.callbackFn('hello', (s, cb) => cb(s + '!'));
       }
+
+      if ( props.promiseFn ) {
+        props.promiseFn('hello').then(val => {
+          const promiseResult = document.createElement('div');
+          promiseResult.setAttribute('data-promise-result', val);
+          document.body.appendChild(promiseResult);
+        });
+      }
     }
 
     // localhost:8080 can be hard coded because we know the domain of the host

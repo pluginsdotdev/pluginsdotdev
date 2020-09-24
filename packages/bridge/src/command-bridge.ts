@@ -225,7 +225,6 @@ const makeCommonBridge = (
   const handleInvokeMessage = (bridge: Bridge, msg: InvokeMessage) => {
     const { invocationId, fnId, argsBridgeValue } = msg.payload;
     const fn = localState.localProxies.get(fnId);
-    console.log("get local proxy", JSON.stringify(fnId));
     if (!fn) {
       console.log("Unknown function invoked");
       // TODO: return error?
@@ -233,8 +232,36 @@ const makeCommonBridge = (
     }
 
     const args: Array<any> = fromBridge(bridge, argsBridgeValue);
+
     try {
       const result = fn.apply(null, args);
+
+      if (result instanceof Promise) {
+        result
+          .then((res) => {
+            sendMessage({
+              msg: "invocation-response",
+              payload: {
+                resultType: "result",
+                invocationId,
+                resultBridgeValue: toThisBridge(res),
+              },
+            });
+          })
+          .catch((err) => {
+            sendMessage({
+              msg: "invocation-response",
+              payload: {
+                resultType: "error",
+                invocationId,
+                errorBridgeValue: toThisBridge(err),
+              },
+            });
+          });
+
+        return;
+      }
+
       sendMessage({
         msg: "invocation-response",
         payload: {
