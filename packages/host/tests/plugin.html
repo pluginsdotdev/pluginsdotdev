@@ -20,7 +20,11 @@
                   { onClick: () => props.onClick() },
                   'click'
               ) : null,
-            props.count ? props.count : 0
+            R.createElement(
+              'div',
+              { id: 'count', 'data-count': props.count || 0 },
+              props.count ? props.count : 0
+            )
           );
         }
       }

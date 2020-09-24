@@ -117,5 +117,17 @@ describe("plugin-point", () => {
       "world"
     );
     expect(await page.$("button")).toBeTruthy();
+
+    await page.click("button");
+    await page.waitForSelector("[data-count='1']");
+    expect(
+      await page.evaluate(() => document.getElementById("count").innerHTML)
+    ).toEqual("1");
+
+    await page.click("button");
+    await page.waitForSelector("[data-count='2']");
+    expect(
+      await page.evaluate(() => document.getElementById("count").innerHTML)
+    ).toEqual("2");
   });
 });
