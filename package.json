@@ -24,7 +24,7 @@
     "programming"
   ],
   "author": "Adam Berger <adam@ratchetdesigns.com>",
-  "license": "EPL-1.0",
+  "license": "AGPL-3.0-only OR LicenseRef-COMMERCIAL-LICENSE.md",
   "bugs": {
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
   },

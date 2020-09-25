@@ -4,7 +4,7 @@
   "description": "Test utilities for pluginsdotdev",
   "author": "Adam Berger <adam@plugins.dev>",
   "homepage": "https://plugins.dev",
-  "license": "ISC",
+  "license": "MIT",
   "private": true,
   "main": "dist/index.js",
   "directories": {

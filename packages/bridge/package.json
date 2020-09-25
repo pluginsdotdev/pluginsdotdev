@@ -10,7 +10,7 @@
   ],
   "author": "Adam Berger <adam@plugins.dev>",
   "homepage": "https://plugins.dev",
-  "license": "EPL-1.0",
+  "license": "AGPL-3.0-only OR LicenseRef-COMMERCIAL-LICENSE.md",
   "main": "dist/index.js",
   "module": "dist/index.es5.js",
   "directories": {

@@ -4,7 +4,7 @@
   "description": "Documentation for plugins.dev",
   "author": "Adam Berger <adam@plugins.dev>",
   "homepage": "https://plugins.dev",
-  "license": "ISC",
+  "license": "AGPL-3.0-only",
   "private": true,
   "directories": {
     "lib": "src",
