@@ -162,4 +162,27 @@ describe("plugin-point", () => {
       "hello world"
     );
   });
+
+  it("sanitizes dangerouslySetInnerHTML", async () => {
+    const page = t.page();
+    await page.evaluate(() => {
+      const RD = (window as any).ReactDOM as any;
+      const R = (window as any).React as any;
+
+      RD.render(
+        R.createElement((<any>window).index.PluginPoint, {
+          hostId: "my-host",
+          pluginPoint: "my-plugin-point",
+          jwt: "fake-jwt",
+          pluginUrl: "http://localhost:8081/tests/plugin-sanitization.html",
+          props: {
+            dangerouslySetInnerHTML: true,
+          },
+        }),
+        document.getElementById("root")
+      );
+    });
+    await page.waitForSelector("div.dangerouslySetInnerHTML");
+    expect(await page.$$("div.dangerouslySetInnerHTML *")).toHaveLength(0);
+  });
 });

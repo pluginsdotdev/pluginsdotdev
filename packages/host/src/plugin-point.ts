@@ -5,6 +5,7 @@ import {
 } from "@pluginsdotdev/bridge";
 import { applyUpdates, emptyRootNode } from "./update-utils";
 import { registerHandler } from "./synthetic-event-bridge-proxy";
+import { sanitizeProps } from "./sanitize-props";
 
 import type { ComponentType } from "react";
 import type {
@@ -46,11 +47,15 @@ type NodeComponentProps = {
   node: Node | undefined;
   nodesById: Map<NodeId, Node>;
   exposedComponents?: Record<string, ComponentType>;
+  hostId: HostId;
+  pluginUrl: string;
 };
 const NodeComponent: React.FC<NodeComponentProps> = ({
   node,
   nodesById,
   exposedComponents,
+  hostId,
+  pluginUrl,
 }) => {
   if (!node) {
     return null;
@@ -60,7 +65,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
 
   return React.createElement(
     nodeType,
-    node.props,
+    sanitizeProps(hostId, pluginUrl, node.props),
     node.text ??
       node.children.map((childId: NodeId) =>
         React.createElement(NodeComponent, {
@@ -68,6 +73,8 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
           node: nodesById.get(childId),
           nodesById,
           exposedComponents,
+          hostId,
+          pluginUrl,
         })
       )
   );
@@ -143,12 +150,14 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
       return null;
     }
 
-    const { exposedComponents } = this.props;
+    const { exposedComponents, hostId, pluginUrl } = this.props;
 
     return React.createElement(NodeComponent, {
       node: rootNode,
       nodesById: rootNode.nodesById,
       exposedComponents,
+      hostId,
+      pluginUrl,
     });
   }
 }
