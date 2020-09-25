@@ -47,6 +47,7 @@
     "clone": "^2.1.2",
     "cz-conventional-changelog": "^3.3.0",
     "fast-check": "^2.2.0",
+    "flowgen": "^1.11.0",
     "husky": "^4.2.5",
     "jest": "^26.4.2",
     "lerna": "^3.22.1",

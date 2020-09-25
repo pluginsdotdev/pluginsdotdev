@@ -38,7 +38,8 @@
     "test": "tsc --module commonjs && rollup --config rollup.config.ts && npx jest",
     "lint": "tslint  --project tsconfig.json -t codeFrame 'src/**/*.ts' 'tests/**/*.ts'",
     "prebuild": "rimraf dist",
-    "build": "tsc --module commonjs && rollup --config rollup.config.ts",
+    "build": "tsc --module commonjs && npm run gen-flow-types && rollup --config rollup.config.ts",
+    "gen-flow-types": "for i in $(find dist/types/ -type f -name \"*.d.ts\"); do echo \"${i}\"; npx flowgen \"$i\" --output-file \"dist/lib/${i##dist/types/}.js.flow\"; done",
     "build-docs": "typedoc --out docs --target es6 --theme minimal --mode file src",
     "pre-commit": "lint-staged"
   },
