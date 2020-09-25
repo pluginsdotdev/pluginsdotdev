@@ -18,17 +18,45 @@ import type { Node, RootNode } from "./update-utils";
 
 registerHandler();
 
+const isHostComponent = (type: string) => type.startsWith("host:");
+const hostComponentName = (type: string) => type.replace(/^host:/, "");
+
+const getNodeType = (
+  exposedComponents: Record<string, ComponentType>,
+  nodeType: string
+) => {
+  if (nodeType === "root" || nodeType === "text") {
+    return React.Fragment;
+  }
+
+  if (isHostComponent(nodeType)) {
+    const cName = hostComponentName(nodeType);
+    const HostComponent = exposedComponents[cName];
+    if (HostComponent) {
+      return HostComponent;
+    }
+
+    // TODO: log?
+  }
+
+  return nodeType;
+};
+
 type NodeComponentProps = {
   node: Node | undefined;
   nodesById: Map<NodeId, Node>;
+  exposedComponents?: Record<string, ComponentType>;
 };
-const NodeComponent: React.FC<NodeComponentProps> = ({ node, nodesById }) => {
+const NodeComponent: React.FC<NodeComponentProps> = ({
+  node,
+  nodesById,
+  exposedComponents,
+}) => {
   if (!node) {
     return null;
   }
 
-  const nodeType =
-    node.type === "root" || node.type === "text" ? React.Fragment : node.type;
+  const nodeType = getNodeType(exposedComponents ?? {}, node.type);
 
   return React.createElement(
     nodeType,
@@ -39,6 +67,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({ node, nodesById }) => {
           key: childId,
           node: nodesById.get(childId),
           nodesById,
+          exposedComponents,
         })
       )
   );
@@ -114,9 +143,12 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
       return null;
     }
 
+    const { exposedComponents } = this.props;
+
     return React.createElement(NodeComponent, {
       node: rootNode,
       nodesById: rootNode.nodesById,
+      exposedComponents,
     });
   }
 }

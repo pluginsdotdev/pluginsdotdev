@@ -4,7 +4,7 @@
     data-host-id="host-id"
     data-user-id="user-id"
     data-host-origin="http://localhost:8080"
-    data-exposed-components="[]"></body>
+    data-exposed-components="[&quot;MyHostComponent&quot;]"></body>
   <script type="application/javascript" src="../node_modules/@pluginsdotdev/plugin/dist/index.js"></script>
   <script type="application/javascript" src="../node_modules/react/umd/react.development.js"></script>
   <script type="application/javascript">
@@ -14,6 +14,11 @@
           const R = window.React;
           return R.createElement('div', { className: props.className },
             R.createElement('p', {}, props.title),
+            props.renderHostComponent
+              ? R.createElement(
+                  pluginConfig.exposedComponents.MyHostComponent,
+                  { pluginProp: 'hello world' }
+                ) : null,
             props.onClick
               ? R.createElement(
                   'button',

@@ -130,4 +130,36 @@ describe("plugin-point", () => {
       await page.evaluate(() => document.getElementById("count")!.innerHTML)
     ).toEqual("2");
   });
+
+  it("host components should work", async () => {
+    const page = t.page();
+    await page.evaluate(() => {
+      const RD = (window as any).ReactDOM as any;
+      const R = (window as any).React as any;
+
+      const MyHostComponent = ({ pluginProp }: { pluginProp: string }) =>
+        R.createElement("p", { className: "from-plugin" }, pluginProp);
+
+      RD.render(
+        R.createElement((<any>window).index.PluginPoint, {
+          hostId: "my-host",
+          pluginPoint: "my-plugin-point",
+          jwt: "fake-jwt",
+          pluginUrl: "http://localhost:8081/tests/plugin.html",
+          exposedComponents: { MyHostComponent },
+          props: {
+            className: "hello",
+            title: "world",
+            renderHostComponent: true,
+          },
+        }),
+        document.getElementById("root")
+      );
+    });
+    await page.waitForSelector("p.from-plugin");
+    expect(await page.$("p.from-plugin")).toBeTruthy();
+    expect(await page.$eval("p.from-plugin", (p) => p.innerHTML)).toEqual(
+      "hello world"
+    );
+  });
 });
