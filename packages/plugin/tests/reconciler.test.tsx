@@ -225,22 +225,15 @@ describe('properties', () => {
           })
         ),
         async (items: {type: string, props: Record<string, any>}[]) => {
-          const updates = await new Promise((resolve, reject) => {
-            const onCommit = (_: any, updates: ReconciliationUpdate[]) => {
-              resolve(updates);
-            };
-            const root = createRootNode(onCommit);
-            render(
-              React.createElement(
-                'div', 
-                {},
-                items.map(({ type, props }, key) => (
-                  React.createElement(type, { key, ...props })
-                ))
-              ),
-              root
-            );
-          });
+          const { updates } = await updatesForRender(
+            React.createElement(
+              'div', 
+              {},
+              items.map(({ type, props }, key) => (
+                React.createElement(type, { key, ...props })
+              ))
+            )
+          );
 
           items.forEach(({ type, props }) => {
             expect(updates).toContainEqual({
@@ -264,16 +257,32 @@ describe('properties', () => {
         fc.array(
           fc.record({
             type: fc.constantFrom('div', 'p', 'a', 'img'),
-            props: fc.array(
+            props: fc.dictionary(
+              fc.string(),
               fc.record({
-                prop: fc.string(),
+                state: fc.constantFrom('removed', 'added', 'maintained'),
                 value: fc.anything({ values: [fc.boolean(), fc.integer(), fc.string(), fc.constant(null)] }),
-                state: fc.constantFrom('first', 'second')
               })
             )
           })
         ),
-        async (items: {type: string, props: { prop: string; value: any; state: string }[]}[]) => {
+        async (items_: {type: string, props: { [prop: string]: {value: any; state: string } }}[]) => {
+          const items = items_.map(item => ({
+            type: item.type,
+            props: Object.keys(item.props).map(prop => {
+              const { value, state } = item.props[prop];
+              return {
+                prop,
+                value,
+                state
+              };
+            })
+          }));
+          const validStatesByPart = {
+            first: new Set(['removed', 'maintained']),
+            second: new Set(['added', 'maintained'])
+          };
+
           const updateBatches: ReconciliationUpdate[][] = [];
           let onBatchReady: null | (() => void);
           const onCommit = (_: any, updates: ReconciliationUpdate[]) => {
@@ -309,7 +318,7 @@ describe('properties', () => {
                 'div', 
                 {},
                 items.map(({ type, props }, key) => (
-                  React.createElement(type, { key, ...makeProps(props.filter(p => p.state === part)) })
+                  React.createElement(type, { key, ...makeProps(props.filter(p => validStatesByPart[part].has(p.state))) })
                 ))
               ),
               root
@@ -353,7 +362,7 @@ describe('properties', () => {
               nodeId: expect.any(Number),
               type,
               propUpdates: getSetProps(
-                props.filter(p => p.state === 'first')
+                props.filter(p => validStatesByPart.first.has(p.state))
               )
             });
           });
@@ -362,10 +371,9 @@ describe('properties', () => {
           const updates2 = await getUpdates();
 
           items.forEach(({ type, props }) => {
-            const propsInSecond = new Set(props.filter(p => p.state === 'second').map(p => p.prop));
             const delPropUpdates: ReconciliationPropUpdate[] = Array.from(new Set(
               props
-                .filter(p => p.state === 'first' && !propsInSecond.has(p.prop))
+                .filter(p => p.state === 'removed')
                 .map(p => p.prop)
             )).map(prop => ({
               op: 'delete',
@@ -373,7 +381,7 @@ describe('properties', () => {
             }));
 
             const setPropUpdates: Set<ReconciliationPropUpdate> = getSetProps(
-              props.filter(p => p.state === 'second')
+              props.filter(p => p.state === 'added')
             );
 
             const propUpdates = new Set(delPropUpdates.concat(Array.from(setPropUpdates)));
