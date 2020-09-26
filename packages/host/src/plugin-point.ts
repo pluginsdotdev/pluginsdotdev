@@ -52,6 +52,7 @@ type NodeComponentProps = {
   exposedComponents?: Record<string, ComponentType>;
   hostId: HostId;
   pluginDomain: string;
+  pluginUrl: string;
 };
 const NodeComponent: React.FC<NodeComponentProps> = ({
   node,
@@ -59,6 +60,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
   exposedComponents,
   hostId,
   pluginDomain,
+  pluginUrl,
 }) => {
   if (!node) {
     return null;
@@ -74,7 +76,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
   }
 
   const sanitizedProps = isHtmlElement
-    ? sanitizeProps(hostId, pluginDomain, node.type, node.props)
+    ? sanitizeProps(hostId, pluginDomain, pluginUrl, node.type, node.props)
     : node.props;
 
   const contents =
@@ -87,6 +89,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
         exposedComponents,
         hostId,
         pluginDomain,
+        pluginUrl,
       })
     );
 
@@ -182,6 +185,7 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
       exposedComponents,
       hostId,
       pluginDomain,
+      pluginUrl,
     });
   }
 }

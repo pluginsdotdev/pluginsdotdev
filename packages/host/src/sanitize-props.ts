@@ -1,5 +1,5 @@
 import * as attrs from "./attrs";
-import { domainFromUrl } from "./domain-utils";
+import { domainFromUrl, resolveUrl } from "./domain-utils";
 
 import type { HostId } from "@pluginsdotdev/bridge";
 
@@ -128,6 +128,7 @@ const isValidReactAttribute = (prop: string, value: any) =>
 
 const getValidAttributeValue = (
   pluginDomain: string,
+  pluginUrl: string,
   tagName: string,
   prop: string,
   value: any
@@ -158,8 +159,9 @@ const getValidAttributeValue = (
       return value;
     }
 
-    const domain = domainFromUrl(value);
-    return domain === pluginDomain ? value : null;
+    const url = resolveUrl(pluginUrl, value);
+    const domain = domainFromUrl(url);
+    return domain === pluginDomain ? url : null;
   } else if (
     dataUriAttrs.has(lcProp) &&
     value.indexOf("data:") === 0 &&
@@ -184,6 +186,7 @@ const getValidAttributeValue = (
 export const sanitizeProps = (
   hostId: HostId,
   pluginDomain: string,
+  pluginUrl: string,
   tagName: string,
   props: Record<string, any>
 ) => {
@@ -211,6 +214,7 @@ export const sanitizeProps = (
 
     const validAttributeValue = getValidAttributeValue(
       pluginDomain,
+      pluginUrl,
       tagName,
       prop,
       value
