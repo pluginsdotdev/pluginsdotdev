@@ -1,11 +1,13 @@
 import React from "react";
+import url from "url";
 import {
   initializeHostBridge,
   registerFromBridgeProxyHandler,
 } from "@pluginsdotdev/bridge";
 import { applyUpdates, emptyRootNode } from "./update-utils";
 import { registerHandler } from "./synthetic-event-bridge-proxy";
-import { sanitizeProps } from "./sanitize-props";
+import { sanitizeProps, safePrefix } from "./sanitize-props";
+import { isValidElement } from "./sanitize-element";
 
 import type { ComponentType } from "react";
 import type {
@@ -62,22 +64,32 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
   }
 
   const nodeType = getNodeType(exposedComponents ?? {}, node.type);
+  const isHtmlElement = typeof nodeType === "string";
+  const valid = isHtmlElement ? isValidElement(nodeType as string) : true;
 
-  return React.createElement(
-    nodeType,
-    sanitizeProps(hostId, pluginUrl, node.props),
+  if (!valid) {
+    // TODO: log to server
+    return null;
+  }
+
+  const sanitizedProps = isHtmlElement
+    ? sanitizeProps(hostId, pluginUrl, node.type, node.props)
+    : node.props;
+
+  const contents =
     node.text ??
-      node.children.map((childId: NodeId) =>
-        React.createElement(NodeComponent, {
-          key: childId,
-          node: nodesById.get(childId),
-          nodesById,
-          exposedComponents,
-          hostId,
-          pluginUrl,
-        })
-      )
-  );
+    node.children.map((childId: NodeId) =>
+      React.createElement(NodeComponent, {
+        key: childId,
+        node: nodesById.get(childId),
+        nodesById,
+        exposedComponents,
+        hostId,
+        pluginUrl,
+      })
+    );
+
+  return React.createElement(nodeType, sanitizedProps, contents);
 };
 
 export interface PluginPointProps<P> {
@@ -122,8 +134,18 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
     const {
       props: { hostId, pluginUrl, props },
     } = this;
+
+    const { search: _, ...parsedPluginUrl } = url.parse(pluginUrl, true);
+    const pluginUrlWithParams = url.format({
+      ...parsedPluginUrl,
+      query: {
+        ...parsedPluginUrl.query,
+        idPrefix: safePrefix(),
+      },
+    });
+
     initializeHostBridge(hostId, this.onReconcile.bind(this))
-      .then((bridgeMaker) => bridgeMaker(pluginUrl))
+      .then((bridgeMaker) => bridgeMaker(pluginUrlWithParams))
       .then((bridge) => {
         this.setState({ bridge });
         bridge.render(rootId, props);

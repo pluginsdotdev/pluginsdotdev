@@ -53,11 +53,13 @@
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
   },
   "dependencies": {
-    "@pluginsdotdev/bridge": "^0.0.1"
+    "@pluginsdotdev/bridge": "^0.0.1",
+    "url": "^0.11.0"
   },
   "devDependencies": {
-    "@pluginsdotdev/test-utils": "^0.0.0",
     "@pluginsdotdev/plugin": "^0.0.1",
+    "@pluginsdotdev/test-utils": "^0.0.0",
+    "dompurify": "^2.1.1",
     "react": "^16.13.1",
     "react-dom": "^16.13.1"
   },
