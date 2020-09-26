@@ -41,4 +41,57 @@ describe("sanitize-props", () => {
       sanitizeProps("host", "plugin", "div", { className: "hello-world", id })
     ).toEqual({ className: "hello-world", id });
   });
+
+  it("should reject urls with unknown protocols", () => {
+    expect(
+      sanitizeProps("host", "plugin", "a", {
+        href: "spotify:track:12345",
+        className: "hello-world",
+      })
+    ).toEqual({ className: "hello-world" });
+  });
+
+  it("should reject javascript urls", () => {
+    expect(
+      sanitizeProps("host", "plugin", "a", {
+        href: "javascript:alert(document.title)",
+        className: "hello-world",
+      })
+    ).toEqual({ className: "hello-world" });
+  });
+
+  it("should accept normal urls (TODO: for now, until we whitelist)", () => {
+    expect(
+      sanitizeProps("host", "plugin", "a", {
+        href: "plugins.dev/hello",
+        className: "hello-world",
+      })
+    ).toEqual({
+      href: "plugins.dev/hello",
+      className: "hello-world",
+    });
+  });
+
+  it("should reject non-function event handlers", () => {
+    expect(
+      sanitizeProps("host", "plugin", "a", {
+        onClick: "javascript:alert(document.title)",
+        className: "hello-world",
+      })
+    ).toEqual({ className: "hello-world" });
+  });
+
+  it("should accept function event handlers", () => {
+    const onClick = () => {};
+
+    expect(
+      sanitizeProps("host", "plugin", "a", {
+        onClick,
+        className: "hello-world",
+      })
+    ).toEqual({
+      onClick,
+      className: "hello-world",
+    });
+  });
 });
