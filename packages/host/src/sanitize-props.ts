@@ -1,4 +1,5 @@
 import * as attrs from "./attrs";
+import { domainFromUrl } from "./domain-utils";
 
 import type { HostId } from "@pluginsdotdev/bridge";
 
@@ -54,6 +55,8 @@ const dataUriTags = new Set([
 
 const dataUriAttrs = new Set(["src", "xlink:href", "href"]);
 
+const anyDomainSafeAttrs = new Set(["xlink:href", "href"]);
+
 const isEventHandler = (prop: string, value: any) =>
   /^on.*/.test(prop) && typeof value === "function";
 
@@ -89,23 +92,23 @@ const unsafeProps = new Set<string>(["dangerouslySetInnerHTML"]);
 
 type Validator = (
   hostId: HostId,
-  pluginUrl: string,
+  pluginDomain: string,
   value: any,
   prop: string
-) => null | { msg: string; prop: string; hostId: HostId; pluginUrl: string };
+) => null | { msg: string; prop: string; hostId: HostId; pluginDomain: string };
 
 /**
  * Handles DOM Clobbering.
  * https://github.com/cure53/DOMPurify/blob/main/src/purify.js#L654
  **/
-const requireSafePrefix: Validator = (hostId, pluginUrl, value, prop) => {
+const requireSafePrefix: Validator = (hostId, pluginDomain, value, prop) => {
   const strValue = "" + value;
   if (!strValue.startsWith(safePrefix())) {
     return {
       msg: "Plugin attempted to use unsanitized id or name",
       prop,
       hostId,
-      pluginUrl,
+      pluginDomain,
     };
   }
 
@@ -123,37 +126,53 @@ const validatorByProp: Record<string, Validator> = {
 const isValidReactAttribute = (prop: string, value: any) =>
   isEventHandler(prop, value) || reactAttrs.has(prop);
 
-const isValidAttribute = (tagName: string, prop: string, value: any) => {
+const getValidAttributeValue = (
+  pluginDomain: string,
+  tagName: string,
+  prop: string,
+  value: any
+): any | null => {
   // adapted from https://github.com/cure53/DOMPurify/blob/main/src/purify.js#L757
 
   const lcTag = tagName.toLowerCase();
   const lcProp = prop.toLowerCase();
 
   if (isValidDataAttr(lcProp)) {
-    return true;
+    return value;
   } else if (isValidAriaAttr(lcProp)) {
-    return true;
+    return value;
   } else if (!allowedAttrs.has(lcProp)) {
     // DOMPurify returns false here but we add react exclusions
-    return isValidReactAttribute(prop, value);
+    return isValidReactAttribute(prop, value) ? value : null;
   } else if (uriSafeAttrs.has(lcProp)) {
-    return true;
+    return value;
   } else if (isAllowedUri(value)) {
-    // TODO: check domain
-    return true;
+    // DOMPurify returns true here but we check domains
+    if (!dataUriAttrs.has(lcProp)) {
+      // skip domain check
+      return value;
+    }
+
+    if (anyDomainSafeAttrs.has(lcProp)) {
+      // some attrs can have any domain
+      return value;
+    }
+
+    const domain = domainFromUrl(value);
+    return domain === pluginDomain ? value : null;
   } else if (
     dataUriAttrs.has(lcProp) &&
     value.indexOf("data:") === 0 &&
     dataUriTags.has(lcTag)
   ) {
-    return true;
+    return value;
     // we intentionally skip the unknown protocols check
   } else if (!value) {
-    return true;
+    return value;
   }
 
   // DOMPurify returns false here but we add react exclusions
-  return isValidReactAttribute(prop, value);
+  return isValidReactAttribute(prop, value) ? value : null;
 };
 
 /**
@@ -164,7 +183,7 @@ const isValidAttribute = (tagName: string, prop: string, value: any) => {
  **/
 export const sanitizeProps = (
   hostId: HostId,
-  pluginUrl: string,
+  pluginDomain: string,
   tagName: string,
   props: Record<string, any>
 ) => {
@@ -176,25 +195,31 @@ export const sanitizeProps = (
         msg: "Plugin attempted to set unsafe prop",
         prop,
         hostId,
-        pluginUrl,
+        pluginDomain,
       });
       return ps;
     }
 
     const validator = validatorByProp[prop];
     if (validator) {
-      const error = validator(hostId, pluginUrl, value, prop);
+      const error = validator(hostId, pluginDomain, value, prop);
       if (error) {
         handleError(error);
         return ps;
       }
     }
 
-    if (!isValidAttribute(tagName, prop, value)) {
+    const validAttributeValue = getValidAttributeValue(
+      pluginDomain,
+      tagName,
+      prop,
+      value
+    );
+    if (validAttributeValue === null) {
       return ps;
     }
 
-    ps[prop] = value;
+    ps[prop] = validAttributeValue;
     return ps;
   }, {} as Record<string, any>);
 };

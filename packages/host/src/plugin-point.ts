@@ -8,6 +8,7 @@ import { applyUpdates, emptyRootNode } from "./update-utils";
 import { registerHandler } from "./synthetic-event-bridge-proxy";
 import { sanitizeProps, safePrefix } from "./sanitize-props";
 import { isValidElement } from "./sanitize-element";
+import { domainFromUrl } from "./domain-utils";
 
 import type { ComponentType } from "react";
 import type {
@@ -50,14 +51,14 @@ type NodeComponentProps = {
   nodesById: Map<NodeId, Node>;
   exposedComponents?: Record<string, ComponentType>;
   hostId: HostId;
-  pluginUrl: string;
+  pluginDomain: string;
 };
 const NodeComponent: React.FC<NodeComponentProps> = ({
   node,
   nodesById,
   exposedComponents,
   hostId,
-  pluginUrl,
+  pluginDomain,
 }) => {
   if (!node) {
     return null;
@@ -73,7 +74,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
   }
 
   const sanitizedProps = isHtmlElement
-    ? sanitizeProps(hostId, pluginUrl, node.type, node.props)
+    ? sanitizeProps(hostId, pluginDomain, node.type, node.props)
     : node.props;
 
   const contents =
@@ -85,7 +86,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
         nodesById,
         exposedComponents,
         hostId,
-        pluginUrl,
+        pluginDomain,
       })
     );
 
@@ -173,13 +174,14 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
     }
 
     const { exposedComponents, hostId, pluginUrl } = this.props;
+    const pluginDomain = domainFromUrl(pluginUrl);
 
     return React.createElement(NodeComponent, {
       node: rootNode,
       nodesById: rootNode.nodesById,
       exposedComponents,
       hostId,
-      pluginUrl,
+      pluginDomain,
     });
   }
 }

@@ -94,4 +94,39 @@ describe("sanitize-props", () => {
       className: "hello-world",
     });
   });
+
+  it("should reject incorrect src domains", () => {
+    expect(
+      sanitizeProps("host", "https://plugins.dev", "a", {
+        src: "https://not-plugins.dev/something",
+        className: "hello-world",
+      })
+    ).toEqual({
+      className: "hello-world",
+    });
+  });
+
+  it("should accept correct src domains", () => {
+    expect(
+      sanitizeProps("host", "https://plugins.dev", "a", {
+        src: "https://plugins.dev/something",
+        className: "hello-world",
+      })
+    ).toEqual({
+      src: "https://plugins.dev/something",
+      className: "hello-world",
+    });
+  });
+
+  it("should accept any href domains", () => {
+    expect(
+      sanitizeProps("host", "https://plugins.dev", "a", {
+        href: "https://not-plugins.dev/something",
+        className: "hello-world",
+      })
+    ).toEqual({
+      href: "https://not-plugins.dev/something",
+      className: "hello-world",
+    });
+  });
 });
