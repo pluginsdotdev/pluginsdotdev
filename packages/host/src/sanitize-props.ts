@@ -7,10 +7,10 @@ import type { HostId } from "@pluginsdotdev/bridge";
 const isValidDataAttr = (prop: string) =>
   /^data-[\-\w.\u00B7-\uFFFF]/i.test(prop);
 const isValidAriaAttr = (prop: string) => /^aria-[\-\w]+$/i.test(prop);
-const fixWhitespace = (value: string) =>
+const fixWhitespace = (value: string, replacement?: string) =>
   value.replace(
     /[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u2029\u205F\u3000]/g,
-    ""
+    replacement ?? ""
   );
 const isAllowedUri = (value: string) =>
   /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i.test(
@@ -126,6 +126,74 @@ const validatorByProp: Record<string, Validator> = {
 const isValidReactAttribute = (prop: string, value: any) =>
   isEventHandler(prop, value) || reactAttrs.has(prop);
 
+const getValidStyle = (
+  pluginDomain: string,
+  pluginUrl: string,
+  style: Record<string, any>
+) =>
+  Object.keys(style).reduce((s, key) => {
+    const val = style[key];
+
+    if (typeof val === "number" || typeof val === "boolean") {
+      // numbers and bools are ok
+      s[key] = val;
+      return s;
+    }
+
+    if (typeof val !== "string") {
+      // anything other than strings, numbers, and bools are out
+      return s;
+    }
+
+    try {
+      const valStr = "" + val;
+      const unescapedVal = fixWhitespace(valStr, " ")
+        .replace(/\\[0-9a-z]+\s/gi, (c) =>
+          String.fromCodePoint(parseInt(c.slice(1, -1), 16))
+        )
+        .replace(/\\[^\\]/g, (c) => c.slice(1));
+
+      const withFixedUrl = unescapedVal.replace(
+        /url\s*\(\s*(['"]?)(.*?)\1\s*\)/gi,
+        (urlContainingString) => {
+          const firstParen = urlContainingString.indexOf("(");
+          const lastParen = urlContainingString.lastIndexOf(")");
+          const quotedUrl = urlContainingString.slice(
+            firstParen + 1,
+            lastParen
+          );
+          const firstSingleQuote = quotedUrl.indexOf("'");
+          const firstDoubleQuote = quotedUrl.indexOf('"');
+          const firstQuote = Math.min.apply(
+            null,
+            [quotedUrl.indexOf("'"), quotedUrl.indexOf('"')].filter(
+              (x) => x >= 0
+            )
+          );
+          const quote = firstQuote >= 0 ? quotedUrl[firstQuote] : null;
+          const lastQuote = quote ? quotedUrl.lastIndexOf(quote) : -1;
+          const unquotedUrl =
+            firstQuote >= 0 && lastQuote >= 0
+              ? quotedUrl.slice(firstQuote + 1, lastQuote)
+              : quotedUrl;
+          const url = resolveUrl(pluginUrl, unquotedUrl);
+          const domain = domainFromUrl(url);
+          if (domain !== pluginDomain) {
+            throw new Error("Bad domain");
+          }
+          return `url("${url}")`;
+        }
+      );
+
+      const withRemovedCalc = withFixedUrl;
+
+      s[key] = withRemovedCalc;
+      return s;
+    } catch (err) {
+      return s;
+    }
+  }, {} as Record<string, any>);
+
 const getValidAttributeValue = (
   pluginDomain: string,
   pluginUrl: string,
@@ -138,7 +206,10 @@ const getValidAttributeValue = (
   const lcTag = tagName.toLowerCase();
   const lcProp = prop.toLowerCase();
 
-  if (isValidDataAttr(lcProp)) {
+  if (prop === "style") {
+    // this is in addition to dompurify
+    return getValidStyle(pluginDomain, pluginUrl, value);
+  } else if (isValidDataAttr(lcProp)) {
     return value;
   } else if (isValidAriaAttr(lcProp)) {
     return value;

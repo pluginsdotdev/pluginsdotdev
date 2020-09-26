@@ -165,4 +165,46 @@ describe("sanitize-props", () => {
       className: "hello-world",
     });
   });
+
+  it("should disallow style attributes with bad url domains", () => {
+    expect(
+      sanitizeProps("host", "https://plugins.dev", "https://plugins.dev", "a", {
+        style: {
+          color: "red",
+          background:
+            'lightblue url("http://not-plugins.dev/background.png") no-repeat fixed center',
+          width: 100,
+        },
+        className: "hello-world",
+      })
+    ).toEqual({
+      style: {
+        color: "red",
+        width: 100,
+      },
+      className: "hello-world",
+    });
+  });
+
+  it("should allow style attributes with good url domains", () => {
+    expect(
+      sanitizeProps("host", "https://plugins.dev", "https://plugins.dev", "a", {
+        style: {
+          color: "red",
+          background:
+            'lightblue url("https://plugins.dev/background.png") no-repeat fixed center',
+          width: 100,
+        },
+        className: "hello-world",
+      })
+    ).toEqual({
+      style: {
+        color: "red",
+        background:
+          'lightblue url("https://plugins.dev/background.png") no-repeat fixed center',
+        width: 100,
+      },
+      className: "hello-world",
+    });
+  });
 });
