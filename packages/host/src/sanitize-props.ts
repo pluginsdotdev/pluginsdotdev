@@ -1,3 +1,4 @@
+import { murmur2 } from "murmurhash-js";
 import * as attrs from "./attrs";
 import { domainFromUrl, resolveUrl } from "./domain-utils";
 
@@ -70,12 +71,13 @@ let _safePrefix: null | string = null;
  * is prefixed with a safe prefix that we control, ensuring that it can't
  * overwrite anything on the window.
  **/
-export const safePrefix = () => {
+export const safePrefix = (pluginPoint: string, pluginDomain: string) => {
+  const hash = murmur2(`${pluginPoint}!${pluginDomain}`);
   if (_safePrefix) {
-    return _safePrefix;
+    return `${_safePrefix}${hash}__`;
   }
   _safePrefix = generateSafePrefix();
-  return _safePrefix;
+  return `${_safePrefix}${hash}__`;
 };
 
 // TODO: pull this into a shared library
@@ -92,6 +94,7 @@ const unsafeProps = new Set<string>(["dangerouslySetInnerHTML"]);
 
 type Validator = (
   hostId: HostId,
+  pluginPoint: string,
   pluginDomain: string,
   value: any,
   prop: string
@@ -101,9 +104,15 @@ type Validator = (
  * Handles DOM Clobbering.
  * https://github.com/cure53/DOMPurify/blob/main/src/purify.js#L654
  **/
-const requireSafePrefix: Validator = (hostId, pluginDomain, value, prop) => {
+const requireSafePrefix: Validator = (
+  hostId,
+  pluginPoint,
+  pluginDomain,
+  value,
+  prop
+) => {
   const strValue = "" + value;
-  if (!strValue.startsWith(safePrefix())) {
+  if (!strValue.startsWith(safePrefix(pluginPoint, pluginDomain))) {
     return {
       msg: "Plugin attempted to use unsanitized id or name",
       prop,
@@ -256,6 +265,7 @@ const getValidAttributeValue = (
  **/
 export const sanitizeProps = (
   hostId: HostId,
+  pluginPoint: string,
   pluginDomain: string,
   pluginUrl: string,
   tagName: string,
@@ -276,7 +286,7 @@ export const sanitizeProps = (
 
     const validator = validatorByProp[prop];
     if (validator) {
-      const error = validator(hostId, pluginDomain, value, prop);
+      const error = validator(hostId, pluginPoint, pluginDomain, value, prop);
       if (error) {
         handleError(error);
         return ps;

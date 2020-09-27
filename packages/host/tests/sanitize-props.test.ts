@@ -3,7 +3,7 @@ import { sanitizeProps, safePrefix } from "../src/sanitize-props";
 describe("sanitize-props", () => {
   it("should sanitize dangerouslySetInnerHTML", () => {
     expect(
-      sanitizeProps("host", "plugin", "plugin", "div", {
+      sanitizeProps("host", "plugin-point", "plugin", "plugin", "div", {
         className: "hello-world",
         dangerouslySetInnerHTML: "oops",
       })
@@ -12,7 +12,7 @@ describe("sanitize-props", () => {
 
   it("should sanitize unsafe ids", () => {
     expect(
-      sanitizeProps("host", "plugin", "plugin", "div", {
+      sanitizeProps("host", "plugin-point", "plugin", "plugin", "div", {
         className: "hello-world",
         id: "oops",
       })
@@ -21,7 +21,7 @@ describe("sanitize-props", () => {
 
   it("should sanitize unsafe names", () => {
     expect(
-      sanitizeProps("host", "plugin", "plugin", "div", {
+      sanitizeProps("host", "plugin-point", "plugin", "plugin", "div", {
         className: "hello-world",
         name: "oops",
       })
@@ -29,9 +29,9 @@ describe("sanitize-props", () => {
   });
 
   it("should allow safe names", () => {
-    const name = `${safePrefix()}oops}`;
+    const name = `${safePrefix("plugin-point", "plugin")}oops}`;
     expect(
-      sanitizeProps("host", "plugin", "plugin", "div", {
+      sanitizeProps("host", "plugin-point", "plugin", "plugin", "div", {
         className: "hello-world",
         name,
       })
@@ -39,9 +39,9 @@ describe("sanitize-props", () => {
   });
 
   it("should allow safe ids", () => {
-    const id = `${safePrefix()}oops}`;
+    const id = `${safePrefix("plugin-point", "plugin")}oops}`;
     expect(
-      sanitizeProps("host", "plugin", "plugin", "div", {
+      sanitizeProps("host", "plugin-point", "plugin", "plugin", "div", {
         className: "hello-world",
         id,
       })
@@ -50,7 +50,7 @@ describe("sanitize-props", () => {
 
   it("should reject urls with unknown protocols", () => {
     expect(
-      sanitizeProps("host", "plugin", "plugin", "a", {
+      sanitizeProps("host", "plugin-point", "plugin", "plugin", "a", {
         href: "spotify:track:12345",
         className: "hello-world",
       })
@@ -59,7 +59,7 @@ describe("sanitize-props", () => {
 
   it("should reject javascript urls", () => {
     expect(
-      sanitizeProps("host", "plugin", "plugin", "a", {
+      sanitizeProps("host", "plugin-point", "plugin", "plugin", "a", {
         href: "javascript:alert(document.title)",
         className: "hello-world",
       })
@@ -68,7 +68,7 @@ describe("sanitize-props", () => {
 
   it("should accept normal urls (TODO: for now, until we whitelist)", () => {
     expect(
-      sanitizeProps("host", "plugin", "plugin", "a", {
+      sanitizeProps("host", "plugin-point", "plugin", "plugin", "a", {
         href: "plugins.dev/hello",
         className: "hello-world",
       })
@@ -80,7 +80,7 @@ describe("sanitize-props", () => {
 
   it("should reject non-function event handlers", () => {
     expect(
-      sanitizeProps("host", "plugin", "plugin", "a", {
+      sanitizeProps("host", "plugin-point", "plugin", "plugin", "a", {
         onClick: "javascript:alert(document.title)",
         className: "hello-world",
       })
@@ -91,7 +91,7 @@ describe("sanitize-props", () => {
     const onClick = () => {};
 
     expect(
-      sanitizeProps("host", "plugin", "plugin", "a", {
+      sanitizeProps("host", "plugin-point", "plugin", "plugin", "a", {
         onClick,
         className: "hello-world",
       })
@@ -103,10 +103,17 @@ describe("sanitize-props", () => {
 
   it("should reject incorrect src domains", () => {
     expect(
-      sanitizeProps("host", "https://plugins.dev", "https://plugins.dev", "a", {
-        src: "https://not-plugins.dev/something",
-        className: "hello-world",
-      })
+      sanitizeProps(
+        "host",
+        "plugin-point",
+        "https://plugins.dev",
+        "https://plugins.dev",
+        "a",
+        {
+          src: "https://not-plugins.dev/something",
+          className: "hello-world",
+        }
+      )
     ).toEqual({
       className: "hello-world",
     });
@@ -114,10 +121,17 @@ describe("sanitize-props", () => {
 
   it("should accept correct src domains", () => {
     expect(
-      sanitizeProps("host", "https://plugins.dev", "https://plugins.dev", "a", {
-        src: "https://plugins.dev/something",
-        className: "hello-world",
-      })
+      sanitizeProps(
+        "host",
+        "plugin-point",
+        "https://plugins.dev",
+        "https://plugins.dev",
+        "a",
+        {
+          src: "https://plugins.dev/something",
+          className: "hello-world",
+        }
+      )
     ).toEqual({
       src: "https://plugins.dev/something",
       className: "hello-world",
@@ -126,10 +140,17 @@ describe("sanitize-props", () => {
 
   it("should handle superfluous domain ports", () => {
     expect(
-      sanitizeProps("host", "https://plugins.dev", "https://plugins.dev", "a", {
-        src: "https://plugins.dev:443/something",
-        className: "hello-world",
-      })
+      sanitizeProps(
+        "host",
+        "plugin-point",
+        "https://plugins.dev",
+        "https://plugins.dev",
+        "a",
+        {
+          src: "https://plugins.dev:443/something",
+          className: "hello-world",
+        }
+      )
     ).toEqual({
       src: "https://plugins.dev:443/something",
       className: "hello-world",
@@ -140,6 +161,7 @@ describe("sanitize-props", () => {
     expect(
       sanitizeProps(
         "host",
+        "plugin-point",
         "https://plugins.dev",
         "https://plugins.dev/v1/",
         "a",
@@ -156,10 +178,17 @@ describe("sanitize-props", () => {
 
   it("should accept any href domains", () => {
     expect(
-      sanitizeProps("host", "https://plugins.dev", "https://plugins.dev", "a", {
-        href: "https://not-plugins.dev/something",
-        className: "hello-world",
-      })
+      sanitizeProps(
+        "host",
+        "plugin-point",
+        "https://plugins.dev",
+        "https://plugins.dev",
+        "a",
+        {
+          href: "https://not-plugins.dev/something",
+          className: "hello-world",
+        }
+      )
     ).toEqual({
       href: "https://not-plugins.dev/something",
       className: "hello-world",
@@ -168,15 +197,22 @@ describe("sanitize-props", () => {
 
   it("should disallow style attributes with bad url domains", () => {
     expect(
-      sanitizeProps("host", "https://plugins.dev", "https://plugins.dev", "a", {
-        style: {
-          color: "red",
-          background:
-            'lightblue url("http://not-plugins.dev/background.png") no-repeat fixed center',
-          width: 100,
-        },
-        className: "hello-world",
-      })
+      sanitizeProps(
+        "host",
+        "plugin-point",
+        "https://plugins.dev",
+        "https://plugins.dev",
+        "a",
+        {
+          style: {
+            color: "red",
+            background:
+              'lightblue url("http://not-plugins.dev/background.png") no-repeat fixed center',
+            width: 100,
+          },
+          className: "hello-world",
+        }
+      )
     ).toEqual({
       style: {
         color: "red",
@@ -188,15 +224,22 @@ describe("sanitize-props", () => {
 
   it("should allow style attributes with good url domains", () => {
     expect(
-      sanitizeProps("host", "https://plugins.dev", "https://plugins.dev", "a", {
-        style: {
-          color: "red",
-          background:
-            'lightblue url("https://plugins.dev/background.png") no-repeat fixed center',
-          width: 100,
-        },
-        className: "hello-world",
-      })
+      sanitizeProps(
+        "host",
+        "plugin-point",
+        "https://plugins.dev",
+        "https://plugins.dev",
+        "a",
+        {
+          style: {
+            color: "red",
+            background:
+              'lightblue url("https://plugins.dev/background.png") no-repeat fixed center',
+            width: 100,
+          },
+          className: "hello-world",
+        }
+      )
     ).toEqual({
       style: {
         color: "red",

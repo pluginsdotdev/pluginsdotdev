@@ -51,6 +51,7 @@ type NodeComponentProps = {
   nodesById: Map<NodeId, Node>;
   exposedComponents?: Record<string, ComponentType>;
   hostId: HostId;
+  pluginPoint: string;
   pluginDomain: string;
   pluginUrl: string;
 };
@@ -59,6 +60,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
   nodesById,
   exposedComponents,
   hostId,
+  pluginPoint,
   pluginDomain,
   pluginUrl,
 }) => {
@@ -76,7 +78,14 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
   }
 
   const sanitizedProps = isHtmlElement
-    ? sanitizeProps(hostId, pluginDomain, pluginUrl, node.type, node.props)
+    ? sanitizeProps(
+        hostId,
+        pluginPoint,
+        pluginDomain,
+        pluginUrl,
+        node.type,
+        node.props
+      )
     : node.props;
 
   const contents =
@@ -88,6 +97,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
         nodesById,
         exposedComponents,
         hostId,
+        pluginPoint,
         pluginDomain,
         pluginUrl,
       })
@@ -136,7 +146,7 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
   componentDidMount() {
     // TODO: re-run if pluginUrl or hostId changes??
     const {
-      props: { hostId, pluginUrl, props },
+      props: { hostId, pluginUrl, pluginPoint, props },
     } = this;
 
     const { search: _, ...parsedPluginUrl } = url.parse(pluginUrl, true);
@@ -144,7 +154,7 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
       ...parsedPluginUrl,
       query: {
         ...parsedPluginUrl.query,
-        idPrefix: safePrefix(),
+        idPrefix: safePrefix(pluginPoint, domainFromUrl(pluginUrl)),
       },
     });
 
@@ -176,7 +186,7 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
       return null;
     }
 
-    const { exposedComponents, hostId, pluginUrl } = this.props;
+    const { exposedComponents, hostId, pluginPoint, pluginUrl } = this.props;
     const pluginDomain = domainFromUrl(pluginUrl);
 
     return React.createElement(NodeComponent, {
@@ -184,6 +194,7 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
       nodesById: rootNode.nodesById,
       exposedComponents,
       hostId,
+      pluginPoint,
       pluginDomain,
       pluginUrl,
     });
