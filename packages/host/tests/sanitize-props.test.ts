@@ -335,4 +335,30 @@ describe("sanitize-props", () => {
       className: "hello-world",
     });
   });
+
+  it("should add required props", () => {
+    expect(
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        requiredPropsForTag: {
+          a: {
+            target: "_blank",
+          },
+        },
+        tagName: "a",
+        props: {
+          style: {
+            color: "red",
+          },
+          className: "hello-world",
+        },
+      })
+    ).toEqual({
+      style: {
+        color: "red",
+      },
+      className: "hello-world",
+      target: "_blank",
+    });
+  });
 });

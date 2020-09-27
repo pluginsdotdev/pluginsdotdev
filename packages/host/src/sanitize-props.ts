@@ -266,6 +266,7 @@ const getValidAttributeValue = (
 };
 
 type AllowedStyleValues = Record<string, Array<string>>;
+type RequiredPropsForTag = Record<string, Record<string, any>>;
 
 /**
  * Parameter for sanitizeProps
@@ -277,13 +278,19 @@ export interface SanitizePropsParams {
   pluginUrl: string;
   tagName: string;
   /**
-   * Map from style property to an array of permissible values for it.
+   * Map from lower-case style property to an array of permissible values
+   * for it.
    * If a value is provided for a property, we perform the default style
    * sanitization and then only allow values from the array.
    * If no value is provided for a property, only the default style
    * sanitization is applied.
    **/
   allowedStyleValues?: AllowedStyleValues;
+  /**
+   * If provided, any lower-case tag in the key set will automatically have
+   * the provided properties and values applied.
+   **/
+  requiredPropsForTag?: RequiredPropsForTag;
   props: Record<string, any>;
 }
 
@@ -300,9 +307,10 @@ export const sanitizeProps = ({
   pluginUrl,
   tagName,
   allowedStyleValues,
+  requiredPropsForTag,
   props,
 }: SanitizePropsParams) => {
-  return Object.keys(props).reduce((ps, prop) => {
+  const sanitizedProps = Object.keys(props).reduce((ps, prop) => {
     const value = props[prop];
 
     if (unsafeProps.has(prop)) {
@@ -339,4 +347,16 @@ export const sanitizeProps = ({
     ps[prop] = validAttributeValue;
     return ps;
   }, {} as Record<string, any>);
+
+  if (requiredPropsForTag) {
+    const reqProps = requiredPropsForTag[tagName.toLowerCase()];
+    if (reqProps) {
+      return {
+        ...sanitizedProps,
+        ...reqProps,
+      };
+    }
+  }
+
+  return sanitizedProps;
 };

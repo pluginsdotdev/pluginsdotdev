@@ -77,7 +77,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
     return null;
   }
 
-  // TODO: set allowedStyleValues based on host config
+  // TODO: set allowedStyleValues and requiredPropsForTag based on host config
   const sanitizedProps = isHtmlElement
     ? sanitizeProps({
         hostId,
