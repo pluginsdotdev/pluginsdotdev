@@ -147,6 +147,22 @@ const getUnescapedCssValue = (value: string) =>
     )
     .replace(/\\[^\\]/g, (c) => c.slice(1));
 
+const sanitizeCSSUrlString = (
+  pluginDomain: string,
+  pluginUrl: string,
+  urlString: string
+) => {
+  const url = resolveUrl(pluginUrl, urlString);
+  const domain = domainFromUrl(url);
+  if (domain !== pluginDomain) {
+    throw new Error("Bad domain");
+  }
+  return url;
+};
+
+/**
+ * Return a sanitized value or throw if the value is evil
+ **/
 const sanitizeCSSUrls = (
   pluginDomain: string,
   pluginUrl: string,
@@ -168,13 +184,57 @@ const sanitizeCSSUrls = (
       firstQuote >= 0 && lastQuote >= 0
         ? quotedUrl.slice(firstQuote + 1, lastQuote)
         : quotedUrl;
-    const url = resolveUrl(pluginUrl, unquotedUrl);
-    const domain = domainFromUrl(url);
-    if (domain !== pluginDomain) {
-      throw new Error("Bad domain");
-    }
+    const url = sanitizeCSSUrlString(pluginDomain, pluginUrl, unquotedUrl);
     return `url("${url}")`;
   });
+
+/**
+ * Return a sanitized value or throw if the value is evil
+ **/
+const sanitizeCSSImageSets = (
+  pluginDomain: string,
+  pluginUrl: string,
+  value: string
+) =>
+  value.replace(/image-set\s*\(\s*(.*?)\s*\)/gi, (imageSetContainingString) => {
+    const imgSet = imageSetContainingString.slice(
+      imageSetContainingString.indexOf("(") + 1,
+      imageSetContainingString.lastIndexOf(")")
+    );
+    const matcher = /\s*(['"]?)(.*?)\1([^,]*)[,]?/gi;
+    const sanitizedImgSet = [];
+    for (
+      let maxIter = 20, match = matcher.exec(imgSet);
+      match !== null && !!maxIter;
+      match = matcher.exec(imgSet), --maxIter
+    ) {
+      if (match.index === imgSet.length) {
+        // we're matching empty strings at the end
+        break;
+      }
+
+      const [_fullMatch, _quote, url, resolution] = match;
+      const trimmedUrl = url.trim();
+
+      if (!trimmedUrl.length) {
+        // we fall into this if we don't have a quoted string
+        // make sure that means that we have a url(...) in resolution
+        if (!/(?:url|image)\s*\(/i.test(resolution)) {
+          throw new Error("Malformatted image-set");
+        }
+
+        sanitizedImgSet.push(resolution);
+        continue;
+      }
+
+      const sanitizedUrl = sanitizeCSSUrlString(pluginDomain, pluginUrl, url);
+      sanitizedImgSet.push(`url("${sanitizedUrl}") ${resolution.trim()}`);
+    }
+
+    return `image-set(${sanitizedImgSet.join(",")})`;
+  });
+
+const cssSanitizers = [sanitizeCSSUrls, sanitizeCSSImageSets];
 
 const getValidStyle = (
   pluginDomain: string,
@@ -200,9 +260,8 @@ const getValidStyle = (
     try {
       const valStr = "" + val;
       const unescapedVal = getUnescapedCssValue(valStr);
-      const sanitizedValue = sanitizeCSSUrls(
-        pluginDomain,
-        pluginUrl,
+      const sanitizedValue = cssSanitizers.reduce(
+        (value, sanitize) => sanitize(pluginDomain, pluginUrl, value),
         unescapedVal
       );
 

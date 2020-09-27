@@ -242,9 +242,9 @@ describe("sanitize-props", () => {
           style: {
             color: "red",
             background:
-              'lightblue url("http://not-plugins.dev/background.png") no-repeat fixed center',
+              'lightblue url ("http://not-plugins.dev/background.png") no-repeat fixed center',
             background2_bad_scheme:
-              'lightblue url("http://plugins.dev/background.png") no-repeat fixed center',
+              'lightblue url( "http://plugins.dev/background.png" ) no-repeat fixed center',
             width: 100,
           },
           className: "hello-world",
@@ -448,6 +448,68 @@ describe("sanitize-props", () => {
       },
       className: "hello-world",
       target: "_blank",
+    });
+  });
+
+  it("should disallow image-sets with bad url domains", () => {
+    expect(
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
+          style: {
+            color: "red",
+            background:
+              'image-set("https://not-plugins.dev/bad1.png" 1x, "https://plugins.dev/good.png")',
+            background2:
+              'image-set ( "https://not-plugins.dev/bad2.png"    1x"malformed", "https://plugins.dev/good.png")',
+            background3:
+              'image-set ( url(https://not-plugins.dev/bad3.png)    1x, "https://plugins.dev/good.png")',
+            width: 100,
+          },
+          className: "hello-world",
+        },
+      })
+    ).toEqual({
+      style: {
+        color: "red",
+        width: 100,
+      },
+      className: "hello-world",
+    });
+  });
+
+  it("should sallow image-sets with good url domains", () => {
+    expect(
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
+          style: {
+            color: "red",
+            background:
+              'image-set("https://plugins.dev/good1.png" 1x, "https://plugins.dev/good.png")',
+            background2:
+              'image-set ( "https://plugins.dev/good2.png"    1x"malformed", "https://plugins.dev/good.png")',
+            background3:
+              'image-set ( url(https://plugins.dev/good3.png)    1x, "https://plugins.dev/good.png")',
+            width: 100,
+          },
+          className: "hello-world",
+        },
+      })
+    ).toEqual({
+      style: {
+        color: "red",
+        background:
+          'image-set(url("https://plugins.dev/good1.png") 1x,url("https://plugins.dev/good.png") )',
+        background2:
+          'image-set(url("https://plugins.dev/good2.png") 1x"malformed",url("https://plugins.dev/good.png") )',
+        background3:
+          'image-set(url("https://plugins.dev/good3.png")    1x, "https://plugins.dev/good.png")',
+        width: 100,
+      },
+      className: "hello-world",
     });
   });
 });
