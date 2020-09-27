@@ -282,4 +282,57 @@ describe("sanitize-props", () => {
       className: "hello-world",
     });
   });
+
+  it("should remove style values not in the allowed list", () => {
+    expect(
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        allowedStyleValues: {
+          position: ["relative", "static"],
+        },
+        tagName: "a",
+        props: {
+          style: {
+            color: "red",
+            position: "sticky",
+            width: 100,
+          },
+          className: "hello-world",
+        },
+      })
+    ).toEqual({
+      style: {
+        color: "red",
+        width: 100,
+      },
+      className: "hello-world",
+    });
+  });
+
+  it("should allow style values in the allowed list", () => {
+    expect(
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        allowedStyleValues: {
+          position: ["relative", "static"],
+        },
+        tagName: "a",
+        props: {
+          style: {
+            color: "red",
+            position: "relative",
+            width: 100,
+          },
+          className: "hello-world",
+        },
+      })
+    ).toEqual({
+      style: {
+        color: "red",
+        position: "relative",
+        width: 100,
+      },
+      className: "hello-world",
+    });
+  });
 });

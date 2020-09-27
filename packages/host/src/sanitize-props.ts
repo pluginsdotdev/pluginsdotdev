@@ -138,6 +138,7 @@ const isValidReactAttribute = (prop: string, value: any) =>
 const getValidStyle = (
   pluginDomain: string,
   pluginUrl: string,
+  allowedStyleValues: AllowedStyleValues,
   style: Record<string, any>
 ) =>
   Object.keys(style).reduce((s, key) => {
@@ -162,7 +163,7 @@ const getValidStyle = (
         )
         .replace(/\\[^\\]/g, (c) => c.slice(1));
 
-      const withFixedUrl = unescapedVal.replace(
+      const sanitizedValue = unescapedVal.replace(
         /url\s*\(\s*(['"]?)(.*?)\1\s*\)/gi,
         (urlContainingString) => {
           const firstParen = urlContainingString.indexOf("(");
@@ -194,9 +195,15 @@ const getValidStyle = (
         }
       );
 
-      const withRemovedCalc = withFixedUrl;
+      const allowedValsForProp = allowedStyleValues[key.toLowerCase()];
+      if (
+        allowedValsForProp &&
+        allowedValsForProp.indexOf(sanitizedValue) < 0
+      ) {
+        return s;
+      }
 
-      s[key] = withRemovedCalc;
+      s[key] = sanitizedValue;
       return s;
     } catch (err) {
       return s;
@@ -206,6 +213,7 @@ const getValidStyle = (
 const getValidAttributeValue = (
   pluginDomain: string,
   pluginUrl: string,
+  allowedStyleValues: AllowedStyleValues,
   tagName: string,
   prop: string,
   value: any
@@ -217,7 +225,7 @@ const getValidAttributeValue = (
 
   if (prop === "style") {
     // this is in addition to dompurify
-    return getValidStyle(pluginDomain, pluginUrl, value);
+    return getValidStyle(pluginDomain, pluginUrl, allowedStyleValues, value);
   } else if (isValidDataAttr(lcProp)) {
     return value;
   } else if (isValidAriaAttr(lcProp)) {
@@ -257,6 +265,8 @@ const getValidAttributeValue = (
   return isValidReactAttribute(prop, value) ? value : null;
 };
 
+type AllowedStyleValues = Record<string, Array<string>>;
+
 /**
  * Parameter for sanitizeProps
  **/
@@ -266,6 +276,14 @@ export interface SanitizePropsParams {
   pluginDomain: string;
   pluginUrl: string;
   tagName: string;
+  /**
+   * Map from style property to an array of permissible values for it.
+   * If a value is provided for a property, we perform the default style
+   * sanitization and then only allow values from the array.
+   * If no value is provided for a property, only the default style
+   * sanitization is applied.
+   **/
+  allowedStyleValues?: AllowedStyleValues;
   props: Record<string, any>;
 }
 
@@ -281,6 +299,7 @@ export const sanitizeProps = ({
   pluginDomain,
   pluginUrl,
   tagName,
+  allowedStyleValues,
   props,
 }: SanitizePropsParams) => {
   return Object.keys(props).reduce((ps, prop) => {
@@ -308,6 +327,7 @@ export const sanitizeProps = ({
     const validAttributeValue = getValidAttributeValue(
       pluginDomain,
       pluginUrl,
+      allowedStyleValues ?? ({} as AllowedStyleValues),
       tagName,
       prop,
       value
