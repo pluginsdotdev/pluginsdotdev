@@ -135,6 +135,47 @@ const validatorByProp: Record<string, Validator> = {
 const isValidReactAttribute = (prop: string, value: any) =>
   isEventHandler(prop, value) || reactAttrs.has(prop);
 
+/**
+ * CSS allows \hex-encoded-unicode (+ trailing space) and \constant encoding.
+ *
+ * e.g. "\97 " === "a" and "\#" === "#"
+ **/
+const getUnescapedCssValue = (value: string) =>
+  fixWhitespace(value, " ")
+    .replace(/\\[0-9a-z]+\s/gi, (c) =>
+      String.fromCodePoint(parseInt(c.slice(1, -1), 16))
+    )
+    .replace(/\\[^\\]/g, (c) => c.slice(1));
+
+const sanitizeCSSUrls = (
+  pluginDomain: string,
+  pluginUrl: string,
+  value: string
+) =>
+  value.replace(/url\s*\(\s*(['"]?)(.*?)\1\s*\)/gi, (urlContainingString) => {
+    const firstParen = urlContainingString.indexOf("(");
+    const lastParen = urlContainingString.lastIndexOf(")");
+    const quotedUrl = urlContainingString.slice(firstParen + 1, lastParen);
+    const firstSingleQuote = quotedUrl.indexOf("'");
+    const firstDoubleQuote = quotedUrl.indexOf('"');
+    const firstQuote = Math.min.apply(
+      null,
+      [quotedUrl.indexOf("'"), quotedUrl.indexOf('"')].filter((x) => x >= 0)
+    );
+    const quote = firstQuote >= 0 ? quotedUrl[firstQuote] : null;
+    const lastQuote = quote ? quotedUrl.lastIndexOf(quote) : -1;
+    const unquotedUrl =
+      firstQuote >= 0 && lastQuote >= 0
+        ? quotedUrl.slice(firstQuote + 1, lastQuote)
+        : quotedUrl;
+    const url = resolveUrl(pluginUrl, unquotedUrl);
+    const domain = domainFromUrl(url);
+    if (domain !== pluginDomain) {
+      throw new Error("Bad domain");
+    }
+    return `url("${url}")`;
+  });
+
 const getValidStyle = (
   pluginDomain: string,
   pluginUrl: string,
@@ -143,10 +184,11 @@ const getValidStyle = (
 ) =>
   Object.keys(style).reduce((s, key) => {
     const val = style[key];
+    const unescapedKey = getUnescapedCssValue(key);
 
     if (typeof val === "number" || typeof val === "boolean") {
       // numbers and bools are ok
-      s[key] = val;
+      s[unescapedKey] = val;
       return s;
     }
 
@@ -157,45 +199,14 @@ const getValidStyle = (
 
     try {
       const valStr = "" + val;
-      const unescapedVal = fixWhitespace(valStr, " ")
-        .replace(/\\[0-9a-z]+\s/gi, (c) =>
-          String.fromCodePoint(parseInt(c.slice(1, -1), 16))
-        )
-        .replace(/\\[^\\]/g, (c) => c.slice(1));
-
-      const sanitizedValue = unescapedVal.replace(
-        /url\s*\(\s*(['"]?)(.*?)\1\s*\)/gi,
-        (urlContainingString) => {
-          const firstParen = urlContainingString.indexOf("(");
-          const lastParen = urlContainingString.lastIndexOf(")");
-          const quotedUrl = urlContainingString.slice(
-            firstParen + 1,
-            lastParen
-          );
-          const firstSingleQuote = quotedUrl.indexOf("'");
-          const firstDoubleQuote = quotedUrl.indexOf('"');
-          const firstQuote = Math.min.apply(
-            null,
-            [quotedUrl.indexOf("'"), quotedUrl.indexOf('"')].filter(
-              (x) => x >= 0
-            )
-          );
-          const quote = firstQuote >= 0 ? quotedUrl[firstQuote] : null;
-          const lastQuote = quote ? quotedUrl.lastIndexOf(quote) : -1;
-          const unquotedUrl =
-            firstQuote >= 0 && lastQuote >= 0
-              ? quotedUrl.slice(firstQuote + 1, lastQuote)
-              : quotedUrl;
-          const url = resolveUrl(pluginUrl, unquotedUrl);
-          const domain = domainFromUrl(url);
-          if (domain !== pluginDomain) {
-            throw new Error("Bad domain");
-          }
-          return `url("${url}")`;
-        }
+      const unescapedVal = getUnescapedCssValue(valStr);
+      const sanitizedValue = sanitizeCSSUrls(
+        pluginDomain,
+        pluginUrl,
+        unescapedVal
       );
 
-      const allowedValsForProp = allowedStyleValues[key.toLowerCase()];
+      const allowedValsForProp = allowedStyleValues[unescapedKey.toLowerCase()];
       if (
         allowedValsForProp &&
         allowedValsForProp.indexOf(sanitizedValue) < 0
@@ -203,7 +214,7 @@ const getValidStyle = (
         return s;
       }
 
-      s[key] = sanitizedValue;
+      s[unescapedKey] = sanitizedValue;
       return s;
     } catch (err) {
       return s;
