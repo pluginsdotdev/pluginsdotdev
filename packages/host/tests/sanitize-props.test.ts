@@ -243,6 +243,8 @@ describe("sanitize-props", () => {
             color: "red",
             background:
               'lightblue url("http://not-plugins.dev/background.png") no-repeat fixed center',
+            background2_bad_scheme:
+              'lightblue url("http://plugins.dev/background.png") no-repeat fixed center',
             width: 100,
           },
           className: "hello-world",
@@ -251,6 +253,66 @@ describe("sanitize-props", () => {
     ).toEqual({
       style: {
         color: "red",
+        width: 100,
+      },
+      className: "hello-world",
+    });
+  });
+
+  it("should disallow style attributes with bad url domains with escaping", () => {
+    expect(
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
+          style: {
+            color: "red",
+            background:
+              'lightblue \\75 R\\6C ("http://not-plugins.dev/background.png") no-repeat fixed center',
+            background2:
+              'lightblue \\75 R\\6C ("http://\\6E ot-plugins.dev/background.png") no-repeat fixed center',
+            width: 100,
+          },
+          className: "hello-world",
+        },
+      })
+    ).toEqual({
+      style: {
+        color: "red",
+        width: 100,
+      },
+      className: "hello-world",
+    });
+  });
+
+  it("should allow style attributes with good url domains with escaping", () => {
+    expect(
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
+          style: {
+            color: "red",
+            background:
+              'lightblue \\75 R\\6C ("https://plugins.dev/background.png") no-repeat fixed center',
+            background2:
+              "lightblue \\75 R\\6C ('https://\\70 lugins.dev/background.png') no-repeat fixed center",
+            background3:
+              "lightblue \\75 R\\6C (\\62 ackground.png) no-repeat fixed center",
+            width: 100,
+          },
+          className: "hello-world",
+        },
+      })
+    ).toEqual({
+      style: {
+        color: "red",
+        background:
+          'lightblue url("https://plugins.dev/background.png") no-repeat fixed center',
+        background2:
+          'lightblue url("https://plugins.dev/background.png") no-repeat fixed center',
+        background3:
+          'lightblue url("https://plugins.dev/my-plugin/v1/background.png") no-repeat fixed center',
         width: 100,
       },
       className: "hello-world",
@@ -321,6 +383,33 @@ describe("sanitize-props", () => {
           style: {
             color: "red",
             position: "relative",
+            width: 100,
+          },
+          className: "hello-world",
+        },
+      })
+    ).toEqual({
+      style: {
+        color: "red",
+        position: "relative",
+        width: 100,
+      },
+      className: "hello-world",
+    });
+  });
+
+  it("should allow escaped style values in the allowed list", () => {
+    expect(
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        allowedStyleValues: {
+          position: ["relative", "static"],
+        },
+        tagName: "a",
+        props: {
+          style: {
+            color: "red",
+            position: "\\72 elative",
             width: 100,
           },
           className: "hello-world",
