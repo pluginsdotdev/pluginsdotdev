@@ -10,5 +10,12 @@ export const safeId = (id: string) => {
   if (!query || !query.idPrefix) {
     throw new Error("No id prefix provided");
   }
+  const { idPrefix } = query;
+  if (typeof idPrefix !== "string") {
+    throw new Error("Invalid idPrefix provided");
+  }
+  if (!/^[a-z0-9_]+$/i.test(idPrefix)) {
+    throw new Error("Invalid id prefix provided");
+  }
   return `${query.idPrefix}${id}`;
 };
