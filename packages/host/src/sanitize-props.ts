@@ -162,6 +162,8 @@ const sanitizeCSSUrlString = (
 
 /**
  * Return a sanitized value or throw if the value is evil
+ *
+ * https://developer.mozilla.org/en-US/docs/Web/CSS/url
  **/
 const sanitizeCSSUrls = (
   pluginDomain: string,
@@ -190,6 +192,8 @@ const sanitizeCSSUrls = (
 
 /**
  * Return a sanitized value or throw if the value is evil
+ *
+ * https://developer.mozilla.org/en-US/docs/Web/CSS/image-set
  **/
 const sanitizeCSSImageSets = (
   pluginDomain: string,
@@ -234,7 +238,28 @@ const sanitizeCSSImageSets = (
     return `image-set(${sanitizedImgSet.join(",")})`;
   });
 
-const cssSanitizers = [sanitizeCSSUrls, sanitizeCSSImageSets];
+/**
+ * No browser supports them yet so neither will we.
+ *
+ * https://developer.mozilla.org/en-US/docs/Web/CSS/imagefunction
+ **/
+const sanitizeCSSImages = (
+  pluginDomain: string,
+  pluginUrl: string,
+  value: string
+) => {
+  if (/image\s*\(/gi.test(value)) {
+    throw new Error("CSS image() functions are not supported");
+  }
+
+  return value;
+};
+
+const cssSanitizers = [
+  sanitizeCSSUrls,
+  sanitizeCSSImageSets,
+  sanitizeCSSImages,
+];
 
 const getValidStyle = (
   pluginDomain: string,

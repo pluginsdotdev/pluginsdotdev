@@ -479,7 +479,7 @@ describe("sanitize-props", () => {
     });
   });
 
-  it("should sallow image-sets with good url domains", () => {
+  it("should allow image-sets with good url domains", () => {
     expect(
       sanitizeProps({
         ...defaultSanitizeParams,
@@ -507,6 +507,30 @@ describe("sanitize-props", () => {
           'image-set(url("https://plugins.dev/good2.png") 1x"malformed",url("https://plugins.dev/good.png") )',
         background3:
           'image-set(url("https://plugins.dev/good3.png")    1x, "https://plugins.dev/good.png")',
+        width: 100,
+      },
+      className: "hello-world",
+    });
+  });
+
+  it("should disallow images", () => {
+    expect(
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
+          style: {
+            color: "red",
+            background:
+              'image("https://plugins.dev/good1.png", #213478, ltr "https://plugins.dev/good.png")',
+            width: 100,
+          },
+          className: "hello-world",
+        },
+      })
+    ).toEqual({
+      style: {
+        color: "red",
         width: 100,
       },
       className: "hello-world",
