@@ -78,14 +78,14 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
   }
 
   const sanitizedProps = isHtmlElement
-    ? sanitizeProps(
+    ? sanitizeProps({
         hostId,
         pluginPoint,
         pluginDomain,
         pluginUrl,
-        node.type,
-        node.props
-      )
+        tagName: node.type,
+        props: node.props,
+      })
     : node.props;
 
   const contents =

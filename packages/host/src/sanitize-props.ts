@@ -258,19 +258,31 @@ const getValidAttributeValue = (
 };
 
 /**
+ * Parameter for sanitizeProps
+ **/
+export interface SanitizePropsParams {
+  hostId: HostId;
+  pluginPoint: string;
+  pluginDomain: string;
+  pluginUrl: string;
+  tagName: string;
+  props: Record<string, any>;
+}
+
+/**
  * Sanitize properties we intend to add to html elements.
  *
  * Follow the pattern of
  * https://github.com/cure53/DOMPurify/blob/main/src/purify.js#L743
  **/
-export const sanitizeProps = (
-  hostId: HostId,
-  pluginPoint: string,
-  pluginDomain: string,
-  pluginUrl: string,
-  tagName: string,
-  props: Record<string, any>
-) => {
+export const sanitizeProps = ({
+  hostId,
+  pluginPoint,
+  pluginDomain,
+  pluginUrl,
+  tagName,
+  props,
+}: SanitizePropsParams) => {
   return Object.keys(props).reduce((ps, prop) => {
     const value = props[prop];
 

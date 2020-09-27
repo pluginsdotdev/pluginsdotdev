@@ -1,76 +1,121 @@
 import { sanitizeProps, safePrefix } from "../src/sanitize-props";
 
+const defaultSanitizeParams = {
+  hostId: "host",
+  pluginPoint: "plugin-point",
+  pluginDomain: "https://plugins.dev",
+  pluginUrl: "https://plugins.dev/my-plugin/v1/",
+};
+
 describe("sanitize-props", () => {
   it("should sanitize dangerouslySetInnerHTML", () => {
     expect(
-      sanitizeProps("host", "plugin-point", "plugin", "plugin", "div", {
-        className: "hello-world",
-        dangerouslySetInnerHTML: "oops",
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "div",
+        props: {
+          className: "hello-world",
+          dangerouslySetInnerHTML: "oops",
+        },
       })
     ).toEqual({ className: "hello-world" });
   });
 
   it("should sanitize unsafe ids", () => {
     expect(
-      sanitizeProps("host", "plugin-point", "plugin", "plugin", "div", {
-        className: "hello-world",
-        id: "oops",
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "div",
+        props: {
+          className: "hello-world",
+          id: "oops",
+        },
       })
     ).toEqual({ className: "hello-world" });
   });
 
   it("should sanitize unsafe names", () => {
     expect(
-      sanitizeProps("host", "plugin-point", "plugin", "plugin", "div", {
-        className: "hello-world",
-        name: "oops",
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "div",
+        props: {
+          className: "hello-world",
+          name: "oops",
+        },
       })
     ).toEqual({ className: "hello-world" });
   });
 
   it("should allow safe names", () => {
-    const name = `${safePrefix("plugin-point", "plugin")}oops}`;
+    const name = `${safePrefix(
+      defaultSanitizeParams.pluginPoint,
+      defaultSanitizeParams.pluginDomain
+    )}oops}`;
     expect(
-      sanitizeProps("host", "plugin-point", "plugin", "plugin", "div", {
-        className: "hello-world",
-        name,
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "div",
+        props: {
+          className: "hello-world",
+          name,
+        },
       })
     ).toEqual({ className: "hello-world", name });
   });
 
   it("should allow safe ids", () => {
-    const id = `${safePrefix("plugin-point", "plugin")}oops}`;
+    const id = `${safePrefix(
+      defaultSanitizeParams.pluginPoint,
+      defaultSanitizeParams.pluginDomain
+    )}oops}`;
     expect(
-      sanitizeProps("host", "plugin-point", "plugin", "plugin", "div", {
-        className: "hello-world",
-        id,
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "div",
+        props: {
+          className: "hello-world",
+          id,
+        },
       })
     ).toEqual({ className: "hello-world", id });
   });
 
   it("should reject urls with unknown protocols", () => {
     expect(
-      sanitizeProps("host", "plugin-point", "plugin", "plugin", "a", {
-        href: "spotify:track:12345",
-        className: "hello-world",
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
+          href: "spotify:track:12345",
+          className: "hello-world",
+        },
       })
     ).toEqual({ className: "hello-world" });
   });
 
   it("should reject javascript urls", () => {
     expect(
-      sanitizeProps("host", "plugin-point", "plugin", "plugin", "a", {
-        href: "javascript:alert(document.title)",
-        className: "hello-world",
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
+          href: "javascript:alert(document.title)",
+          className: "hello-world",
+        },
       })
     ).toEqual({ className: "hello-world" });
   });
 
   it("should accept normal urls (TODO: for now, until we whitelist)", () => {
     expect(
-      sanitizeProps("host", "plugin-point", "plugin", "plugin", "a", {
-        href: "plugins.dev/hello",
-        className: "hello-world",
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
+          href: "plugins.dev/hello",
+          className: "hello-world",
+        },
       })
     ).toEqual({
       href: "plugins.dev/hello",
@@ -80,9 +125,13 @@ describe("sanitize-props", () => {
 
   it("should reject non-function event handlers", () => {
     expect(
-      sanitizeProps("host", "plugin-point", "plugin", "plugin", "a", {
-        onClick: "javascript:alert(document.title)",
-        className: "hello-world",
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
+          onClick: "javascript:alert(document.title)",
+          className: "hello-world",
+        },
       })
     ).toEqual({ className: "hello-world" });
   });
@@ -91,9 +140,13 @@ describe("sanitize-props", () => {
     const onClick = () => {};
 
     expect(
-      sanitizeProps("host", "plugin-point", "plugin", "plugin", "a", {
-        onClick,
-        className: "hello-world",
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
+          onClick,
+          className: "hello-world",
+        },
       })
     ).toEqual({
       onClick,
@@ -103,17 +156,14 @@ describe("sanitize-props", () => {
 
   it("should reject incorrect src domains", () => {
     expect(
-      sanitizeProps(
-        "host",
-        "plugin-point",
-        "https://plugins.dev",
-        "https://plugins.dev",
-        "a",
-        {
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
           src: "https://not-plugins.dev/something",
           className: "hello-world",
-        }
-      )
+        },
+      })
     ).toEqual({
       className: "hello-world",
     });
@@ -121,17 +171,14 @@ describe("sanitize-props", () => {
 
   it("should accept correct src domains", () => {
     expect(
-      sanitizeProps(
-        "host",
-        "plugin-point",
-        "https://plugins.dev",
-        "https://plugins.dev",
-        "a",
-        {
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
           src: "https://plugins.dev/something",
           className: "hello-world",
-        }
-      )
+        },
+      })
     ).toEqual({
       src: "https://plugins.dev/something",
       className: "hello-world",
@@ -140,17 +187,14 @@ describe("sanitize-props", () => {
 
   it("should handle superfluous domain ports", () => {
     expect(
-      sanitizeProps(
-        "host",
-        "plugin-point",
-        "https://plugins.dev",
-        "https://plugins.dev",
-        "a",
-        {
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
           src: "https://plugins.dev:443/something",
           className: "hello-world",
-        }
-      )
+        },
+      })
     ).toEqual({
       src: "https://plugins.dev:443/something",
       className: "hello-world",
@@ -159,36 +203,30 @@ describe("sanitize-props", () => {
 
   it("should resolve relative src urls", () => {
     expect(
-      sanitizeProps(
-        "host",
-        "plugin-point",
-        "https://plugins.dev",
-        "https://plugins.dev/v1/",
-        "a",
-        {
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
           src: "assets/something",
           className: "hello-world",
-        }
-      )
+        },
+      })
     ).toEqual({
-      src: "https://plugins.dev/v1/assets/something",
+      src: "https://plugins.dev/my-plugin/v1/assets/something",
       className: "hello-world",
     });
   });
 
   it("should accept any href domains", () => {
     expect(
-      sanitizeProps(
-        "host",
-        "plugin-point",
-        "https://plugins.dev",
-        "https://plugins.dev",
-        "a",
-        {
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
           href: "https://not-plugins.dev/something",
           className: "hello-world",
-        }
-      )
+        },
+      })
     ).toEqual({
       href: "https://not-plugins.dev/something",
       className: "hello-world",
@@ -197,13 +235,10 @@ describe("sanitize-props", () => {
 
   it("should disallow style attributes with bad url domains", () => {
     expect(
-      sanitizeProps(
-        "host",
-        "plugin-point",
-        "https://plugins.dev",
-        "https://plugins.dev",
-        "a",
-        {
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
           style: {
             color: "red",
             background:
@@ -211,8 +246,8 @@ describe("sanitize-props", () => {
             width: 100,
           },
           className: "hello-world",
-        }
-      )
+        },
+      })
     ).toEqual({
       style: {
         color: "red",
@@ -224,13 +259,10 @@ describe("sanitize-props", () => {
 
   it("should allow style attributes with good url domains", () => {
     expect(
-      sanitizeProps(
-        "host",
-        "plugin-point",
-        "https://plugins.dev",
-        "https://plugins.dev",
-        "a",
-        {
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
           style: {
             color: "red",
             background:
@@ -238,8 +270,8 @@ describe("sanitize-props", () => {
             width: 100,
           },
           className: "hello-world",
-        }
-      )
+        },
+      })
     ).toEqual({
       style: {
         color: "red",
