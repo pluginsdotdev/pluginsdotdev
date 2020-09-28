@@ -536,4 +536,29 @@ describe("sanitize-props", () => {
       className: "hello-world",
     });
   });
+
+  it("should disallow elements", () => {
+    expect(
+      sanitizeProps({
+        ...defaultSanitizeParams,
+        tagName: "a",
+        props: {
+          style: {
+            color: "red",
+            background: "element(#my-element)",
+            background1: "-webkit-element(#my-element)",
+            background2: "-moz-element(#my-element)",
+            width: 100,
+          },
+          className: "hello-world",
+        },
+      })
+    ).toEqual({
+      style: {
+        color: "red",
+        width: 100,
+      },
+      className: "hello-world",
+    });
+  });
 });
