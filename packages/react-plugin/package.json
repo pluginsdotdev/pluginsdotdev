@@ -1,0 +1,66 @@
+{
+  "name": "@pluginsdotdev/react-plugin",
+  "version": "0.0.1",
+  "description": "Plugins.dev lets you allow users to safely add 3rd party plugins to your site. This is the package for react plugins.",
+  "keywords": [
+    "React",
+    "plugins",
+    "plugins.dev"
+  ],
+  "author": "Adam Berger <adam@plugins.dev>",
+  "homepage": "https://plugins.dev",
+  "license": "AGPL-3.0-only OR LicenseRef-COMMERCIAL-LICENSE.md",
+  "main": "dist/index.js",
+  "module": "dist/index.es5.js",
+  "directories": {
+    "lib": "src",
+    "test": "tests",
+    "doc": "doc"
+  },
+  "typings": "dist/types/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "sideEffects": false,
+  "browserify": {
+    "transform": [
+      "loose-envify"
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pluginsdotdev/pluginsdotdev.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1"
+  },
+  "scripts": {
+    "test": "tsc --module commonjs && rollup --config rollup.config.ts && npx jest",
+    "lint": "tslint  --project tsconfig.json -t codeFrame 'src/**/*.ts' 'tests/**/*.ts'",
+    "prebuild": "rimraf dist",
+    "build": "tsc --module commonjs && npm run gen-flow-types && rollup --config rollup.config.ts",
+    "gen-flow-types": "for i in $(find dist/types/ -type f -name \"*.d.ts\"); do echo \"${i}\"; npx flowgen \"$i\" --output-file \"dist/lib/${i##dist/types/}.js.flow\"; done",
+    "build-docs": "typedoc --out docs --target es6 --theme minimal --mode file src",
+    "pre-commit": "lint-staged"
+  },
+  "lint-staged": {
+    "{src,tests}/**/*.ts": [
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "bugs": {
+    "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
+  },
+  "dependencies": {
+    "@pluginsdotdev/plugin": "^0.0.1",
+    "react": "^16.13.1"
+  },
+  "devDependencies": {
+    "@pluginsdotdev/test-utils": "^0.0.0",
+    "loose-envify": "^1.4.0"
+  }
+}
