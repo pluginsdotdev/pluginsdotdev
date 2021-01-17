@@ -23,11 +23,6 @@
     "dist"
   ],
   "sideEffects": false,
-  "browserify": {
-    "transform": [
-      "loose-envify"
-    ]
-  },
   "publishConfig": {
     "access": "public"
   },
@@ -62,6 +57,7 @@
   },
   "devDependencies": {
     "@pluginsdotdev/test-utils": "^0.0.0",
-    "react": "^16.13.1"
+    "react": "^16.13.1",
+    "react-dom": "^17.0.1"
   }
 }
