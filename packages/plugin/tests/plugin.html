@@ -7,18 +7,36 @@
     data-exposed-components="[&quot;MyHostComponent&quot;]"></body>
   <script type="application/javascript" src="../dist/index.js"></script>
   <script type="application/javascript" src="../node_modules/react/umd/react.development.js"></script>
+  <script type="application/javascript" src="../node_modules/react-dom/umd/react-dom.development.js"></script>
   <script type="application/javascript">
+    const R = window.React;
+
     window.index.registerPlugin(
       function pluginFactory(pluginConfig) {
-        return function(props) {
-          const R = window.React;
+        const Plugin = (props) => {
+          const [toggled, toggle] = R.useState(false);
+          R.useEffect(() => {
+            const t = setTimeout(() => {
+              toggle(true);
+            }, 1000);
+            return () => clearTimeout(t);
+          }, []);
           return R.createElement('div', { className: props.className },
-            R.createElement('p', {}, props.title),
+            toggled
+            ? R.createElement('div', {}, props.title)
+            : R.createElement('p', {}, props.title),
             props.useHostComponent
             ? R.createElement(
-                pluginConfig.exposedComponents.MyHostComponent,
-                { myProp: 'plugin-provided-prop' }
+              pluginConfig.exposedComponents.MyHostComponent,
+              { myProp: 'plugin-provided-prop' }
             ) : null
+          );
+        }
+
+        return (props, root) => {
+          window.ReactDOM.render(
+            R.createElement(Plugin, props),
+            root
           );
         }
       }

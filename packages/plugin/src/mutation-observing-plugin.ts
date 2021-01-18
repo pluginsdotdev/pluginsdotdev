@@ -1,5 +1,4 @@
 import React from "react";
-import ReactDOM from "react-dom";
 import {
   initializePluginBridge,
   RenderRootId,
@@ -22,7 +21,7 @@ interface PluginConfig {
   exposedComponents: ExposedComponents;
 }
 
-type PluginFactory = (pluginConfig: PluginConfig) => ComponentType<Props>;
+type PluginFactory = (pluginConfig: PluginConfig) => (props: Props, container: HTMLElement) => void;
 
 interface BrowserData {
   pluginId: string;
@@ -177,6 +176,25 @@ const getTreeUpdates = (nodeIdContainer: NodeIdContainer, target: Node, child: N
   return [updates, order.concat([childId, targetId])];
 };
 
+const getRemovedUpdates = (nodeIdContainer: NodeIdContainer, target: Node, child: Node): Updates => {
+  const childId = nodeIdContainer.getId(child)!;
+  const targetId = nodeIdContainer.getId(target)!;
+  return {
+    [targetId]: {
+      nodeId: targetId,
+      type: nodeIdContainer.isRoot(target)
+        ? "root"
+        : target.nodeName.toLowerCase(),
+      childUpdates: [
+        {
+          op: "delete",
+          childId
+        }
+      ]
+    }
+  };
+};
+
 const registerPlugin = async (pluginFactory: PluginFactory) => {
   const {
     hostOrigin,
@@ -197,15 +215,29 @@ const registerPlugin = async (pluginFactory: PluginFactory) => {
     nodeIdContainer.addNode(root);
     const obs = new MutationObserver((mutationList, observer) => {
       const [updates, order] = mutationList.reduce(
-        ([updatesById, order], {type, target, addedNodes}) => {
+        ([updatesById, order], {type, target, addedNodes, removedNodes}) => {
           const added = Array.from(addedNodes);
-          return added.reduce(
+          const removed = Array.from(removedNodes);
+
+          const [addedUpdates, addedOrder] = added.reduce(
             ([updates, order], node) => {
               const [treeUpdates, treeOrder] = getTreeUpdates(nodeIdContainer, target, node);
               return [mergeUpdates(updates, treeUpdates), order.concat(treeOrder)];
             },
             [updatesById, order]
           );
+
+          const updates = removed.reduce(
+            (updates, node) => {
+              return mergeUpdates(
+                addedUpdates,
+                getRemovedUpdates(nodeIdContainer, target, node)
+              );
+            },
+            addedUpdates
+          );
+
+          return [updates, addedOrder];
         },
         [{}, []] as [Updates, Array<number>]
       );
@@ -238,10 +270,7 @@ const registerPlugin = async (pluginFactory: PluginFactory) => {
       }
     );
 
-    ReactDOM.render(
-      React.createElement(plugin, props),
-      root
-    );
+    plugin(props, root);
   }
 };
 
