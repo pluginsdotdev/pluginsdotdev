@@ -44,7 +44,7 @@ describe("safe-id", () => {
     20
   );
 
-  it("should return a reasonable prefix", async () => {
+  xit("should return a reasonable prefix", async () => {
     await fc.assert(
       fc.asyncProperty(
         prefixArb,
@@ -70,7 +70,7 @@ describe("safe-id", () => {
     );
   });
 
-  it("should error for a bad prefix", async () => {
+  xit("should error for a bad prefix", async () => {
     await fc.assert(
       fc.asyncProperty(
         prefixArb,
