@@ -59,6 +59,7 @@
   },
   "devDependencies": {
     "@pluginsdotdev/plugin": "^0.0.1",
+    "@pluginsdotdev/react-plugin": "^0.0.1",
     "@pluginsdotdev/test-utils": "^0.0.0",
     "dompurify": "^2.1.1",
     "react": "^16.13.1",
