@@ -205,6 +205,8 @@ class NodeIdContainer {
     const orderedUpdates = this.updateOrder.map(
       (node) => this.queuedUpdates.get(node)!
     );
+    this.queuedUpdates = new WeakMap<Node, ReconciliationUpdate>();
+    this.updateOrder = [];
     this.reconcile(orderedUpdates);
   }
 }
