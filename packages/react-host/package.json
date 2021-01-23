@@ -1,7 +1,7 @@
 {
-  "name": "@pluginsdotdev/host",
+  "name": "@pluginsdotdev/react-host",
   "version": "0.0.1",
-  "description": "Plugins.dev lets you allow users to safely add 3rd party plugins to your site. This is the package for plugin hosts.",
+  "description": "Plugins.dev lets you allow users to safely add 3rd party plugins to your site. This is the package for react plugin hosts.",
   "keywords": [
     "React",
     "plugins",
