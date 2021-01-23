@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "@pluginsdotdev/plugin": "^0.0.1",
+    "@pluginsdotdev/bridge": "^0.0.1",
     "react": "^16.13.1"
   },
   "devDependencies": {
