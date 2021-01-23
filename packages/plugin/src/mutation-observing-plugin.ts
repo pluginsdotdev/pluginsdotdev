@@ -1,7 +1,5 @@
-import React from "react";
 import { initializePluginBridge } from "@pluginsdotdev/bridge";
 
-import type { ComponentType, ElementType } from "react";
 import type {
   PluginBridge,
   Props,
@@ -262,6 +260,54 @@ const queueRemovedUpdates = (
   });
 };
 
+const renderRootById = new Map<RenderRootId, HTMLElement>();
+
+const constructRenderRootIfNeeded = (
+  rootId: RenderRootId,
+  pluginBridge: PluginBridge
+): HTMLElement => {
+  const prevRoot = renderRootById.get(rootId);
+  if (prevRoot) {
+    return prevRoot;
+  }
+
+  const root = document.createElement("div");
+  document.body.appendChild(root);
+  renderRootById.set(rootId, root);
+
+  const nodeIdContainer = new NodeIdContainer(
+    (updates: Array<ReconciliationUpdate>) =>
+      pluginBridge.reconcile(rootId, updates)
+  );
+  nodeIdContainers.add(nodeIdContainer);
+  nodeIdContainer.addNode(root);
+  const obs = new MutationObserver((mutationList, observer) => {
+    mutationList.forEach(({ type, target, addedNodes, removedNodes }) => {
+      const added = Array.from(addedNodes);
+      const removed = Array.from(removedNodes);
+
+      added.forEach((node) => {
+        queueTreeUpdates(nodeIdContainer, target, node);
+      });
+
+      removed.forEach((node) => {
+        queueRemovedUpdates(nodeIdContainer, target, node);
+      });
+    });
+    nodeIdContainer.flushUpdates();
+    console.log(mutationList);
+  });
+
+  obs.observe(root, {
+    attributes: true,
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
+
+  return root;
+};
+
 const registerPlugin = async (pluginFactory: PluginFactory) => {
   const {
     hostOrigin,
@@ -278,38 +324,7 @@ const registerPlugin = async (pluginFactory: PluginFactory) => {
   );
 
   function onRender(rootId: RenderRootId, props: Props) {
-    const root = document.createElement("div");
-    document.body.appendChild(root);
-
-    const nodeIdContainer = new NodeIdContainer(
-      (updates: Array<ReconciliationUpdate>) =>
-        pluginBridge.reconcile(rootId, updates)
-    );
-    nodeIdContainers.add(nodeIdContainer);
-    nodeIdContainer.addNode(root);
-    const obs = new MutationObserver((mutationList, observer) => {
-      mutationList.forEach(({ type, target, addedNodes, removedNodes }) => {
-        const added = Array.from(addedNodes);
-        const removed = Array.from(removedNodes);
-
-        added.forEach((node) => {
-          queueTreeUpdates(nodeIdContainer, target, node);
-        });
-
-        removed.forEach((node) => {
-          queueRemovedUpdates(nodeIdContainer, target, node);
-        });
-      });
-      nodeIdContainer.flushUpdates();
-      console.log(mutationList);
-    });
-
-    obs.observe(root, {
-      attributes: true,
-      childList: true,
-      subtree: true,
-      characterData: true,
-    });
+    const root = constructRenderRootIfNeeded(rootId, pluginBridge);
 
     plugin(props, root);
   }
