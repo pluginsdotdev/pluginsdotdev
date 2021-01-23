@@ -248,7 +248,7 @@ const queueTreeUpdates = (
     .filter((attr) => attr.name !== hostComponentAttr)
     .map((attr) => ({
       op: "set",
-      prop: attr.name === "class" ? "className" : attr.name,
+      prop: attr.name,
       value: attr.value,
     }));
   const childUpdate =
@@ -311,18 +311,41 @@ const constructRenderRootIfNeeded = (
   nodeIdContainers.add(nodeIdContainer);
   nodeIdContainer.addNode(root);
   const obs = new MutationObserver((mutationList, observer) => {
-    mutationList.forEach(({ type, target, addedNodes, removedNodes }) => {
-      const added = Array.from(addedNodes);
-      const removed = Array.from(removedNodes);
+    mutationList.forEach(
+      ({ type, target, addedNodes, removedNodes, attributeName }) => {
+        const added = Array.from(addedNodes);
+        const removed = Array.from(removedNodes);
 
-      added.forEach((node) => {
-        queueTreeUpdates(nodeIdContainer, target, node);
-      });
+        added.forEach((node) => {
+          queueTreeUpdates(nodeIdContainer, target, node);
+        });
 
-      removed.forEach((node) => {
-        queueRemovedUpdates(nodeIdContainer, target, node);
-      });
-    });
+        removed.forEach((node) => {
+          queueRemovedUpdates(nodeIdContainer, target, node);
+        });
+
+        const targetEl = target as HTMLElement;
+
+        if (attributeName && targetEl.getAttribute) {
+          const newValue = targetEl.getAttribute(attributeName);
+          const update: PartialReconciliationUpdate = {
+            propUpdates: [
+              typeof newValue === "undefined"
+                ? {
+                    op: "delete",
+                    prop: attributeName,
+                  }
+                : {
+                    op: "set",
+                    prop: attributeName,
+                    value: newValue,
+                  },
+            ],
+          };
+          nodeIdContainer.queueUpdate(target, update);
+        }
+      }
+    );
     nodeIdContainer.flushUpdates();
     console.log(mutationList);
   });
