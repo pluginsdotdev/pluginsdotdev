@@ -1,14 +1,16 @@
 import React from "react";
-import { initializePluginBridge, } from "@pluginsdotdev/bridge";
+import { initializePluginBridge } from "@pluginsdotdev/bridge";
 
 import type { ComponentType, ElementType } from "react";
 import type {
   PluginBridge,
   Props,
   EventOptions,
+  EventHandler,
   RenderRootId,
   ReconciliationUpdate,
-  ReconciliationPropUpdate
+  ReconciliationPropUpdate,
+  ReconciliationHandlerUpdate,
 } from "@pluginsdotdev/bridge";
 
 type ExposedComponents = Record<
@@ -23,7 +25,9 @@ interface PluginConfig {
   exposedComponents: ExposedComponents;
 }
 
-type PluginFactory = (pluginConfig: PluginConfig) => (props: Props, container: HTMLElement) => void;
+type PluginFactory = (
+  pluginConfig: PluginConfig
+) => (props: Props, container: HTMLElement) => void;
 
 interface BrowserData {
   pluginId: string;
@@ -60,33 +64,44 @@ const makeExposedComponents = (
   }, {} as ExposedComponents);
 };
 
-type PartialReconciliationUpdate = Omit<ReconciliationUpdate, "nodeId" | "type">;
+type PartialReconciliationUpdate = Omit<
+  ReconciliationUpdate,
+  "nodeId" | "type"
+>;
 
-const mergePartialUpdates = (a: PartialReconciliationUpdate | null | undefined, b: PartialReconciliationUpdate | null | undefined): PartialReconciliationUpdate => {
-  if ( !a ) {
+const mergePartialUpdates = (
+  a: PartialReconciliationUpdate | null | undefined,
+  b: PartialReconciliationUpdate | null | undefined
+): PartialReconciliationUpdate => {
+  if (!a) {
     return b!;
   }
 
-  if ( !b ) {
+  if (!b) {
     return a!;
   }
 
   const textUpdate = a.textUpdate || b.textUpdate;
   const childUpdates = (a.childUpdates || []).concat(b.childUpdates || []);
   const propUpdates = (a.propUpdates || []).concat(b.propUpdates || []);
-  const handlerUpdates = (a.handlerUpdates || []).concat(b.handlerUpdates || []);
+  const handlerUpdates = (a.handlerUpdates || []).concat(
+    b.handlerUpdates || []
+  );
 
   return {
     childUpdates,
     propUpdates,
     handlerUpdates,
-    textUpdate
+    textUpdate,
   };
 };
 
-const mergeUpdates = (a: ReconciliationUpdate | null | undefined, b: ReconciliationUpdate | null | undefined): ReconciliationUpdate => {
-  if ( a && b && (a.nodeId !== b.nodeId || a.type !== b.type) ) {
-    throw new Error('Can only merge updates for the same nodeId and type');
+const mergeUpdates = (
+  a: ReconciliationUpdate | null | undefined,
+  b: ReconciliationUpdate | null | undefined
+): ReconciliationUpdate => {
+  if (a && b && (a.nodeId !== b.nodeId || a.type !== b.type)) {
+    throw new Error("Can only merge updates for the same nodeId and type");
   }
 
   const partial = mergePartialUpdates(a, b);
@@ -95,13 +110,16 @@ const mergeUpdates = (a: ReconciliationUpdate | null | undefined, b: Reconciliat
   return {
     nodeId: either.nodeId,
     type: either.type,
-    ...partial
+    ...partial,
   };
 };
 
 // the globalEventHandlerQueue holds ReconciliationUpdates for events that are registered to
 // nodes that have not yet been assigned a node id
-const globalEventHandlerQueue = new WeakMap<Node, PartialReconciliationUpdate>();
+const globalEventHandlerQueue = new WeakMap<
+  Node,
+  PartialReconciliationUpdate
+>();
 
 type Reconcile = (updates: Array<ReconciliationUpdate>) => Promise<void>;
 
@@ -124,9 +142,7 @@ class NodeIdContainer {
 
   getOrAddNode(node: Node): number {
     const id = this.getId(node);
-    return typeof id === 'undefined'
-      ? this.addNode(node)
-      : id;
+    return typeof id === "undefined" ? this.addNode(node) : id;
   }
 
   getId(node: Node): number | undefined {
@@ -138,7 +154,7 @@ class NodeIdContainer {
   }
 
   hasNode(node: Node): boolean {
-    return typeof this.getId(node) !== 'undefined';
+    return typeof this.getId(node) !== "undefined";
   }
 
   queueUpdate(node: Node, update: PartialReconciliationUpdate) {
@@ -146,24 +162,26 @@ class NodeIdContainer {
     globalEventHandlerQueue.delete(node);
 
     const type = this.isRoot(node)
-               ? "root"
-               : (node.nodeType === Node.TEXT_NODE
-                  ? "text"
-                  : node.nodeName.toLowerCase());
+      ? "root"
+      : node.nodeType === Node.TEXT_NODE
+      ? "text"
+      : node.nodeName.toLowerCase();
     const fullUpdate = {
       ...mergePartialUpdates(update, previouslyQueued),
       nodeId: this.getOrAddNode(node),
-      type
+      type,
     };
     const existingUpdate = this.queuedUpdates.get(node);
-    if ( !existingUpdate ) {
+    if (!existingUpdate) {
       this.updateOrder.push(node);
     }
     this.queuedUpdates.set(node, mergeUpdates(existingUpdate, fullUpdate));
   }
 
   flushUpdates() {
-    const orderedUpdates = this.updateOrder.map(node => this.queuedUpdates.get(node)!);
+    const orderedUpdates = this.updateOrder.map(
+      (node) => this.queuedUpdates.get(node)!
+    );
     this.reconcile(orderedUpdates);
   }
 }
@@ -173,14 +191,18 @@ const nodeIdContainers = new Set<NodeIdContainer>();
 const calculateChildIdx = (node: Node): number => {
   let childIdx = 0;
   let currentNode = node;
-  while ( currentNode.previousSibling !== null ) {
+  while (currentNode.previousSibling !== null) {
     currentNode = currentNode.previousSibling;
     ++childIdx;
   }
   return childIdx;
 };
 
-const queueTreeUpdates = (nodeIdContainer: NodeIdContainer, target: Node, child: Node): void => {
+const queueTreeUpdates = (
+  nodeIdContainer: NodeIdContainer,
+  target: Node,
+  child: Node
+): void => {
   const childId = nodeIdContainer.getOrAddNode(child);
   const targetId = nodeIdContainer.getId(target)!;
   const targetUpdate: PartialReconciliationUpdate = {
@@ -188,56 +210,56 @@ const queueTreeUpdates = (nodeIdContainer: NodeIdContainer, target: Node, child:
       {
         op: "set",
         childIdx: calculateChildIdx(child),
-        childId
-      }
-    ]
+        childId,
+      },
+    ],
   };
   // TODO: handle other node types https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType
-  const attrs: Array<Attr> = child.nodeType === Node.ELEMENT_NODE
-                           ? Array.from((child as Element).attributes)
-                           : [];
-  const propUpdates: Array<ReconciliationPropUpdate> = attrs.map(
-    attr => ({
-      op: "set",
-      prop: attr.name === 'class' ? 'className' : attr.name,
-      value: attr.value
-    })
-  );
-  const childUpdate = child.nodeType === Node.TEXT_NODE
-    ? {
-      textUpdate: {
-        text: child.textContent || ''
-      }
-    } : {
-      propUpdates
-    };
+  const attrs: Array<Attr> =
+    child.nodeType === Node.ELEMENT_NODE
+      ? Array.from((child as Element).attributes)
+      : [];
+  const propUpdates: Array<ReconciliationPropUpdate> = attrs.map((attr) => ({
+    op: "set",
+    prop: attr.name === "class" ? "className" : attr.name,
+    value: attr.value,
+  }));
+  const childUpdate =
+    child.nodeType === Node.TEXT_NODE
+      ? {
+          textUpdate: {
+            text: child.textContent || "",
+          },
+        }
+      : {
+          propUpdates,
+        };
 
   // queue children updates first
   const children: Array<Node> = Array.from(child.childNodes);
-  children.forEach(
-    grandchild => {
-      queueTreeUpdates(nodeIdContainer, child, grandchild);
-    }
-  );
+  children.forEach((grandchild) => {
+    queueTreeUpdates(nodeIdContainer, child, grandchild);
+  });
 
   // queue our updates
   nodeIdContainer.queueUpdate(child, childUpdate);
   nodeIdContainer.queueUpdate(target, targetUpdate);
 };
 
-const queueRemovedUpdates = (nodeIdContainer: NodeIdContainer, target: Node, child: Node): void => {
+const queueRemovedUpdates = (
+  nodeIdContainer: NodeIdContainer,
+  target: Node,
+  child: Node
+): void => {
   const childId = nodeIdContainer.getId(child)!;
-  nodeIdContainer.queueUpdate(
-    target,
-    {
-      childUpdates: [
-        {
-          op: "delete",
-          childId
-        }
-      ]
-    }
-  );
+  nodeIdContainer.queueUpdate(target, {
+    childUpdates: [
+      {
+        op: "delete",
+        childId,
+      },
+    ],
+  });
 };
 
 const registerPlugin = async (pluginFactory: PluginFactory) => {
@@ -250,10 +272,13 @@ const registerPlugin = async (pluginFactory: PluginFactory) => {
     ...pluginConfig,
     exposedComponents: makeExposedComponents(exposedComponentsList),
   });
-  const pluginBridge: PluginBridge = await initializePluginBridge(hostOrigin, onRender);
+  const pluginBridge: PluginBridge = await initializePluginBridge(
+    hostOrigin,
+    onRender
+  );
 
   function onRender(rootId: RenderRootId, props: Props) {
-    const root = document.createElement('div');
+    const root = document.createElement("div");
     document.body.appendChild(root);
 
     const nodeIdContainer = new NodeIdContainer(
@@ -263,78 +288,189 @@ const registerPlugin = async (pluginFactory: PluginFactory) => {
     nodeIdContainers.add(nodeIdContainer);
     nodeIdContainer.addNode(root);
     const obs = new MutationObserver((mutationList, observer) => {
-      mutationList.forEach(
-        ({type, target, addedNodes, removedNodes}) => {
-          const added = Array.from(addedNodes);
-          const removed = Array.from(removedNodes);
+      mutationList.forEach(({ type, target, addedNodes, removedNodes }) => {
+        const added = Array.from(addedNodes);
+        const removed = Array.from(removedNodes);
 
-          added.forEach(
-            node => {
-              queueTreeUpdates(nodeIdContainer, target, node);
-            }
-          );
+        added.forEach((node) => {
+          queueTreeUpdates(nodeIdContainer, target, node);
+        });
 
-          removed.forEach(
-            node => {
-              queueRemovedUpdates(nodeIdContainer, target, node);
-            }
-          );
-        }
-      );
+        removed.forEach((node) => {
+          queueRemovedUpdates(nodeIdContainer, target, node);
+        });
+      });
       nodeIdContainer.flushUpdates();
       console.log(mutationList);
     });
 
-    obs.observe(
-      root,
-      {
-        attributes: true,
-        childList: true,
-        subtree: true,
-        characterData: true
-      }
-    );
+    obs.observe(root, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
 
     plugin(props, root);
   }
 };
 
-const getEventHandler = (node: Node, listener: EventListener | EventListenerObject | null) =>
-  (nodeId: number, eventType: string, event: any) => {
-    node.dispatchEvent(event)
+type EventKey = string;
+
+const getEventKey = (type: string, opts: EventOptions): EventKey => {
+  return `${type}:${opts.capture}:${opts.passive}`;
+};
+
+interface Listeners {
+  localListeners: Set<EventListener | EventListenerObject>;
+  remoteListener: EventHandler;
+}
+
+const eventHandlerRegistry = new WeakMap<Node, Record<string, Listeners>>();
+
+const makeListener = (
+  node: Node,
+  type: string,
+  eventOptions: EventOptions,
+  listener: EventListener | EventListenerObject
+): EventHandler => (nodeId: number, eventType: string, event: any) => {
+  // TODO: properly fire events
+  node.dispatchEvent(event);
+
+  if (eventOptions.once) {
+    // TODO: if we remove this, we can re-use the same host listener for every handler
+    //       at the expense of additional events sent across the bridge that we will just ignore
+    //       (local handler would be removed anyway). not sure which makes more sense.
+    node.removeEventListener(type, listener, eventOptions);
+  }
+};
+
+/**
+ * Primary assumption behind getEventHandler:
+ *  - we register events with the expectation that when a handler for the provided type and options
+ *    is triggered on the host, we will trigger the same event on the node coresponding to the event
+ *    target on the plugin.
+ *  - this means that we don't actually care about the plugin-provided handler except to maintain our
+ *    count and update the host whenever our event count crosses 0<>1.
+ *  - specifically, we *must* de-dupe to prevent firing multiple events for multiple handlers.
+ **/
+const getEventHandler = (
+  node: Node,
+  addHandler: boolean,
+  type: string,
+  eventOptions: EventOptions,
+  listener: EventListener | EventListenerObject
+): EventHandler | null => {
+  const listenersByEventKey = eventHandlerRegistry.get(node) || {};
+  const eventKey = getEventKey(type, eventOptions);
+  const listeners = listenersByEventKey[eventKey] || {
+    localListeners: new Set<EventListener | EventListenerObject>(),
+    remoteListener: makeListener(node, type, eventOptions, listener),
   };
+  if (addHandler) {
+    listeners.localListeners.add(listener);
+  } else {
+    listeners.localListeners.delete(listener);
+  }
+  listenersByEventKey[eventKey] = listeners;
+  eventHandlerRegistry.set(node, listenersByEventKey);
+
+  const needHandlerForAdd = addHandler && listeners.localListeners.size === 1;
+  const needHandlerForRemove =
+    !addHandler && listeners.localListeners.size === 0;
+
+  return needHandlerForAdd || needHandlerForRemove
+    ? listeners.remoteListener
+    : null;
+};
+
+const ensureEventOpts = (
+  useCaptureOrOpts?: boolean | AddEventListenerOptions
+): EventOptions => {
+  switch (typeof useCaptureOrOpts) {
+    case "boolean":
+      return { capture: useCaptureOrOpts };
+    case "undefined":
+      return {};
+    default:
+      return useCaptureOrOpts || {}; // || ok here since we check for boolean above, we're only handling null here
+  }
+};
+
+const queueHandlerUpdate = (
+  node: Node,
+  handlerUpdate: ReconciliationHandlerUpdate
+): void => {
+  const targetContainer = Array.from(nodeIdContainers).find((container) =>
+    container.hasNode(node)
+  );
+  const update: PartialReconciliationUpdate = {
+    handlerUpdates: [handlerUpdate],
+  };
+
+  if (targetContainer) {
+    targetContainer.queueUpdate(node, update);
+  } else {
+    globalEventHandlerQueue.set(node, update);
+  }
+};
 
 // we wrap EventTarget to capture event handlers
 const { addEventListener, removeEventListener } = EventTarget.prototype;
-EventTarget.prototype.addEventListener = function wrappedAddEventListener(type: string, listener: EventListener | EventListenerObject | null, useCaptureOrOpts?: boolean | AddEventListenerOptions) {
+EventTarget.prototype.addEventListener = function wrappedAddEventListener(
+  type: string,
+  listener: EventListener | EventListenerObject | null,
+  useCaptureOrOpts?: boolean | AddEventListenerOptions
+) {
   const node = this as Node;
 
-  if ( !(this as any).nodeType ) {
+  if (!(this as any).nodeType || !listener) {
     return addEventListener.call(this, type, listener, useCaptureOrOpts);
   }
 
   // already checked for nodeType. node should actually be a Node
 
-  const eventOptions = typeof useCaptureOrOpts === "boolean"
-                     ? { capture: useCaptureOrOpts }
-                     : useCaptureOrOpts as EventOptions;
-  const targetContainer = Array.from(nodeIdContainers).find(container => container.hasNode(node));
-  const update: PartialReconciliationUpdate = {
-    handlerUpdates: [{
+  const eventOptions = ensureEventOpts(useCaptureOrOpts);
+  const handler = getEventHandler(node, true, type, eventOptions, listener);
+  if (handler) {
+    const update: ReconciliationHandlerUpdate = {
       op: "set",
       eventType: type,
-      handler: getEventHandler(node, listener),
-      eventOptions
-    }]
-  };
-
-  if ( targetContainer ) {
-    targetContainer.queueUpdate(node, update);
-  } else {
-    globalEventHandlerQueue.set(node, update);
+      handler,
+      eventOptions,
+    };
+    queueHandlerUpdate(node, update);
   }
 
   return addEventListener.call(this, type, listener, useCaptureOrOpts);
-}
+};
+
+EventTarget.prototype.removeEventListener = function wrappedRemoveEventListener(
+  type: string,
+  listener: EventListener | EventListenerObject | null,
+  useCaptureOrOpts?: boolean | AddEventListenerOptions
+) {
+  const node = this as Node;
+
+  if (!(this as any).nodeType || !listener) {
+    return removeEventListener.call(this, type, listener, useCaptureOrOpts);
+  }
+
+  // already checked for nodeType. node should actually be a Node
+
+  const eventOptions = ensureEventOpts(useCaptureOrOpts);
+  const handler = getEventHandler(node, false, type, eventOptions, listener);
+  if (handler) {
+    const update: ReconciliationHandlerUpdate = {
+      op: "delete",
+      eventType: type,
+      handler,
+      eventOptions,
+    };
+    queueHandlerUpdate(node, update);
+  }
+
+  return removeEventListener.call(this, type, listener, useCaptureOrOpts);
+};
 
 export { registerPlugin };
