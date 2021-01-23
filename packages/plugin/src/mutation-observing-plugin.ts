@@ -11,10 +11,13 @@ import type {
   ReconciliationHandlerUpdate,
 } from "@pluginsdotdev/bridge";
 
-type ExposedComponents = Record<
-  keyof JSX.IntrinsicElements,
-  keyof JSX.IntrinsicElements
->;
+export interface ExposedComponent {
+  type: string;
+  props: Record<string, string>;
+  el: () => HTMLElement;
+}
+
+type ExposedComponents = Record<string, ExposedComponent>;
 
 interface PluginConfig {
   pluginId: string;
@@ -51,13 +54,29 @@ const browserData = async (): Promise<BrowserData> => {
   });
 };
 
+const hostComponentAttr = `data-pluginsdotdev-host-component-${Math.floor(
+  Math.random() * 10000
+)}`;
+
 const makeExposedComponents = (
   exposedComponentsList: Array<keyof ExposedComponents>
 ): ExposedComponents => {
   return exposedComponentsList.reduce((exposedComponents, component) => {
-    exposedComponents[
-      component
-    ] = `host:${component}` as keyof JSX.IntrinsicElements;
+    const type = "div";
+    const props: Record<string, string> = {
+      [hostComponentAttr]: component,
+    };
+    exposedComponents[component] = {
+      type,
+      props,
+      el: () => {
+        const el = document.createElement(type);
+        Object.keys(props).forEach((prop) => {
+          el.setAttribute(prop, props[prop]);
+        });
+        return el;
+      },
+    };
     return exposedComponents;
   }, {} as ExposedComponents);
 };
@@ -159,10 +178,16 @@ class NodeIdContainer {
     const previouslyQueued = globalEventHandlerQueue.get(node);
     globalEventHandlerQueue.delete(node);
 
+    const el = node as HTMLElement;
+    const hostComponent = el.getAttribute
+      ? el.getAttribute(hostComponentAttr)
+      : null;
     const type = this.isRoot(node)
       ? "root"
       : node.nodeType === Node.TEXT_NODE
       ? "text"
+      : hostComponent
+      ? `host:${hostComponent}`
       : node.nodeName.toLowerCase();
     const fullUpdate = {
       ...mergePartialUpdates(update, previouslyQueued),
@@ -217,11 +242,13 @@ const queueTreeUpdates = (
     child.nodeType === Node.ELEMENT_NODE
       ? Array.from((child as Element).attributes)
       : [];
-  const propUpdates: Array<ReconciliationPropUpdate> = attrs.map((attr) => ({
-    op: "set",
-    prop: attr.name === "class" ? "className" : attr.name,
-    value: attr.value,
-  }));
+  const propUpdates: Array<ReconciliationPropUpdate> = attrs
+    .filter((attr) => attr.name !== hostComponentAttr)
+    .map((attr) => ({
+      op: "set",
+      prop: attr.name === "class" ? "className" : attr.name,
+      value: attr.value,
+    }));
   const childUpdate =
     child.nodeType === Node.TEXT_NODE
       ? {
