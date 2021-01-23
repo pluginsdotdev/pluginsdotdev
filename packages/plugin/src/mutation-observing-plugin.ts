@@ -58,11 +58,44 @@ const makeExposedComponents = (
   }, {} as ExposedComponents);
 };
 
+const mergeUpdates = (a: ReconciliationUpdate | null | undefined, b: ReconciliationUpdate | null | undefined): ReconciliationUpdate => {
+  if ( !a ) {
+    return b!;
+  }
+
+  if ( !b ) {
+    return a!;
+  }
+
+  if ( a.nodeId !== b.nodeId || a.type !== b.type ) {
+    throw new Error('Can only merge updates for the same nodeId and type');
+  }
+
+  const textUpdate = a.textUpdate || b.textUpdate;
+  const childUpdates = (a.childUpdates || []).concat(b.childUpdates || []);
+  const propUpdates = (a.propUpdates || []).concat(b.propUpdates || []);
+
+  return {
+    nodeId: a.nodeId,
+    type: a.type,
+    childUpdates,
+    propUpdates,
+    textUpdate
+  };
+};
+
+type Reconcile = (updates: Array<ReconciliationUpdate>) => Promise<void>;
+
 class NodeIdContainer {
   private nextId = 0;
   private nodesById = new WeakMap<Node, number>();
+  private reconcile: Reconcile;
+  private queuedUpdates = new WeakMap<Node, ReconciliationUpdate>();
+  private updateOrder: Array<Node> = [];
 
-  constructor() { }
+  constructor(reconcile: Reconcile) {
+    this.reconcile = reconcile;
+  }
 
   addNode(node: Node): number {
     const id = this.nextId++;
@@ -84,7 +117,22 @@ class NodeIdContainer {
   isRoot(node: Node): boolean {
     return this.getId(node) === 0;
   }
+
+  queueUpdate(node: Node, update: ReconciliationUpdate) {
+    const existingUpdate = this.queuedUpdates.get(node);
+    if ( !existingUpdate ) {
+      this.updateOrder.push(node);
+    }
+    this.queuedUpdates.set(node, mergeUpdates(existingUpdate, update));
+  }
+
+  flushUpdates() {
+    const orderedUpdates = this.updateOrder.map(node => this.queuedUpdates.get(node)!);
+    this.reconcile(orderedUpdates);
+  }
 }
+
+const nodeIdContainers = new Set<NodeIdContainer>();
 
 const calculateChildIdx = (node: Node): number => {
   let childIdx = 0;
@@ -96,33 +144,7 @@ const calculateChildIdx = (node: Node): number => {
   return childIdx;
 };
 
-type Updates = Record<string, ReconciliationUpdate>;
-
-const mergeUpdates = (a: Updates, b: Updates): Updates => {
-  const allKeys = Array.from(
-    new Set(Object.keys(a).concat(Object.keys(b)))
-  );
-  return allKeys.reduce((result, k) => {
-    const first = result[k];
-    const second = b[k];
-
-    if ( !first ) {
-      result[k] = second;
-      return result;
-    }
-
-    if ( !second ) {
-      return result;
-    }
-
-    first.childUpdates = (first.childUpdates || []).concat(second.childUpdates || []);
-    first.propUpdates = (first.propUpdates || []).concat(second.propUpdates || []);
-    first.textUpdate = first.textUpdate || second.textUpdate;
-    return result;
-  }, a);
-};
-
-const getTreeUpdates = (nodeIdContainer: NodeIdContainer, target: Node, child: Node): [Updates, Array<number>] => {
+const queueTreeUpdates = (nodeIdContainer: NodeIdContainer, target: Node, child: Node): void => {
   const childId = nodeIdContainer.getOrAddNode(child);
   const targetId = nodeIdContainer.getId(target)!;
   const targetUpdate: ReconciliationUpdate = {
@@ -161,26 +183,26 @@ const getTreeUpdates = (nodeIdContainer: NodeIdContainer, target: Node, child: N
       type: child.nodeName.toLowerCase(),
       propUpdates
     };
-  const ourUpdates: Updates = {
-    [targetId]: targetUpdate,
-    [childId]: childUpdate
-  };
+
+  // queue children updates first
   const children: Array<Node> = Array.from(child.childNodes);
-  const [updates, order] = children.reduce(
-    ([updates, order], grandchild) => {
-      const [treeUpdates, treeOrder] = getTreeUpdates(nodeIdContainer, child, grandchild);
-      return [mergeUpdates(updates, treeUpdates), order.concat(treeOrder)];
-    },
-    [ourUpdates, []] as [Updates, Array<number>]
+  children.forEach(
+    grandchild => {
+      queueTreeUpdates(nodeIdContainer, child, grandchild);
+    }
   );
-  return [updates, order.concat([childId, targetId])];
+
+  // queue our updates
+  nodeIdContainer.queueUpdate(child, childUpdate);
+  nodeIdContainer.queueUpdate(target, targetUpdate);
 };
 
-const getRemovedUpdates = (nodeIdContainer: NodeIdContainer, target: Node, child: Node): Updates => {
+const queueRemovedUpdates = (nodeIdContainer: NodeIdContainer, target: Node, child: Node): void => {
   const childId = nodeIdContainer.getId(child)!;
   const targetId = nodeIdContainer.getId(target)!;
-  return {
-    [targetId]: {
+  nodeIdContainer.queueUpdate(
+    target,
+    {
       nodeId: targetId,
       type: nodeIdContainer.isRoot(target)
         ? "root"
@@ -192,7 +214,7 @@ const getRemovedUpdates = (nodeIdContainer: NodeIdContainer, target: Node, child
         }
       ]
     }
-  };
+  );
 };
 
 const registerPlugin = async (pluginFactory: PluginFactory) => {
@@ -211,52 +233,32 @@ const registerPlugin = async (pluginFactory: PluginFactory) => {
     const root = document.createElement('div');
     document.body.appendChild(root);
 
-    const nodeIdContainer = new NodeIdContainer();
+    const nodeIdContainer = new NodeIdContainer(
+      (updates: Array<ReconciliationUpdate>) =>
+        pluginBridge.reconcile(rootId, updates)
+    );
+    nodeIdContainers.add(nodeIdContainer);
     nodeIdContainer.addNode(root);
     const obs = new MutationObserver((mutationList, observer) => {
-      const [updates, order] = mutationList.reduce(
-        ([updatesById, order], {type, target, addedNodes, removedNodes}) => {
+      mutationList.forEach(
+        ({type, target, addedNodes, removedNodes}) => {
           const added = Array.from(addedNodes);
           const removed = Array.from(removedNodes);
 
-          const [addedUpdates, addedOrder] = added.reduce(
-            ([updates, order], node) => {
-              const [treeUpdates, treeOrder] = getTreeUpdates(nodeIdContainer, target, node);
-              return [mergeUpdates(updates, treeUpdates), order.concat(treeOrder)];
-            },
-            [updatesById, order]
+          added.forEach(
+            node => {
+              queueTreeUpdates(nodeIdContainer, target, node);
+            }
           );
 
-          const updates = removed.reduce(
-            (updates, node) => {
-              return mergeUpdates(
-                addedUpdates,
-                getRemovedUpdates(nodeIdContainer, target, node)
-              );
-            },
-            addedUpdates
+          removed.forEach(
+            node => {
+              queueRemovedUpdates(nodeIdContainer, target, node);
+            }
           );
-
-          return [updates, addedOrder];
-        },
-        [{}, []] as [Updates, Array<number>]
+        }
       );
-      const orderKeys = new Set<number>(order);
-      const nonOrderedKeys = Object.keys(updates).map(id => +id).filter(id => !orderKeys.has(id));
-      const allKeys = order.concat(Array.from(nonOrderedKeys));
-      const [orderedUpdates, _] = allKeys.reduce(
-        ([ups, seen], k) => {
-          const useK = !seen.has(k);
-          seen.add(k);
-          if ( useK ) {
-            return [ups.concat([updates[k]]), seen];
-          }
-
-          return [ups, seen];
-        },
-        [[], new Set<number>()] as [Array<ReconciliationUpdate>, Set<number>]
-      );
-      pluginBridge.reconcile(rootId, orderedUpdates);
+      nodeIdContainer.flushUpdates();
       console.log(mutationList);
     });
 
