@@ -50,9 +50,6 @@
   },
   "dependencies": {
     "@pluginsdotdev/bridge": "^0.0.1",
-    "loose-envify": "^1.4.0",
-    "react": "^16.13.1",
-    "react-reconciler": "^0.25.1",
     "url": "^0.11.0"
   },
   "devDependencies": {
