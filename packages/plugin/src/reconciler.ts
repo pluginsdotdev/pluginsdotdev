@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 
 import type {
   ReconciliationUpdate,
-  ReconciliationCombinedUpdate,
   ReconciliationPropUpdate,
 } from "@pluginsdotdev/bridge";
 

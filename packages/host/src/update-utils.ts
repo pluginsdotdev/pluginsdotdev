@@ -58,7 +58,7 @@ const applyUpdates = (
       isRoot ? rootNode : nodesById.get(update.nodeId)!
     );
 
-    if (typeof update.propUpdates !== "undefined") {
+    if (update.propUpdates) {
       node.props = update.propUpdates.reduce((props, update) => {
         if (update.op === "set") {
           props[update.prop] = update.value;
@@ -71,7 +71,7 @@ const applyUpdates = (
       }, Object.assign({}, node.props));
     }
 
-    if (typeof update.childUpdates !== "undefined") {
+    if (update.childUpdates) {
       // TODO: this doesn't work. need to process in-order due to ids
       node.children = update.childUpdates.reduce((children, update) => {
         if (update.op === "set") {
@@ -86,7 +86,7 @@ const applyUpdates = (
       }, node.children.slice());
     }
 
-    if (typeof update.textUpdate !== "undefined") {
+    if (update.textUpdate) {
       node.text = update.textUpdate.text;
     }
 

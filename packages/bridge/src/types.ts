@@ -143,45 +143,12 @@ export type ReconciliationChildUpdate =
   | ReconciliationSetChildUpdate
   | ReconciliationDeleteChildUpdate;
 
-export interface ReconciliationPropUpdates {
-  propUpdates: Array<ReconciliationPropUpdate>;
-  childUpdates?: undefined;
-  textUpdate?: undefined;
-}
-
-export interface ReconciliationChildUpdates {
-  childUpdates: Array<ReconciliationChildUpdate>;
-  propUpdates?: undefined;
-  textUpdate?: undefined;
-}
-
-export interface ReconciliationTextUpdate {
-  textUpdate: {
-    text: string;
-  };
-  propUpdates?: undefined;
-  childUpdates?: undefined;
-}
-
-export type ReconciliationCombinedUpdates = Partial<
-  ReconciliationPropUpdates &
-    ReconciliationChildUpdates &
-    ReconciliationTextUpdate
->;
-
-export type ReconciliationUpdateTypes =
-  | ReconciliationPropUpdates
-  | ReconciliationChildUpdates
-  | ReconciliationTextUpdate
-  | ReconciliationCombinedUpdates;
-
-export interface BaseReconciliationUpdate {
+export interface ReconciliationUpdate {
   nodeId: NodeId;
   type: string;
+  propUpdates?: Array<ReconciliationPropUpdate> | null | undefined;
+  childUpdates?: Array<ReconciliationChildUpdate> | null | undefined;
+  textUpdate?: {
+    text: string;
+  } | null | undefined;
 }
-
-export type ReconciliationUpdate = BaseReconciliationUpdate &
-  ReconciliationUpdateTypes;
-
-export type ReconciliationCombinedUpdate = BaseReconciliationUpdate &
-  ReconciliationCombinedUpdates;
