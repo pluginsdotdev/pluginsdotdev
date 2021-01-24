@@ -28,7 +28,7 @@ interface PluginConfig {
 
 type PluginFactory = (
   pluginConfig: PluginConfig
-) => (props: Props, container: HTMLElement) => void;
+) => (props: Props, container: Element | DocumentFragment) => void;
 
 interface BrowserData {
   pluginId: string;
@@ -140,9 +140,16 @@ const globalEventHandlerQueue = new WeakMap<
 
 type Reconcile = (updates: Array<ReconciliationUpdate>) => Promise<void>;
 
+type NodeHandle = (Node | DocumentFragment) & {
+  _NodeHandle: true;
+};
+
+const nodeHandle = (node: Node): NodeHandle =>
+  ((node as any).shadowRoot || node) as NodeHandle;
+
 class NodeIdContainer {
   private nextId = 0;
-  private nodesById = new WeakMap<Node, number>();
+  private nodesById = new WeakMap<NodeHandle, number>();
   private reconcile: Reconcile;
   private queuedUpdates = new WeakMap<Node, ReconciliationUpdate>();
   private updateOrder: Array<Node> = [];
@@ -153,17 +160,17 @@ class NodeIdContainer {
 
   addNode(node: Node): number {
     const id = this.nextId++;
-    this.nodesById.set(node, id);
+    this.nodesById.set(nodeHandle(node), id);
     return id;
   }
 
   getOrAddNode(node: Node): number {
     const id = this.getId(node);
-    return typeof id === "undefined" ? this.addNode(node) : id;
+    return typeof id === "undefined" ? this.addNode(nodeHandle(node)) : id;
   }
 
   getId(node: Node): number | undefined {
-    return this.nodesById.get(node);
+    return this.nodesById.get(nodeHandle(node));
   }
 
   isRoot(node: Node): boolean {
@@ -195,7 +202,18 @@ class NodeIdContainer {
       type,
     };
     const existingUpdate = this.queuedUpdates.get(node);
-    if (!existingUpdate) {
+    if (
+      existingUpdate &&
+      fullUpdate.childUpdates &&
+      fullUpdate.childUpdates.length
+    ) {
+      // TODO: fix correctness in the general case
+      // if our new update is adding children, we move ourselves back
+      // in the ordering. this is not correct in general unless we ensure
+      // that we never move behind any update that lists us as a child.
+      this.updateOrder = this.updateOrder.filter((n) => n !== node);
+      this.updateOrder.push(node);
+    } else if (!existingUpdate) {
       this.updateOrder.push(node);
     }
     this.queuedUpdates.set(node, mergeUpdates(existingUpdate, fullUpdate));
@@ -289,19 +307,20 @@ const queueRemovedUpdates = (
   });
 };
 
-const renderRootById = new Map<RenderRootId, HTMLElement>();
+const renderRootById = new Map<RenderRootId, Element | DocumentFragment>();
 
 const constructRenderRootIfNeeded = (
   rootId: RenderRootId,
   pluginBridge: PluginBridge
-): HTMLElement => {
+): Element | DocumentFragment => {
   const prevRoot = renderRootById.get(rootId);
   if (prevRoot) {
     return prevRoot;
   }
 
-  const root = document.createElement("div");
-  document.body.appendChild(root);
+  const rootEl = document.createElement("div");
+  const root = rootEl.attachShadow({ mode: "open" });
+  document.body.appendChild(rootEl);
   renderRootById.set(rootId, root);
 
   const nodeIdContainer = new NodeIdContainer(
@@ -491,7 +510,12 @@ EventTarget.prototype.addEventListener = function wrappedAddEventListener(
 ) {
   const node = this as Node;
 
-  if (!(this as any).nodeType || !listener) {
+  if (
+    !(this as any).nodeType ||
+    !listener ||
+    (node as any) === window ||
+    node === document
+  ) {
     return addEventListener.call(this, type, listener, useCaptureOrOpts);
   }
 
