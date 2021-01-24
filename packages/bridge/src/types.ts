@@ -143,26 +143,30 @@ export type ReconciliationChildUpdate =
   | ReconciliationSetChildUpdate
   | ReconciliationDeleteChildUpdate;
 
-export type EventHandler = (nodeId: NodeId, eventType: string, event: any) => void;
+export type EventHandler = (
+  nodeId: NodeId,
+  eventType: string,
+  event: any
+) => void;
 
 export interface EventOptions {
   capture?: boolean;
   once?: boolean;
   passive?: boolean;
-};
+}
 
 export interface ReconciliationSetHandlerUpdate {
   op: "set";
   eventType: string;
   eventOptions: EventOptions;
-  handler?: EventHandler;
+  handler: EventHandler;
 }
 
 export interface ReconciliationDeleteHandlerUpdate {
   op: "delete";
   eventType: string;
   eventOptions: EventOptions;
-  handler?: EventHandler;
+  handler: EventHandler;
 }
 
 export type ReconciliationHandlerUpdate =
@@ -174,8 +178,11 @@ export interface ReconciliationUpdate {
   type: string;
   propUpdates?: Array<ReconciliationPropUpdate> | null | undefined;
   childUpdates?: Array<ReconciliationChildUpdate> | null | undefined;
-  textUpdate?: {
-    text: string;
-  } | null | undefined;
+  textUpdate?:
+    | {
+        text: string;
+      }
+    | null
+    | undefined;
   handlerUpdates?: Array<ReconciliationHandlerUpdate> | null | undefined;
 }
