@@ -203,6 +203,41 @@ const toBridgeFnProxyHandler = (
 
 registerToBridgeProxyHandler("plugins.dev/function", toBridgeFnProxyHandler);
 
+const fromBridgeErrorProxyHandler = (
+  bridge: Bridge,
+  proxyId: ProxyId,
+  value: any
+) => {
+  const error: any = new Error(value.message);
+  error.name = value.name;
+  return error;
+};
+
+registerFromBridgeProxyHandler(
+  "plugins.dev/error",
+  fromBridgeErrorProxyHandler
+);
+
+const toBridgeErrorProxyHandler = (
+  proxyId: ProxyIdFactory,
+  localState: LocalBridgeState,
+  hostValue: HostValue
+) => {
+  if (!(hostValue instanceof Error)) {
+    return null;
+  }
+
+  return {
+    proxyId: proxyId(localState, hostValue),
+    replacementValue: {
+      name: hostValue.name,
+      message: hostValue.message,
+    },
+  };
+};
+
+registerToBridgeProxyHandler("plugins.dev/error", toBridgeErrorProxyHandler);
+
 const _toBridge = (
   localState: LocalBridgeState,
   bridgeProxyIds: Map<ObjectPath, ProxyId>,
@@ -219,13 +254,16 @@ const _toBridge = (
       const { proxyId } = handlerValue;
       localState.localProxies.set(proxyId, hostValue);
       localState.knownProxies.set(hostValue, proxyId);
+      // TODO: split storage of local state and setting a proxy id at a path
+      //       funcitons require both but errors really should not store
+      //       local state
       bridgeProxyIds.set(pathPartsToObjectPath(path), proxyId);
-      return null;
     }
 
-    if (typeof handlerValue.replacementValue !== "undefined") {
-      return handlerValue.replacementValue;
-    }
+    // TODO: should we recursively process replacementValue? (here and in frombridge?)
+    return typeof handlerValue.replacementValue !== "undefined"
+      ? handlerValue.replacementValue
+      : null;
   } else if (Array.isArray(hostValue)) {
     // arrays are traversed item by item, each is converted from host->bridge
     // TODO: for large arrays, we may want to bail if they are monomorphic (by declaration or partial testing)
@@ -313,6 +351,9 @@ const assignAtPath = (container: any, path: ObjectPathParts, val: any): any => {
   return container;
 };
 
+const getAtPath = (container: any, path: ObjectPathParts): any =>
+  path.reduce((o, part) => (o ? o[part] : null), container);
+
 /**
  * Given a bridge and a bridgeValue, construct a regular object with all
  * functions on the bridgeValue proxied back over the bridge.
@@ -333,10 +374,12 @@ export const fromBridge = (
       throw new UnregisteredProxyTypeError(type);
     }
     const handler = fromBridgeProxyHandlers.get(type)!;
+    const pathParts = objectPathToPathParts(path);
+    const val = getAtPath(stubbedBridgeValue, pathParts);
     stubbedBridgeValue = assignAtPath(
       stubbedBridgeValue,
-      objectPathToPathParts(path),
-      handler(bridge, proxyId)
+      pathParts,
+      handler(bridge, proxyId, val)
     );
   }
 

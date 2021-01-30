@@ -50,20 +50,10 @@ export interface LocalBridgeState {
   knownProxies: Map<ProxyValue, ProxyId>;
 }
 
-export interface ToBridgeProxyValueId {
-  proxyId: ProxyId;
-  replacementValue?: undefined;
-}
-
-export interface ToBridgeProxyValueReplacement {
-  proxyId?: undefined;
-  replacementValue: HostValue;
-}
-
-export type ToBridgeProxyValue =
-  | ToBridgeProxyValueId
-  | ToBridgeProxyValueReplacement
-  | null;
+export type ToBridgeProxyValue = null | {
+  proxyId?: ProxyId;
+  replacementValue?: HostValue;
+};
 
 /**
  * ProxyIdFactory generates a new ProxyId
@@ -86,8 +76,16 @@ export type ToBridgeProxyHandler = (
 /**
  * FromBridgeProxyHandler is a handler for a proxy type.
  * This allows the implementer to handle custom proxying from the bridge.
+ *
+ * bridge is the Bridge instance
+ * proxyId is the id returned in the corresponding ToBridgeProxyHandler
+ * value is the replacement value returned in the corresponding ToBridgeProxyHandler
  **/
-export type FromBridgeProxyHandler = (bridge: Bridge, proxyId: ProxyId) => any;
+export type FromBridgeProxyHandler = (
+  bridge: Bridge,
+  proxyId: ProxyId,
+  value?: any
+) => any;
 
 export type RenderRootId = number;
 
