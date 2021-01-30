@@ -1,6 +1,11 @@
-import { initializePluginBridge } from "@pluginsdotdev/bridge";
+import {
+  initializePluginBridge,
+  registerFromBridgeProxyHandler,
+} from "@pluginsdotdev/bridge";
 
 import type {
+  Bridge,
+  ProxyId,
   PluginBridge,
   Props,
   EventOptions,
@@ -563,5 +568,47 @@ EventTarget.prototype.removeEventListener = function wrappedRemoveEventListener(
 
   return removeEventListener.call(this, type, listener, useCaptureOrOpts);
 };
+
+interface EventCtor {
+  new (type: string, data: any): Event;
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/API/Event
+const eventCtorMap: Record<string, EventCtor> = {
+  AnimationEvent: AnimationEvent,
+  ClipboardEvent: ClipboardEvent,
+  CompositionEvent: CompositionEvent,
+  DragEvent: DragEvent,
+  FocusEvent: FocusEvent,
+  InputEvent: InputEvent,
+  KeyboardEvent: KeyboardEvent,
+  MouseEvent: MouseEvent,
+  PointerEvent: PointerEvent,
+  TrackEvent: TrackEvent,
+  TransitionEvent: TransitionEvent,
+  UIEvent: UIEvent,
+  WheelEvent: WheelEvent,
+};
+
+const fromBridgeEventHandler = (
+  bridge: Bridge,
+  proxyId: ProxyId,
+  value: any
+) => {
+  const { type, data }: { type: string; data: any } = value;
+  const EventCtor = eventCtorMap[type] || Event;
+  if (data.sourceCapabilities) {
+    // sourceCapabilities must be of type InputDeviceCapabilities if present
+    data.sourceCapabilities = new (window as any).InputDeviceCapabilities(
+      data.sourceCapabilities
+    );
+  }
+  // not useful to send the host window
+  delete data.view;
+  const evt = new EventCtor(data.type, data);
+  return evt;
+};
+
+registerFromBridgeProxyHandler("plugins.dev/Event", fromBridgeEventHandler);
 
 export { registerPlugin };
