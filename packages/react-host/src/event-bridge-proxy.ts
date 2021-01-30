@@ -1,6 +1,7 @@
 import { registerToBridgeProxyHandler } from "@pluginsdotdev/bridge";
 
 import type {
+  NodeId,
   LocalBridgeState,
   HostValue,
   ProxyIdFactory,
@@ -18,7 +19,10 @@ const allKeys = (obj: object): Array<string> => {
   return keys;
 };
 
-const toSimpleObj = (orig: { [key: string]: any }) => {
+const toSimpleObj = (
+  nodeIdByNode: WeakMap<EventTarget, NodeId>,
+  orig: { [key: string]: any }
+) => {
   return allKeys(orig).reduce((o, key) => {
     const val = orig[key];
 
@@ -29,7 +33,7 @@ const toSimpleObj = (orig: { [key: string]: any }) => {
 
     if (val instanceof EventTarget) {
       o[key] = {
-        // TODO: include nodeId
+        nodeId: nodeIdByNode.get(val),
         checked: (val as any).checked,
         value: (val as any).value,
         selectedIndex: (val as any).selectedIndex,
@@ -38,7 +42,7 @@ const toSimpleObj = (orig: { [key: string]: any }) => {
     }
 
     if (Object(val) === val) {
-      o[key] = toSimpleObj(val);
+      o[key] = toSimpleObj(nodeIdByNode, val);
       return o;
     }
 
@@ -48,6 +52,7 @@ const toSimpleObj = (orig: { [key: string]: any }) => {
 };
 
 export const proxyHandler = (
+  nodeIdByNode: WeakMap<EventTarget, NodeId>,
   proxyId: ProxyIdFactory,
   localState: LocalBridgeState,
   hostValue: HostValue
@@ -60,11 +65,14 @@ export const proxyHandler = (
     proxyId: proxyId(localState, hostValue),
     replacementValue: {
       type: Object.getPrototypeOf(hostValue).constructor.name,
-      data: toSimpleObj(hostValue),
+      data: toSimpleObj(nodeIdByNode, hostValue),
     },
   };
 };
 
-export const registerHandler = () => {
-  registerToBridgeProxyHandler("plugins.dev/Event", proxyHandler);
+export const registerHandler = (nodeIdByNode: WeakMap<EventTarget, NodeId>) => {
+  registerToBridgeProxyHandler(
+    "plugins.dev/Event",
+    proxyHandler.bind(null, nodeIdByNode)
+  );
 };

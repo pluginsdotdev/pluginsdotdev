@@ -57,11 +57,9 @@ const eventConfigsMatch = (a: BaseEventConfig, b: BaseEventConfig): boolean =>
   (a.eventOptions || {}).capture === (b.eventOptions || {}).capture &&
   (a.eventOptions || {}).passive === (b.eventOptions || {}).passive;
 
-const makeHandler = (handler: EventHandler) =>
+const makeHandler = (nodeId: NodeId, handler: EventHandler) =>
   function (event: Event) {
     event.preventDefault();
-    // TODO: get the real node id
-    const nodeId = 1;
     handler(nodeId, event.type, event);
   };
 
@@ -71,10 +69,11 @@ const applyUpdates = (
 ): RootNode =>
   updates.reduce((rootNode: RootNode, update: ReconciliationUpdate) => {
     const { nodesById } = rootNode;
-    const isRoot = update.nodeId === rootId;
-    if (!isRoot && !nodesById.has(update.nodeId)) {
-      nodesById.set(update.nodeId, {
-        id: update.nodeId,
+    const { nodeId } = update;
+    const isRoot = nodeId === rootId;
+    if (!isRoot && !nodesById.has(nodeId)) {
+      nodesById.set(nodeId, {
+        id: nodeId,
         type: update.type,
         children: [],
         handlers: [],
@@ -82,10 +81,7 @@ const applyUpdates = (
       });
     }
 
-    const node = Object.assign(
-      {},
-      isRoot ? rootNode : nodesById.get(update.nodeId)!
-    );
+    const node = Object.assign({}, isRoot ? rootNode : nodesById.get(nodeId)!);
 
     if (update.propUpdates) {
       node.props = update.propUpdates.reduce((props, update) => {
@@ -122,7 +118,7 @@ const applyUpdates = (
           handlers.push({
             eventType: update.eventType,
             eventOptions: update.eventOptions,
-            handler: makeHandler(update.handler),
+            handler: makeHandler(nodeId, update.handler),
           });
         } else if (update.op === "delete") {
           handlers = handlers.filter((h) => eventConfigsMatch(h, update));

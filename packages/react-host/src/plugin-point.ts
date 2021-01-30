@@ -21,7 +21,10 @@ import type {
 } from "@pluginsdotdev/bridge";
 import type { Node, RootNode } from "./update-utils";
 
-registerEventHandler();
+// ok that this is global since each EventTarget is only in a single NodeId namespace
+const nodeIdByNode = new WeakMap<EventTarget, NodeId>();
+
+registerEventHandler(nodeIdByNode);
 registerSyntheticEventHandler();
 
 const isHostComponent = (type: string) => type.startsWith("host:");
@@ -78,6 +81,8 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
     if (!el || !node) {
       return;
     }
+
+    nodeIdByNode.set(el, node.id);
 
     node.handlers.forEach((h) => {
       el.addEventListener(
