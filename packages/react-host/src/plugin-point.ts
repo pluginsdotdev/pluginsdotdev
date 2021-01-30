@@ -1,16 +1,16 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import url from "url";
 import {
   initializeHostBridge,
   registerFromBridgeProxyHandler,
 } from "@pluginsdotdev/bridge";
 import { applyUpdates, emptyRootNode } from "./update-utils";
-import { registerHandler } from "./synthetic-event-bridge-proxy";
+import { registerHandler as registerSyntheticEventHandler } from "./synthetic-event-bridge-proxy";
 import { sanitizeProps, safePrefix } from "./sanitize-props";
 import { isValidElement } from "./sanitize-element";
 import { domainFromUrl } from "./domain-utils";
 
-import type { ComponentType } from "react";
+import type { ComponentType, RefAttributes } from "react";
 import type {
   HostId,
   RenderRootId,
@@ -20,7 +20,7 @@ import type {
 } from "@pluginsdotdev/bridge";
 import type { Node, RootNode } from "./update-utils";
 
-registerHandler();
+registerSyntheticEventHandler();
 
 const isHostComponent = (type: string) => type.startsWith("host:");
 const hostComponentName = (type: string) => type.replace(/^host:/, "");
@@ -29,7 +29,13 @@ const getNodeType = (
   exposedComponents: Record<string, ComponentType>,
   nodeType: string
 ) => {
-  if (nodeType === "root" || nodeType === "text") {
+  if (nodeType === "root") {
+    // TODO: root should return Fragment but need to attach event handlers to
+    //       the PluginPoint itself
+    return "div";
+  }
+
+  if (nodeType === "text") {
     return React.Fragment;
   }
 
@@ -64,6 +70,22 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
   pluginDomain,
   pluginUrl,
 }) => {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !node) {
+      return;
+    }
+
+    node.handlers.forEach((h) => {
+      el.addEventListener(
+        h.eventType as keyof GlobalEventHandlersEventMap,
+        h.handler,
+        h.eventOptions
+      );
+    });
+  }, [node && node.handlers]);
+
   if (!node) {
     return null;
   }
@@ -104,7 +126,15 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
       })
     );
 
-  return React.createElement(nodeType, sanitizedProps, contents);
+  const props: RefAttributes<HTMLElement> =
+    typeof nodeType === "string"
+      ? {
+          ...sanitizedProps,
+          ref,
+        }
+      : sanitizedProps;
+
+  return React.createElement(nodeType, props, contents);
 };
 
 export interface PluginPointProps<P> {
