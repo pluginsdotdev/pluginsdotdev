@@ -5,6 +5,7 @@ import {
   registerFromBridgeProxyHandler,
 } from "@pluginsdotdev/bridge";
 import { applyUpdates, emptyRootNode } from "./update-utils";
+import { registerHandler as registerEventHandler } from "./event-bridge-proxy";
 import { registerHandler as registerSyntheticEventHandler } from "./synthetic-event-bridge-proxy";
 import { sanitizeProps, safePrefix } from "./sanitize-props";
 import { isValidElement } from "./sanitize-element";
@@ -20,6 +21,7 @@ import type {
 } from "@pluginsdotdev/bridge";
 import type { Node, RootNode } from "./update-utils";
 
+registerEventHandler();
 registerSyntheticEventHandler();
 
 const isHostComponent = (type: string) => type.startsWith("host:");
