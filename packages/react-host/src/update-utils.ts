@@ -1,4 +1,5 @@
 import type {
+  EventHandler,
   NodeId,
   ReconciliationUpdate,
   ReconciliationSetPropUpdate,
@@ -7,11 +8,24 @@ import type {
   ReconciliationDeleteChildUpdate,
 } from "@pluginsdotdev/bridge";
 
+type BaseEventConfig = {
+  eventType: string;
+  eventOptions: {
+    capture?: boolean;
+    passive?: boolean;
+  };
+};
+
+type NodeEventConfig = BaseEventConfig & {
+  handler: (this: HTMLElement, event: Event) => void;
+};
+
 export interface Node {
   id: NodeId;
   type: string;
   text?: string;
-  children: NodeId[];
+  children: Array<NodeId>;
+  handlers: Array<NodeEventConfig>;
   props: Record<string, any>;
 }
 
@@ -32,10 +46,24 @@ const emptyRootNode = () => ({
   type: "root",
   props: {},
   children: [],
+  handlers: [],
   nodesById: new Map<NodeId, Node>(),
 });
 
 const exhaustive = (x: never): never => x;
+
+const eventConfigsMatch = (a: BaseEventConfig, b: BaseEventConfig): boolean =>
+  a.eventType === b.eventType &&
+  (a.eventOptions || {}).capture === (b.eventOptions || {}).capture &&
+  (a.eventOptions || {}).passive === (b.eventOptions || {}).passive;
+
+const makeHandler = (handler: EventHandler) =>
+  function (event: Event) {
+    event.preventDefault();
+    // TODO: get the real node id
+    const nodeId = 1;
+    handler(nodeId, event.type, event);
+  };
 
 const applyUpdates = (
   rootNode: RootNode,
@@ -49,6 +77,7 @@ const applyUpdates = (
         id: update.nodeId,
         type: update.type,
         children: [],
+        handlers: [],
         props: {},
       });
     }
@@ -60,10 +89,11 @@ const applyUpdates = (
 
     if (update.propUpdates) {
       node.props = update.propUpdates.reduce((props, update) => {
+        const prop = update.prop === "class" ? "className" : update.prop;
         if (update.op === "set") {
-          props[update.prop] = update.value;
+          props[prop] = update.value;
         } else if (update.op === "delete") {
-          delete props[update.prop];
+          delete props[prop];
         } else {
           // TODO: exhaustive(update.op);
         }
@@ -84,6 +114,23 @@ const applyUpdates = (
         }
         return children;
       }, node.children.slice());
+    }
+
+    if (update.handlerUpdates) {
+      node.handlers = update.handlerUpdates.reduce((handlers, update) => {
+        if (update.op === "set") {
+          handlers.push({
+            eventType: update.eventType,
+            eventOptions: update.eventOptions,
+            handler: makeHandler(update.handler),
+          });
+        } else if (update.op === "delete") {
+          handlers = handlers.filter((h) => eventConfigsMatch(h, update));
+        } else {
+          // TODO: exhaustive(update.op);
+        }
+        return handlers;
+      }, node.handlers.slice());
     }
 
     if (update.textUpdate) {
