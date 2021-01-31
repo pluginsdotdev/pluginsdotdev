@@ -170,11 +170,11 @@ class NodeIdContainer {
 
   constructor(root: Node, reconcile: Reconcile) {
     this.reconcile = reconcile;
-    this.rootId = this.addNode(root);
+    this.rootId = this.addNode(root, "");
   }
 
-  addNode(node: Node): NodeId {
-    const id = `${nextId++}`;
+  addNode(node: Node, parentContext: NodeId): NodeId {
+    const id = `${!!parentContext ? parentContext + "." : ""}${nextId++}`;
     this.nodeToId.set(nodeHandle(node), id);
     const el = node as HTMLElement;
     if (el.setAttribute) {
@@ -183,9 +183,9 @@ class NodeIdContainer {
     return id;
   }
 
-  getOrAddNode(node: Node): NodeId {
+  getOrAddNode(node: Node, parentContext: NodeId): NodeId {
     const id = this.getId(node);
-    return typeof id === "undefined" ? this.addNode(nodeHandle(node)) : id;
+    return typeof id === "undefined" ? this.addNode(node, parentContext) : id;
   }
 
   getId(node: Node): NodeId | undefined {
@@ -200,7 +200,11 @@ class NodeIdContainer {
     return typeof this.getId(node) !== "undefined";
   }
 
-  queueUpdate(node: Node, update: PartialReconciliationUpdate) {
+  queueUpdate(
+    node: Node,
+    update: PartialReconciliationUpdate,
+    parentContext: NodeId
+  ) {
     const previouslyQueued = globalEventHandlerQueue.get(node);
     globalEventHandlerQueue.delete(node);
 
@@ -217,7 +221,7 @@ class NodeIdContainer {
       : node.nodeName.toLowerCase();
     const fullUpdate = {
       ...mergePartialUpdates(update, previouslyQueued),
-      nodeId: this.getOrAddNode(node),
+      nodeId: this.getOrAddNode(node, parentContext),
       type,
     };
     const existingUpdate = this.queuedUpdates.get(node);
@@ -274,10 +278,11 @@ const queueTreeUpdates = (
   nodeIdContainer: NodeIdContainer,
   target: Node,
   child: Node,
+  parentIdContext: NodeId = "",
   // baseChildIdx is useful when we explode a custom element into its parent, we need to maintain its ordering
   baseChildIdx: number = 0
 ): number => {
-  const childId = nodeIdContainer.getOrAddNode(child);
+  const childId = nodeIdContainer.getOrAddNode(child, parentIdContext);
   const targetId = nodeIdContainer.getId(target)!;
   const childIdx = baseChildIdx + calculateChildIdx(child);
   const targetUpdate: PartialReconciliationUpdate = {
@@ -316,19 +321,27 @@ const queueTreeUpdates = (
   const elChild = child as HTMLElement;
   const isCustomElement =
     window.customElements && !!window.customElements.get(elChild.localName);
+  const hasShadowRoot = !!elChild.shadowRoot;
   const children: Array<Node> = Array.from(
     elChild.shadowRoot ? elChild.shadowRoot.childNodes : child.childNodes
   );
+  const childContext = hasShadowRoot ? childId : parentIdContext;
   if (isCustomElement) {
     children.reduce(
       (childIdx, grandchild) =>
         childIdx +
-        queueTreeUpdates(nodeIdContainer, target, grandchild, childIdx),
+        queueTreeUpdates(
+          nodeIdContainer,
+          target,
+          grandchild,
+          childContext,
+          childIdx
+        ),
       childIdx
     );
   } else {
     children.forEach((grandchild) => {
-      queueTreeUpdates(nodeIdContainer, child, grandchild);
+      queueTreeUpdates(nodeIdContainer, child, grandchild, childContext);
     });
   }
 
@@ -337,8 +350,10 @@ const queueTreeUpdates = (
     return children.length;
   }
 
-  nodeIdContainer.queueUpdate(child, childUpdate);
-  nodeIdContainer.queueUpdate(target, targetUpdate);
+  nodeIdContainer.queueUpdate(child, childUpdate, parentIdContext);
+  // TODO: not sure if parentIdContext is valid for target...
+  //       but we never actually create an id here so doesn't matter
+  nodeIdContainer.queueUpdate(target, targetUpdate, parentIdContext);
   return 1;
 };
 
@@ -348,14 +363,19 @@ const queueRemovedUpdates = (
   child: Node
 ): void => {
   const childId = nodeIdContainer.getId(child)!;
-  nodeIdContainer.queueUpdate(target, {
-    childUpdates: [
-      {
-        op: "delete",
-        childId,
-      },
-    ],
-  });
+  // "" is ok as parentContext since we know we're removing (so already have an id)
+  nodeIdContainer.queueUpdate(
+    target,
+    {
+      childUpdates: [
+        {
+          op: "delete",
+          childId,
+        },
+      ],
+    },
+    ""
+  );
 };
 
 const renderRootById = new Map<RenderRootId, DocumentFragment>();
@@ -416,7 +436,8 @@ const constructRenderRootIfNeeded = (
                   },
             ],
           };
-          nodeIdContainer.queueUpdate(target, update);
+          // TODO: verify "" as parentContext
+          nodeIdContainer.queueUpdate(target, update, "");
         }
       }
     );
@@ -580,7 +601,8 @@ const queueHandlerUpdate = (
   };
 
   if (targetContainer) {
-    targetContainer.queueUpdate(node, update);
+    // TODO: "" as parentContext works since we already have an id
+    targetContainer.queueUpdate(node, update, "");
   } else {
     globalEventHandlerQueue.set(node, update);
   }
@@ -670,12 +692,32 @@ const eventCtorMap: Record<string, EventCtor> = {
   WheelEvent: WheelEvent,
 };
 
-const getNodeById = (nodeId: NodeId): Node | null =>
-  Array.from(renderRootById.values()).reduce(
-    (result, root) =>
-      result || root.querySelector(`[${nodeIdAttr}="${nodeId}"]`),
-    null as Node | null
-  );
+type FragAndEl = {
+  fragment: DocumentFragment | null;
+  element: HTMLElement | null;
+};
+
+const getNodeById = (nodeId: NodeId): Node | null => {
+  const nodeIds = nodeId.split(".").reduce((nodeIds, nodeId) => {
+    const prev = nodeIds[nodeIds.length - 1];
+    const next = prev ? `${prev}.${nodeId}` : nodeId;
+    return nodeIds.concat([next]);
+  }, [] as Array<NodeId>);
+
+  const results = nodeIds.reduce((roots: Array<FragAndEl>, nodeId: NodeId) => {
+    const nextEl = roots.reduce(
+      (result, { fragment, element }) =>
+        result ||
+        (fragment && fragment.querySelector(`[${nodeIdAttr}="${nodeId}"]`)),
+      null as HTMLElement | null
+    );
+    return nextEl
+      ? [{ fragment: nextEl.shadowRoot || null, element: nextEl }]
+      : [];
+  }, Array.from(renderRootById.values()).map((fragment) => ({ fragment, element: null })) as Array<FragAndEl>);
+
+  return results.length ? results[0].element : null;
+};
 
 const fromBridgeEventHandler = (
   bridge: Bridge,
