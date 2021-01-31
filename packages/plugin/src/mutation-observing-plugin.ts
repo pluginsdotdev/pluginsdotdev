@@ -466,7 +466,23 @@ const makeListener = (
   }
   recentlySeenEventIds.unshift(eventId);
 
-  (event as any)?._target?.node?.dispatchEvent(event);
+  const {
+    _target: { checked, value, selectedIndex, node },
+  } = event as any;
+  if (!node) {
+    return;
+  }
+
+  if (typeof checked !== "undefined") {
+    node.checked = checked;
+  }
+  if (typeof value !== "undefined") {
+    node.value = value;
+  }
+  if (typeof selectedIndex !== "undefined") {
+    node.selectedIndex = selectedIndex;
+  }
+  node.dispatchEvent(event);
 
   if (eventOptions.once) {
     // TODO: if we remove this, we can re-use the same host listener for every handler
@@ -652,10 +668,19 @@ const fromBridgeEventHandler = (
   }
   // not useful to send the host window
   delete data.view;
-  const evt: any = new EventCtor(data.type, data);
+  const evtInit = { ...data };
+  delete evtInit.target;
+  delete evtInit.relatedTarget;
+  if (data.relatedTarget) {
+    evtInit.relatedTarget = getNodeById(data.relatedTarget.nodeId);
+  }
+  const evt: any = new EventCtor(data.type, evtInit);
   evt._id = proxyId;
   evt._target = {
     node: getNodeById(data.target.nodeId),
+    checked: data.target.checked,
+    value: data.target.value,
+    selectedIndex: data.target.selectedIndex,
   };
   return evt;
 };
