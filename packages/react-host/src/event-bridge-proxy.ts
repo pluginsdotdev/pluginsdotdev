@@ -19,12 +19,18 @@ const allKeys = (obj: object): Array<string> => {
   return keys;
 };
 
+const ignoredProps = new Set<string>(["currentTarget", "srcElement", "view"]);
+
 const toSimpleObj = (
   nodeIdByNode: WeakMap<EventTarget, NodeId>,
   orig: { [key: string]: any }
 ) => {
   return allKeys(orig).reduce((o, key) => {
     const val = orig[key];
+
+    if (ignoredProps.has(key)) {
+      return o;
+    }
 
     if (typeof val === "function") {
       // we don't pass any functions at this point
