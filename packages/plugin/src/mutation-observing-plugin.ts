@@ -10,6 +10,7 @@ import type {
   Props,
   EventOptions,
   EventHandler,
+  NodeId,
   RenderRootId,
   ReconciliationUpdate,
   ReconciliationPropUpdate,
@@ -62,6 +63,12 @@ const browserData = async (): Promise<BrowserData> => {
 const hostComponentAttr = `data-pluginsdotdev-host-component-${Math.floor(
   Math.random() * 10000
 )}`;
+
+const nodeIdAttr = `data-pluginsdotdev-node-id-${Math.floor(
+  Math.random() * 10000
+)}`;
+
+const ignoredAttrs = new Set<string>([hostComponentAttr, nodeIdAttr]);
 
 const makeExposedComponents = (
   exposedComponentsList: Array<keyof ExposedComponents>
@@ -166,6 +173,10 @@ class NodeIdContainer {
   addNode(node: Node): number {
     const id = this.nextId++;
     this.nodesById.set(nodeHandle(node), id);
+    const el = node as HTMLElement;
+    if (el.setAttribute) {
+      el.setAttribute(nodeIdAttr, "" + id);
+    }
     return id;
   }
 
@@ -268,7 +279,7 @@ const queueTreeUpdates = (
       ? Array.from((child as Element).attributes)
       : [];
   const propUpdates: Array<ReconciliationPropUpdate> = attrs
-    .filter((attr) => attr.name !== hostComponentAttr)
+    .filter((attr) => !ignoredAttrs.has(attr.name))
     .map((attr) => ({
       op: "set",
       prop: attr.name,
@@ -312,7 +323,7 @@ const queueRemovedUpdates = (
   });
 };
 
-const renderRootById = new Map<RenderRootId, Element | DocumentFragment>();
+const renderRootById = new Map<RenderRootId, DocumentFragment>();
 
 const constructRenderRootIfNeeded = (
   rootId: RenderRootId,
@@ -350,7 +361,11 @@ const constructRenderRootIfNeeded = (
 
         const targetEl = target as HTMLElement;
 
-        if (attributeName && targetEl.getAttribute) {
+        if (
+          attributeName &&
+          targetEl.getAttribute &&
+          !ignoredAttrs.has(attributeName)
+        ) {
           const newValue = targetEl.getAttribute(attributeName);
           const update: PartialReconciliationUpdate = {
             propUpdates: [
@@ -425,8 +440,7 @@ const makeListener = (
   eventOptions: EventOptions,
   listener: EventListener | EventListenerObject
 ): EventHandler => (nodeId: number, eventType: string, event: any) => {
-  // TODO: properly fire events
-  node.dispatchEvent(event);
+  (event as any)?._target?.node?.dispatchEvent(event);
 
   if (eventOptions.once) {
     // TODO: if we remove this, we can re-use the same host listener for every handler
@@ -590,6 +604,13 @@ const eventCtorMap: Record<string, EventCtor> = {
   WheelEvent: WheelEvent,
 };
 
+const getNodeById = (nodeId: NodeId): Node | null =>
+  Array.from(renderRootById.values()).reduce(
+    (result, root) =>
+      result || root.querySelector(`[${nodeIdAttr}="${nodeId}"]`),
+    null as Node | null
+  );
+
 const fromBridgeEventHandler = (
   bridge: Bridge,
   proxyId: ProxyId,
@@ -606,6 +627,9 @@ const fromBridgeEventHandler = (
   // not useful to send the host window
   delete data.view;
   const evt = new EventCtor(data.type, data);
+  (evt as any)._target = {
+    node: getNodeById(data.target.nodeId),
+  };
   return evt;
 };
 
