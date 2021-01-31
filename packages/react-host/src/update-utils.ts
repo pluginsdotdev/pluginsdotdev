@@ -40,7 +40,7 @@ export interface RealizedNode {
 
 export type RootNode = Node & { nodesById: Map<NodeId, Node> };
 
-const rootId = 0;
+const rootId = "" + 0;
 
 const emptyRootNode = () => ({
   id: rootId,

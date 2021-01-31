@@ -68,7 +68,7 @@ const nodeIdAttr = `data-pluginsdotdev-node-id-${Math.floor(
   Math.random() * 10000
 )}`;
 
-const ignoredAttrs = new Set<string>([hostComponentAttr, nodeIdAttr]);
+const ignoredAttrs = new Set<string>([hostComponentAttr, nodeIdAttr, "is"]);
 
 const makeExposedComponents = (
   exposedComponentsList: Array<keyof ExposedComponents>
@@ -159,21 +159,23 @@ type NodeHandle = (Node | DocumentFragment) & {
 const nodeHandle = (node: Node): NodeHandle =>
   ((node as any).shadowRoot || node) as NodeHandle;
 
+let nextId = 0;
 class NodeIdContainer {
-  private nextId = 0;
-  private nodesById = new WeakMap<NodeHandle, number>();
+  private rootId: NodeId;
+  private nodeToId = new WeakMap<NodeHandle, NodeId>();
   private reconcile: Reconcile;
   private queuedUpdates = new WeakMap<Node, ReconciliationUpdate>();
   private updateOrder: Array<Node> = [];
-  private flushQueued: boolean = false;
+  private isFlushQueued: boolean = false;
 
-  constructor(reconcile: Reconcile) {
+  constructor(root: Node, reconcile: Reconcile) {
     this.reconcile = reconcile;
+    this.rootId = this.addNode(root);
   }
 
-  addNode(node: Node): number {
-    const id = this.nextId++;
-    this.nodesById.set(nodeHandle(node), id);
+  addNode(node: Node): NodeId {
+    const id = `${nextId++}`;
+    this.nodeToId.set(nodeHandle(node), id);
     const el = node as HTMLElement;
     if (el.setAttribute) {
       el.setAttribute(nodeIdAttr, "" + id);
@@ -181,17 +183,17 @@ class NodeIdContainer {
     return id;
   }
 
-  getOrAddNode(node: Node): number {
+  getOrAddNode(node: Node): NodeId {
     const id = this.getId(node);
     return typeof id === "undefined" ? this.addNode(nodeHandle(node)) : id;
   }
 
-  getId(node: Node): number | undefined {
-    return this.nodesById.get(nodeHandle(node));
+  getId(node: Node): NodeId | undefined {
+    return this.nodeToId.get(nodeHandle(node));
   }
 
   isRoot(node: Node): boolean {
-    return this.getId(node) === 0;
+    return this.getId(node) === this.rootId;
   }
 
   hasNode(node: Node): boolean {
@@ -235,10 +237,10 @@ class NodeIdContainer {
     }
     this.queuedUpdates.set(node, mergeUpdates(existingUpdate, fullUpdate));
 
-    if (!this.flushQueued) {
-      this.flushQueued = true;
+    if (!this.isFlushQueued) {
+      this.isFlushQueued = true;
       setTimeout(() => {
-        this.flushQueued = false;
+        this.isFlushQueued = false;
         this.flushUpdates();
       }, 10);
     }
@@ -351,11 +353,11 @@ const constructRenderRootIfNeeded = (
   renderRootById.set(rootId, root);
 
   const nodeIdContainer = new NodeIdContainer(
+    root,
     (updates: Array<ReconciliationUpdate>) =>
       pluginBridge.reconcile(rootId, updates)
   );
   nodeIdContainers.add(nodeIdContainer);
-  nodeIdContainer.addNode(root);
   const obs = new MutationObserver((mutationList, observer) => {
     mutationList.forEach(
       ({ type, target, addedNodes, removedNodes, attributeName }) => {
@@ -453,7 +455,7 @@ const makeListener = (
   type: string,
   eventOptions: EventOptions,
   listener: EventListener | EventListenerObject
-): EventHandler => (nodeId: number, eventType: string, event: any) => {
+): EventHandler => (nodeId: NodeId, eventType: string, event: any) => {
   const eventId = event._id;
   if (recentlySeenEventIds.indexOf(eventId) >= 0) {
     // an event that bubbles may have multiple handlers triggered

@@ -108,7 +108,7 @@ export interface PluginBridge extends Bridge {
   ) => Promise<void>;
 }
 
-export type NodeId = number;
+export type NodeId = string;
 
 export interface ReconciliationSetPropUpdate {
   op: "set";

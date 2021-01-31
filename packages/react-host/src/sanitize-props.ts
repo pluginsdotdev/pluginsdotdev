@@ -90,7 +90,7 @@ const handleError = (msg: object) => {
   // TODO: log error remotely
 };
 
-const unsafeProps = new Set<string>(["dangerouslySetInnerHTML"]);
+const unsafeProps = new Set<string>(["dangerouslySetInnerHTML", "is"]);
 
 type Validator = (
   hostId: HostId,
