@@ -273,15 +273,18 @@ const calculateChildIdx = (node: Node): number => {
 const queueTreeUpdates = (
   nodeIdContainer: NodeIdContainer,
   target: Node,
-  child: Node
-): void => {
+  child: Node,
+  // baseChildIdx is useful when we explode a custom element into its parent, we need to maintain its ordering
+  baseChildIdx: number = 0
+): number => {
   const childId = nodeIdContainer.getOrAddNode(child);
   const targetId = nodeIdContainer.getId(target)!;
+  const childIdx = baseChildIdx + calculateChildIdx(child);
   const targetUpdate: PartialReconciliationUpdate = {
     childUpdates: [
       {
         op: "set",
-        childIdx: calculateChildIdx(child),
+        childIdx,
         childId,
       },
     ],
@@ -310,14 +313,33 @@ const queueTreeUpdates = (
         };
 
   // queue children updates first
-  const children: Array<Node> = Array.from(child.childNodes);
-  children.forEach((grandchild) => {
-    queueTreeUpdates(nodeIdContainer, child, grandchild);
-  });
+  const elChild = child as HTMLElement;
+  const isCustomElement =
+    window.customElements && !!window.customElements.get(elChild.localName);
+  const children: Array<Node> = Array.from(
+    elChild.shadowRoot ? elChild.shadowRoot.childNodes : child.childNodes
+  );
+  if (isCustomElement) {
+    children.reduce(
+      (childIdx, grandchild) =>
+        childIdx +
+        queueTreeUpdates(nodeIdContainer, target, grandchild, childIdx),
+      childIdx
+    );
+  } else {
+    children.forEach((grandchild) => {
+      queueTreeUpdates(nodeIdContainer, child, grandchild);
+    });
+  }
 
   // queue our updates
+  if (isCustomElement) {
+    return children.length;
+  }
+
   nodeIdContainer.queueUpdate(child, childUpdate);
   nodeIdContainer.queueUpdate(target, targetUpdate);
+  return 1;
 };
 
 const queueRemovedUpdates = (
