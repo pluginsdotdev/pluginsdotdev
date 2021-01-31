@@ -4,7 +4,7 @@ import {
   initializeHostBridge,
   registerFromBridgeProxyHandler,
 } from "@pluginsdotdev/bridge";
-import { applyUpdates, emptyRootNode } from "./update-utils";
+import { applyUpdates, emptyRootNode, eventConfigsMatch } from "./update-utils";
 import { registerHandler as registerEventHandler } from "./event-bridge-proxy";
 import { registerHandler as registerSyntheticEventHandler } from "./synthetic-event-bridge-proxy";
 import { sanitizeProps, safePrefix } from "./sanitize-props";
@@ -19,7 +19,7 @@ import type {
   HostBridge,
   NodeId,
 } from "@pluginsdotdev/bridge";
-import type { Node, RootNode } from "./update-utils";
+import type { Node, RootNode, NodeEventConfig } from "./update-utils";
 
 // ok that this is global since each EventTarget is only in a single NodeId namespace
 const nodeIdByNode = new WeakMap<EventTarget, NodeId>();
@@ -76,6 +76,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
   pluginUrl,
 }) => {
   const ref = useRef<HTMLElement>(null);
+  const prevHandlers = useRef<Array<NodeEventConfig>>([]);
   useEffect(() => {
     const el = ref.current;
     if (!el || !node) {
@@ -84,6 +85,23 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
 
     nodeIdByNode.set(el, node.id);
 
+    const existingHandlers = prevHandlers.current;
+    const handlersToDelete = existingHandlers.filter(
+      (existing) =>
+        !node.handlers.find(
+          (h) =>
+            eventConfigsMatch(h, existing) && h.handler === existing.handler
+        )
+    );
+
+    handlersToDelete.forEach((h) => {
+      el.removeEventListener(
+        h.eventType as keyof GlobalEventHandlersEventMap,
+        h.handler,
+        h.eventOptions
+      );
+    });
+
     node.handlers.forEach((h) => {
       el.addEventListener(
         h.eventType as keyof GlobalEventHandlersEventMap,
@@ -91,6 +109,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
         h.eventOptions
       );
     });
+    prevHandlers.current = node.handlers || [];
   }, [node && node.handlers]);
 
   if (!node) {

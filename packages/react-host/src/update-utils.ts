@@ -1,5 +1,6 @@
 import type {
   EventHandler,
+  EventOptions,
   NodeId,
   ReconciliationUpdate,
   ReconciliationSetPropUpdate,
@@ -16,7 +17,7 @@ type BaseEventConfig = {
   };
 };
 
-type NodeEventConfig = BaseEventConfig & {
+export type NodeEventConfig = BaseEventConfig & {
   handler: (this: HTMLElement, event: Event) => void;
 };
 
@@ -52,7 +53,10 @@ const emptyRootNode = () => ({
 
 const exhaustive = (x: never): never => x;
 
-const eventConfigsMatch = (a: BaseEventConfig, b: BaseEventConfig): boolean =>
+export const eventConfigsMatch = (
+  a: BaseEventConfig,
+  b: BaseEventConfig
+): boolean =>
   a.eventType === b.eventType &&
   (a.eventOptions || {}).capture === (b.eventOptions || {}).capture &&
   (a.eventOptions || {}).passive === (b.eventOptions || {}).passive;
@@ -127,7 +131,7 @@ const applyUpdates = (
             handler: makeHandler(nodeId, update.eventOptions, update.handler),
           });
         } else if (update.op === "delete") {
-          handlers = handlers.filter((h) => eventConfigsMatch(h, update));
+          handlers = handlers.filter((h) => !eventConfigsMatch(h, update));
         } else {
           // TODO: exhaustive(update.op);
         }
