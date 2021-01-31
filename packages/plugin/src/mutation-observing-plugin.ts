@@ -165,6 +165,7 @@ class NodeIdContainer {
   private reconcile: Reconcile;
   private queuedUpdates = new WeakMap<Node, ReconciliationUpdate>();
   private updateOrder: Array<Node> = [];
+  private flushQueued: boolean = false;
 
   constructor(reconcile: Reconcile) {
     this.reconcile = reconcile;
@@ -233,6 +234,14 @@ class NodeIdContainer {
       this.updateOrder.push(node);
     }
     this.queuedUpdates.set(node, mergeUpdates(existingUpdate, fullUpdate));
+
+    if (!this.flushQueued) {
+      this.flushQueued = true;
+      setTimeout(() => {
+        this.flushQueued = false;
+        this.flushUpdates();
+      }, 10);
+    }
   }
 
   flushUpdates() {
@@ -241,7 +250,9 @@ class NodeIdContainer {
     );
     this.queuedUpdates = new WeakMap<Node, ReconciliationUpdate>();
     this.updateOrder = [];
-    this.reconcile(orderedUpdates);
+    if (orderedUpdates.length) {
+      this.reconcile(orderedUpdates);
+    }
   }
 }
 
@@ -434,12 +445,27 @@ interface Listeners {
 
 const eventHandlerRegistry = new WeakMap<Node, Record<string, Listeners>>();
 
+const maxRecentEventIds = 100;
+const recentlySeenEventIds: Array<ProxyId> = [];
+
 const makeListener = (
   node: Node,
   type: string,
   eventOptions: EventOptions,
   listener: EventListener | EventListenerObject
 ): EventHandler => (nodeId: number, eventType: string, event: any) => {
+  const eventId = event._id;
+  if (recentlySeenEventIds.indexOf(eventId) >= 0) {
+    // an event that bubbles may have multiple handlers triggered
+    // we must de-dupe on our side
+    return;
+  }
+
+  if (recentlySeenEventIds.length >= maxRecentEventIds) {
+    recentlySeenEventIds.pop();
+  }
+  recentlySeenEventIds.unshift(eventId);
+
   (event as any)?._target?.node?.dispatchEvent(event);
 
   if (eventOptions.once) {
@@ -626,8 +652,9 @@ const fromBridgeEventHandler = (
   }
   // not useful to send the host window
   delete data.view;
-  const evt = new EventCtor(data.type, data);
-  (evt as any)._target = {
+  const evt: any = new EventCtor(data.type, data);
+  evt._id = proxyId;
+  evt._target = {
     node: getNodeById(data.target.nodeId),
   };
   return evt;
