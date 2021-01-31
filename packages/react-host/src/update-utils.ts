@@ -57,9 +57,15 @@ const eventConfigsMatch = (a: BaseEventConfig, b: BaseEventConfig): boolean =>
   (a.eventOptions || {}).capture === (b.eventOptions || {}).capture &&
   (a.eventOptions || {}).passive === (b.eventOptions || {}).passive;
 
-const makeHandler = (nodeId: NodeId, handler: EventHandler) =>
+const makeHandler = (
+  nodeId: NodeId,
+  opts: EventOptions,
+  handler: EventHandler
+) =>
   function (event: Event) {
-    event.preventDefault();
+    if (!opts.passive) {
+      event.preventDefault();
+    }
     handler(nodeId, event.type, event);
   };
 
@@ -118,7 +124,7 @@ const applyUpdates = (
           handlers.push({
             eventType: update.eventType,
             eventOptions: update.eventOptions,
-            handler: makeHandler(nodeId, update.handler),
+            handler: makeHandler(nodeId, update.eventOptions, update.handler),
           });
         } else if (update.op === "delete") {
           handlers = handlers.filter((h) => eventConfigsMatch(h, update));
