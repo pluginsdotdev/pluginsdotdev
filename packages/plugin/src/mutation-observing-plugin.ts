@@ -219,11 +219,11 @@ class NodeIdContainer {
       : hostComponent
       ? `host:${hostComponent}`
       : node.nodeName.toLowerCase();
-    const fullUpdate = {
+    const fullUpdate = this.updateCreationHook(node, {
       ...mergePartialUpdates(update, previouslyQueued),
       nodeId: this.getOrAddNode(node, parentContext),
       type,
-    };
+    });
     const existingUpdate = this.queuedUpdates.get(node);
     if (
       existingUpdate &&
@@ -248,6 +248,52 @@ class NodeIdContainer {
         this.flushUpdates();
       }, 10);
     }
+  }
+
+  updateCreationHook(
+    node: Node,
+    update: ReconciliationUpdate
+  ): ReconciliationUpdate {
+    if (update.type === "canvas") {
+      const canvas = node as HTMLCanvasElement;
+      let url = canvas.toDataURL();
+      update.type = "img";
+      update.propUpdates = (update.propUpdates || []).concat([
+        {
+          op: "set",
+          prop: "src",
+          value: url,
+        },
+      ]);
+
+      const handle = setInterval(() => {
+        if (!canvas.isConnected) {
+          clearInterval(handle);
+          return;
+        }
+
+        const newUrl = canvas.toDataURL();
+        if (url === newUrl) {
+          return;
+        }
+        url = newUrl;
+        this.queueUpdate(
+          node,
+          {
+            propUpdates: [
+              {
+                op: "set",
+                prop: "src",
+                value: url,
+              },
+            ],
+          },
+          ""
+        );
+      }, 32);
+    }
+
+    return update;
   }
 
   flushUpdates() {
