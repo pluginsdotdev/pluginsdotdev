@@ -209,6 +209,8 @@ class NodeIdContainer {
     globalEventHandlerQueue.delete(node);
 
     const el = node as HTMLElement;
+    const isCustomElement =
+      window.customElements && !!window.customElements.get(el.localName);
     const hostComponent = el.getAttribute
       ? el.getAttribute(hostComponentAttr)
       : null;
@@ -216,6 +218,8 @@ class NodeIdContainer {
       ? "root"
       : node.nodeType === Node.TEXT_NODE
       ? "text"
+      : isCustomElement
+      ? "div" // TODO: custom elements should render a context, not a div
       : hostComponent
       ? `host:${hostComponent}`
       : node.nodeName.toLowerCase();
@@ -320,17 +324,18 @@ const calculateChildIdx = (node: Node): number => {
   return childIdx;
 };
 
+type Observe = (node: Node | null) => void;
+
 const queueTreeUpdates = (
+  observe: Observe,
   nodeIdContainer: NodeIdContainer,
   target: Node,
   child: Node,
-  parentIdContext: NodeId = "",
-  // baseChildIdx is useful when we explode a custom element into its parent, we need to maintain its ordering
-  baseChildIdx: number = 0
-): number => {
+  parentIdContext: NodeId = ""
+): void => {
   const childId = nodeIdContainer.getOrAddNode(child, parentIdContext);
   const targetId = nodeIdContainer.getId(target)!;
-  const childIdx = baseChildIdx + calculateChildIdx(child);
+  const childIdx = calculateChildIdx(child);
   const targetUpdate: PartialReconciliationUpdate = {
     childUpdates: [
       {
@@ -365,42 +370,26 @@ const queueTreeUpdates = (
 
   // queue children updates first
   const elChild = child as HTMLElement;
-  const isCustomElement =
-    window.customElements && !!window.customElements.get(elChild.localName);
-  const hasShadowRoot = !!elChild.shadowRoot;
   const children: Array<Node> = Array.from(
     elChild.shadowRoot ? elChild.shadowRoot.childNodes : child.childNodes
   );
-  const childContext = hasShadowRoot ? childId : parentIdContext;
-  if (isCustomElement) {
-    children.reduce(
-      (childIdx, grandchild) =>
-        childIdx +
-        queueTreeUpdates(
-          nodeIdContainer,
-          target,
-          grandchild,
-          childContext,
-          childIdx
-        ),
-      childIdx
-    );
-  } else {
-    children.forEach((grandchild) => {
-      queueTreeUpdates(nodeIdContainer, child, grandchild, childContext);
-    });
+  const childContext = !!elChild.shadowRoot ? childId : parentIdContext;
+
+  if (elChild.shadowRoot) {
+    // need to monitor shadow roots individually
+    // observe de-dupes for us
+    observe(elChild.shadowRoot);
   }
+
+  children.forEach((grandchild) =>
+    queueTreeUpdates(observe, nodeIdContainer, child, grandchild, childContext)
+  );
 
   // queue our updates
-  if (isCustomElement) {
-    return children.length;
-  }
-
   nodeIdContainer.queueUpdate(child, childUpdate, parentIdContext);
   // TODO: not sure if parentIdContext is valid for target...
   //       but we never actually create an id here so doesn't matter
   nodeIdContainer.queueUpdate(target, targetUpdate, parentIdContext);
-  return 1;
 };
 
 const queueRemovedUpdates = (
@@ -446,44 +435,73 @@ const constructRenderRootIfNeeded = (
       pluginBridge.reconcile(rootId, updates)
   );
   nodeIdContainers.add(nodeIdContainer);
+
+  const observerCfg = {
+    attributes: true,
+    childList: true,
+    subtree: true,
+    characterData: true,
+  };
+
   const obs = new MutationObserver((mutationList, observer) => {
+    const observe = (node: Node | null) => {
+      if (node) {
+        observer.observe(node, observerCfg);
+      }
+    };
+
     mutationList.forEach(
       ({ type, target, addedNodes, removedNodes, attributeName }) => {
-        const added = Array.from(addedNodes);
-        const removed = Array.from(removedNodes);
+        switch (type) {
+          case "childList":
+            const added = Array.from(addedNodes);
+            const removed = Array.from(removedNodes);
 
-        added.forEach((node) => {
-          queueTreeUpdates(nodeIdContainer, target, node);
-        });
+            added.forEach((node) => {
+              queueTreeUpdates(observe, nodeIdContainer, target, node);
+            });
 
-        removed.forEach((node) => {
-          queueRemovedUpdates(nodeIdContainer, target, node);
-        });
+            removed.forEach((node) => {
+              queueRemovedUpdates(nodeIdContainer, target, node);
+            });
+            return;
+          case "attributes":
+            const targetEl = target as HTMLElement;
 
-        const targetEl = target as HTMLElement;
-
-        if (
-          attributeName &&
-          targetEl.getAttribute &&
-          !ignoredAttrs.has(attributeName)
-        ) {
-          const newValue = targetEl.getAttribute(attributeName);
-          const update: PartialReconciliationUpdate = {
-            propUpdates: [
-              typeof newValue === "undefined"
-                ? {
-                    op: "delete",
-                    prop: attributeName,
-                  }
-                : {
-                    op: "set",
-                    prop: attributeName,
-                    value: newValue,
-                  },
-            ],
-          };
-          // TODO: verify "" as parentContext
-          nodeIdContainer.queueUpdate(target, update, "");
+            if (
+              attributeName &&
+              targetEl.getAttribute &&
+              !ignoredAttrs.has(attributeName)
+            ) {
+              const newValue = targetEl.getAttribute(attributeName);
+              const update: PartialReconciliationUpdate = {
+                propUpdates: [
+                  typeof newValue === "undefined"
+                    ? {
+                        op: "delete",
+                        prop: attributeName,
+                      }
+                    : {
+                        op: "set",
+                        prop: attributeName,
+                        value: newValue,
+                      },
+                ],
+              };
+              // TODO: verify "" as parentContext
+              nodeIdContainer.queueUpdate(target, update, "");
+            }
+            return;
+          case "characterData":
+            const text = target.textContent;
+            const update: PartialReconciliationUpdate = {
+              textUpdate: {
+                text: text || "",
+              },
+            };
+            // TODO: verify "" as parentContext
+            nodeIdContainer.queueUpdate(target, update, "");
+            return;
         }
       }
     );
@@ -491,12 +509,7 @@ const constructRenderRootIfNeeded = (
     console.log(mutationList);
   });
 
-  obs.observe(root, {
-    attributes: true,
-    childList: true,
-    subtree: true,
-    characterData: true,
-  });
+  obs.observe(root, observerCfg);
 
   return root;
 };
