@@ -160,7 +160,11 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
         }
       : sanitizedProps;
 
-  return React.createElement(nodeType, props, contents);
+  return React.createElement(
+    nodeType,
+    props,
+    Array.isArray(contents) && !contents.length ? null : contents
+  );
 };
 
 export interface PluginPointProps<P> {
