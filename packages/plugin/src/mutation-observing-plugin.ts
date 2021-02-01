@@ -717,6 +717,13 @@ EventTarget.prototype.removeEventListener = function wrappedRemoveEventListener(
   return removeEventListener.call(this, type, listener, useCaptureOrOpts);
 };
 
+const { attachShadow } = Element.prototype;
+Element.prototype.attachShadow = function wrappedAttachShadow(shadowRootInit: {
+  mode: "open" | "closed";
+}) {
+  return attachShadow.call(this, { ...shadowRootInit, mode: "open" });
+};
+
 interface EventCtor {
   new (type: string, data: any): Event;
 }
