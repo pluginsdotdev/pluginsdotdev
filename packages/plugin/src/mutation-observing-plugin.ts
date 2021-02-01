@@ -256,7 +256,7 @@ class NodeIdContainer {
   ): ReconciliationUpdate {
     if (update.type === "canvas") {
       const canvas = node as HTMLCanvasElement;
-      let url = canvas.toDataURL();
+      let url = canvas.toDataURL("image/png");
       update.type = "img";
       update.propUpdates = (update.propUpdates || []).concat([
         {
@@ -272,7 +272,7 @@ class NodeIdContainer {
           return;
         }
 
-        const newUrl = canvas.toDataURL();
+        const newUrl = canvas.toDataURL("image/png");
         if (url === newUrl) {
           return;
         }
