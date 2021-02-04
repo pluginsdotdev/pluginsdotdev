@@ -2,7 +2,7 @@ import {
   initializePluginBridge,
   registerFromBridgeProxyHandler,
 } from "@pluginsdotdev/bridge";
-import { extractStylesheetRules } from "./extract-stylesheet-rules";
+import { extractStylesheetRules } from "@pluginsdotdev/style-utils";
 
 import type {
   Bridge,
