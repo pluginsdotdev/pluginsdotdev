@@ -2,6 +2,7 @@ import {
   initializePluginBridge,
   registerFromBridgeProxyHandler,
 } from "@pluginsdotdev/bridge";
+import { extractStylesheetRules } from "./extract-stylesheet-rules";
 
 import type {
   Bridge,
@@ -350,13 +351,30 @@ const queueTreeUpdates = (
     child.nodeType === Node.ELEMENT_NODE
       ? Array.from((child as Element).attributes)
       : [];
-  const propUpdates: Array<ReconciliationPropUpdate> = attrs
-    .filter((attr) => !ignoredAttrs.has(attr.name))
-    .map((attr) => ({
-      op: "set",
-      prop: attr.name,
-      value: attr.value,
-    }));
+  const propUpdates: Array<ReconciliationPropUpdate> =
+    child.nodeName === "STYLE"
+      ? [
+          {
+            op: "set",
+            prop: "stylesheet",
+            value: extractStylesheetRules((child as HTMLStyleElement).sheet),
+          },
+        ]
+      : child.nodeName === "LINK"
+      ? [
+          {
+            op: "set",
+            prop: "stylesheet",
+            value: extractStylesheetRules((child as HTMLLinkElement).sheet),
+          },
+        ]
+      : attrs
+          .filter((attr) => !ignoredAttrs.has(attr.name))
+          .map((attr) => ({
+            op: "set",
+            prop: attr.name,
+            value: attr.value,
+          }));
   const childUpdate =
     child.nodeType === Node.TEXT_NODE
       ? {
@@ -415,6 +433,21 @@ const queueRemovedUpdates = (
 
 const renderRootById = new Map<RenderRootId, DocumentFragment>();
 
+const isStyleNode = (node: Node | null): node is HTMLStyleElement =>
+  node?.nodeName === "STYLE";
+
+const getStyleUpdate = (
+  style: HTMLStyleElement
+): PartialReconciliationUpdate => ({
+  propUpdates: [
+    {
+      op: "set",
+      prop: "stylesheet",
+      value: extractStylesheetRules(style.sheet),
+    },
+  ],
+});
+
 const constructRenderRootIfNeeded = (
   rootId: RenderRootId,
   pluginBridge: PluginBridge
@@ -454,6 +487,11 @@ const constructRenderRootIfNeeded = (
       ({ type, target, addedNodes, removedNodes, attributeName }) => {
         switch (type) {
           case "childList":
+            if (isStyleNode(target)) {
+              nodeIdContainer.queueUpdate(target, getStyleUpdate(target), "");
+              return;
+            }
+
             const added = Array.from(addedNodes);
             const removed = Array.from(removedNodes);
 
@@ -473,6 +511,11 @@ const constructRenderRootIfNeeded = (
               targetEl.getAttribute &&
               !ignoredAttrs.has(attributeName)
             ) {
+              if (isStyleNode(target)) {
+                nodeIdContainer.queueUpdate(target, getStyleUpdate(target), "");
+                return;
+              }
+
               const newValue = targetEl.getAttribute(attributeName);
               const update: PartialReconciliationUpdate = {
                 propUpdates: [
@@ -493,6 +536,16 @@ const constructRenderRootIfNeeded = (
             }
             return;
           case "characterData":
+            const parentNode = target?.parentNode;
+            if (isStyleNode(parentNode)) {
+              nodeIdContainer.queueUpdate(
+                parentNode,
+                getStyleUpdate(parentNode),
+                ""
+              );
+              return;
+            }
+
             const text = target.textContent;
             const update: PartialReconciliationUpdate = {
               textUpdate: {
@@ -506,7 +559,6 @@ const constructRenderRootIfNeeded = (
       }
     );
     nodeIdContainer.flushUpdates();
-    console.log(mutationList);
   });
 
   obs.observe(root, observerCfg);

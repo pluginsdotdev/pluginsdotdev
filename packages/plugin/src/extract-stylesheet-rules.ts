@@ -166,8 +166,14 @@ const convertRule = (cssRule: CSSRule): Rule | null => {
 const ruleFilter = (rule: Rule | null): rule is Rule => !!rule;
 
 export const extractStylesheetRules = (
-  stylesheet: CSSStyleSheet
+  stylesheet: CSSStyleSheet | null
 ): StyleSheetRules => {
+  if (!stylesheet) {
+    return {
+      rules: [],
+    };
+  }
+
   return {
     rules: Array.prototype.map
       .call<CSSRuleList, [(rule: CSSRule) => Rule | null], Array<Rule | null>>(
