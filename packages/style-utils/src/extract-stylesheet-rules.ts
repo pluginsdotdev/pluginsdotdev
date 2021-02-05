@@ -1,63 +1,19 @@
-export type Style = Record<string, string>;
-
-export interface AtRule<Id extends string> {
-  atId: Id;
-}
-
-export interface GroupingRule {
-  rules: Array<Rule>;
-}
-
-export interface ConditionRule extends GroupingRule {
-  condition: string;
-}
-
-export interface StyleRule {
-  selector: string;
-  style: Style;
-}
-
-export type SupportsRule = AtRule<"supports"> & ConditionRule;
-
-export type PageRule = AtRule<"page"> &
-  StyleRule & {
-    selector: string;
-  };
-
-export type NamespaceRule = AtRule<"namespace"> & {
-  namespaceURI: string;
-  prefix: string;
-};
-
-export type MediaRule = AtRule<"media"> & ConditionRule;
-
-export type FrameStyles = Record<string, Style>;
-
-export type KeyframesRule = AtRule<"keyframes"> & {
-  frames: FrameStyles;
-};
-
-export type FontRule = AtRule<"font-face"> & {
-  style: Style;
-};
-
-export type ImportRule = GroupingRule & {
-  media: Array<string>;
-};
-
-export type Rule =
-  | StyleRule
-  | SupportsRule
-  | PageRule
-  | NamespaceRule
-  | MediaRule
-  | KeyframesRule
-  | FontRule
-  | ImportRule;
-
-export interface StyleSheetRules {
-  rules: Array<Rule>;
-}
+import type {
+  Style,
+  GroupingRule,
+  ConditionRule,
+  StyleRule,
+  SupportsRule,
+  PageRule,
+  NamespaceRule,
+  MediaRule,
+  FramesStyles,
+  KeyframesRule,
+  FontRule,
+  ImportRule,
+  Rule,
+  StyleSheetRules,
+} from "./types";
 
 const { map, reduce } = Array.prototype;
 
@@ -76,25 +32,25 @@ const convertStyle = (cssStyle: CSSStyleDeclaration): Style =>
   ) as Style;
 
 const convertSupportsRule = (cssRule: CSSSupportsRule): SupportsRule => ({
-  atId: "supports",
+  type: "supports",
   condition: cssRule.conditionText,
   rules: map.call(cssRule.cssRules, convertRule) as Array<Rule>,
 });
 
 const convertPageRule = (cssRule: CSSPageRule): PageRule => ({
-  atId: "page",
+  type: "page",
   selector: cssRule.selectorText,
   style: convertStyle(cssRule.style),
 });
 
 const convertNamespaceRule = (cssRule: CSSNamespaceRule): NamespaceRule => ({
-  atId: "namespace",
+  type: "namespace",
   namespaceURI: cssRule.namespaceURI,
   prefix: cssRule.prefix,
 });
 
 const convertMediaRule = (cssRule: CSSMediaRule): MediaRule => ({
-  atId: "media",
+  type: "media",
   condition: cssRule.conditionText,
   rules: map
     .call<CSSRuleList, [(cssRule: CSSRule) => Rule | null], Array<Rule | null>>(
@@ -105,27 +61,32 @@ const convertMediaRule = (cssRule: CSSMediaRule): MediaRule => ({
 });
 
 const convertKeyframesRule = (cssRule: CSSKeyframesRule): KeyframesRule => ({
-  atId: "keyframes",
+  type: "keyframes",
+  name: cssRule.name,
   frames: reduce.call<
     CSSRuleList,
-    [(frames: FrameStyles, rule: CSSKeyframeRule) => FrameStyles, FrameStyles],
-    FrameStyles
+    [
+      (frames: FramesStyles, rule: CSSKeyframeRule) => FramesStyles,
+      FramesStyles
+    ],
+    FramesStyles
   >(
     cssRule.cssRules,
-    (frames: FrameStyles, rule: CSSKeyframeRule): FrameStyles => ({
+    (frames: FramesStyles, rule: CSSKeyframeRule): FramesStyles => ({
       ...frames,
       [rule.keyText]: convertStyle(rule.style),
     }),
-    {} as FrameStyles
+    {} as FramesStyles
   ),
 });
 
 const convertFontFaceRule = (cssRule: CSSFontFaceRule): FontRule => ({
-  atId: "font-face",
+  type: "font-face",
   style: convertStyle(cssRule.style),
 });
 
 const convertImportRule = (cssRule: CSSImportRule): ImportRule => ({
+  type: "import",
   media: map.call<MediaList, [(m: string) => string], Array<string>>(
     cssRule.media,
     (m) => m
@@ -139,6 +100,7 @@ const convertImportRule = (cssRule: CSSImportRule): ImportRule => ({
 });
 
 const convertStyleRule = (cssRule: CSSStyleRule): StyleRule => ({
+  type: "style",
   selector: cssRule.selectorText,
   style: convertStyle(cssRule.style),
 });
