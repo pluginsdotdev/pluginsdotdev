@@ -1,9 +1,11 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
+import ReactDOM from "react-dom";
 import url from "url";
 import {
   initializeHostBridge,
   registerFromBridgeProxyHandler,
 } from "@pluginsdotdev/bridge";
+import { stylesheetRulesToString } from "@pluginsdotdev/style-utils";
 import { applyUpdates, emptyRootNode, eventConfigsMatch } from "./update-utils";
 import { registerHandler as registerEventHandler } from "./event-bridge-proxy";
 import { registerHandler as registerSyntheticEventHandler } from "./synthetic-event-bridge-proxy";
@@ -19,6 +21,7 @@ import type {
   HostBridge,
   NodeId,
 } from "@pluginsdotdev/bridge";
+import type { StyleSheetRules } from "@pluginsdotdev/style-utils";
 import type { Node, RootNode, NodeEventConfig } from "./update-utils";
 
 // ok that this is global since each EventTarget is only in a single NodeId namespace
@@ -56,6 +59,8 @@ const getNodeType = (
 
   return nodeType;
 };
+
+const needShadowRoot = (nodeType: string): boolean => nodeType === "root";
 
 type NodeComponentProps = {
   node: Node | undefined;
@@ -111,6 +116,21 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
     });
     prevHandlers.current = node.handlers || [];
   }, [node && node.handlers]);
+  const [initialized, setInitialized] = useState<boolean>(false);
+  const useShadow = node && needShadowRoot(node.type);
+  const shadowRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = shadowRef.current;
+    if (!node || !el || initialized) {
+      return;
+    }
+
+    if (useShadow) {
+      el.attachShadow({ mode: "open" });
+    }
+
+    setInitialized(true);
+  }, [initialized]);
 
   if (!node) {
     return null;
@@ -119,6 +139,14 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
   const nodeType = getNodeType(exposedComponents ?? {}, node.type);
   const isHtmlElement = typeof nodeType === "string";
   const valid = isHtmlElement ? isValidElement(nodeType as string) : true;
+
+  if (nodeType === "style") {
+    return React.createElement(
+      "style",
+      {},
+      stylesheetRulesToString(node.props.stylesheet as StyleSheetRules)
+    );
+  }
 
   if (!valid) {
     // TODO: log to server
@@ -160,11 +188,24 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
         }
       : sanitizedProps;
 
-  return React.createElement(
+  const result = React.createElement(
     nodeType,
     props,
     Array.isArray(contents) && !contents.length ? null : contents
   );
+
+  return useShadow
+    ? React.createElement(
+        "span",
+        { ref: shadowRef },
+        initialized
+          ? ReactDOM.createPortal(
+              result,
+              (shadowRef.current!.shadowRoot! as any) as HTMLElement
+            )
+          : null
+      )
+    : result;
 };
 
 export interface PluginPointProps<P> {
