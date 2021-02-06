@@ -13,7 +13,7 @@ import type {
   ImportRule,
   Rule,
   StyleSheetRules,
-} from "./types";
+} from "@pluginsdotdev/style-types";
 
 const { map, reduce } = Array.prototype;
 

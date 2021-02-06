@@ -2,7 +2,7 @@ import { murmur2 } from "murmurhash-js";
 import * as attrs from "./attrs";
 import { domainFromUrl, resolveUrl } from "./domain-utils";
 
-import type { HostId } from "@pluginsdotdev/bridge";
+type HostId = string;
 
 // from https://github.com/cure53/DOMPurify/blob/main/src/regexp.js
 const isValidDataAttr = (prop: string) =>

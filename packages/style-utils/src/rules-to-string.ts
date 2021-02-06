@@ -13,11 +13,13 @@ import type {
   ImportRule,
   Rule,
   StyleSheetRules,
-} from "./types";
+} from "@pluginsdotdev/style-types";
 
-import {
-  Sanitized,
-  ObjSanitized,
+import { styleSanitizers } from "@pluginsdotdev/sanitizers";
+
+import type { Sanitized, ObjSanitized } from "@pluginsdotdev/sanitizers";
+
+const {
   sanitizing,
   styleRuleSanitizer,
   supportsRuleSanitizer,
@@ -28,7 +30,7 @@ import {
   keyframesStylesSanitizer,
   fontRuleSanitizer,
   importRuleSanitizer,
-} from "./sanitizers";
+} = styleSanitizers;
 
 const styleToString = (style: Sanitized<Style>): string =>
   Object.keys(style)

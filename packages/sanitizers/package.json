@@ -1,7 +1,7 @@
 {
-  "name": "@pluginsdotdev/style-utils",
+  "name": "@pluginsdotdev/sanitizers",
   "version": "0.0.1",
-  "description": "Plugins.dev lets you allow users to safely add 3rd party plugins to your site. This is the package that provides style utilities for parsing and stringifying styles.",
+  "description": "Plugins.dev lets you allow users to safely add 3rd party plugins to your site. This is the package that provides sanitizer utilities.",
   "keywords": [
     "React",
     "plugins",
@@ -53,10 +53,11 @@
   "bugs": {
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
   },
+  "dependencies": {
+    "murmurhash-js": "^1.0.0",
+    "url": "^0.11.0"
+  },
   "devDependencies": {
     "@pluginsdotdev/style-types": "^0.0.1"
-  },
-  "dependencies": {
-    "@pluginsdotdev/sanitizers": "^0.0.1"
   }
 }

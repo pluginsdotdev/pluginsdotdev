@@ -12,7 +12,7 @@ import type {
   ImportRule,
   Rule,
   StyleSheetRules,
-} from "./types";
+} from "@pluginsdotdev/style-types";
 
 export type Sanitized<T> = T & {
   _sanitized: true;

@@ -6,12 +6,15 @@ import {
   registerFromBridgeProxyHandler,
 } from "@pluginsdotdev/bridge";
 import { stylesheetRulesToString } from "@pluginsdotdev/style-utils";
+import {
+  isValidElement,
+  sanitizeProps,
+  safePrefix,
+  domainFromUrl,
+} from "@pluginsdotdev/sanitizers";
 import { applyUpdates, emptyRootNode, eventConfigsMatch } from "./update-utils";
 import { registerHandler as registerEventHandler } from "./event-bridge-proxy";
 import { registerHandler as registerSyntheticEventHandler } from "./synthetic-event-bridge-proxy";
-import { sanitizeProps, safePrefix } from "./sanitize-props";
-import { isValidElement } from "./sanitize-element";
-import { domainFromUrl } from "./domain-utils";
 
 import type { ComponentType, RefAttributes } from "react";
 import type {
@@ -21,7 +24,7 @@ import type {
   HostBridge,
   NodeId,
 } from "@pluginsdotdev/bridge";
-import type { StyleSheetRules } from "@pluginsdotdev/style-utils";
+import type { StyleSheetRules } from "@pluginsdotdev/style-types";
 import type { Node, RootNode, NodeEventConfig } from "./update-utils";
 
 // ok that this is global since each EventTarget is only in a single NodeId namespace
