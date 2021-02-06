@@ -15,73 +15,111 @@ import type {
   StyleSheetRules,
 } from "./types";
 
-const styleToString = (style: Style): string =>
+import {
+  Sanitized,
+  ObjSanitized,
+  sanitizing,
+  styleRuleSanitizer,
+  supportsRuleSanitizer,
+  pageRuleSanitizer,
+  namespaceRuleSanitizer,
+  mediaRuleSanitizer,
+  keyframesRuleSanitizer,
+  keyframesStylesSanitizer,
+  fontRuleSanitizer,
+  importRuleSanitizer,
+} from "./sanitizers";
+
+const styleToString = (style: Sanitized<Style>): string =>
   Object.keys(style)
     .map((prop) => `  ${prop}: ${style[prop]}`)
     .join("\n");
 
-const styleRuleToString = ({ selector, style }: StyleRule): string => {
-  return `${selector} {
+const styleRuleToString = sanitizing(
+  styleRuleSanitizer,
+  ({ selector, style }: ObjSanitized<StyleRule>): string => {
+    return `${selector} {
     ${styleToString(style)}
   }`;
-};
+  }
+);
 
 const conditionRuleToString = (
   atId: string,
-  { condition, rules }: ConditionRule
+  { condition, rules }: ObjSanitized<ConditionRule>
 ): string => {
   return `@${atId} ${condition} {
     ${rulesToString(rules)}
   }`;
 };
 
-const supportsRuleToString = (rule: SupportsRule): string =>
-  conditionRuleToString("supports", rule);
+const supportsRuleToString = sanitizing(
+  supportsRuleSanitizer,
+  (rule: ObjSanitized<SupportsRule>): string =>
+    conditionRuleToString("supports", rule)
+);
 
-const pageRuleToString = ({ selector, style }: PageRule): string => {
-  return `@page ${selector} {
+const pageRuleToString = sanitizing(
+  pageRuleSanitizer,
+  ({ selector, style }: ObjSanitized<PageRule>): string => {
+    return `@page ${selector} {
     ${styleToString(style)}
   }`;
-};
+  }
+);
 
-const namespaceRuleToString = ({
-  namespaceURI,
-  prefix,
-}: NamespaceRule): string => {
-  return `@namespace ${prefix} url(${namespaceURI})`;
-};
+const namespaceRuleToString = sanitizing(
+  namespaceRuleSanitizer,
+  ({ namespaceURI, prefix }: ObjSanitized<NamespaceRule>): string => {
+    return `@namespace ${prefix} url(${namespaceURI})`;
+  }
+);
 
-const mediaRuleToString = (rule: MediaRule): string =>
-  conditionRuleToString("media", rule);
+const mediaRuleToString = sanitizing(
+  mediaRuleSanitizer,
+  (rule: ObjSanitized<MediaRule>): string =>
+    conditionRuleToString("media", rule)
+);
 
-const keyframesStylesToString = (frames: FramesStyles): string =>
-  Object.keys(frames)
+const keyframesStylesToString = (frames: Sanitized<FramesStyles>): string => {
+  const sanitizedFrames = keyframesStylesSanitizer(frames);
+  return Object.keys(sanitizedFrames)
     .map(
       (frameName) =>
         `${frameName} {
-      ${styleToString(frames[frameName])}
-    }`
+          ${styleToString(sanitizedFrames[frameName])}
+        }`
     )
     .join("\n");
+};
 
-const keyframesRuleToString = ({ name, frames }: KeyframesRule): string =>
-  `@keyframes ${name} {
+const keyframesRuleToString = sanitizing(
+  keyframesRuleSanitizer,
+  ({ name, frames }: ObjSanitized<KeyframesRule>): string =>
+    `@keyframes ${name} {
     ${keyframesStylesToString(frames)}
-  }`;
+  }`
+);
 
-const fontRuleToString = ({ style }: FontRule): string =>
-  `@font-face {
+const fontRuleToString = sanitizing(
+  fontRuleSanitizer,
+  ({ style }: ObjSanitized<FontRule>): string =>
+    `@font-face {
     ${styleToString(style)}
-  }`;
+  }`
+);
 
-const importRuleToString = ({ media, rules }: ImportRule): string =>
-  media && media.length
-    ? mediaRuleToString({
-        type: "media",
-        condition: `(${media.join(", ")})`,
-        rules,
-      })
-    : rulesToString(rules);
+const importRuleToString = sanitizing(
+  importRuleSanitizer,
+  ({ media, rules }: ObjSanitized<ImportRule>): string =>
+    media && media.length
+      ? mediaRuleToString({
+          type: "media",
+          condition: `(${media.join(", ")})`,
+          rules,
+        })
+      : rulesToString(rules)
+);
 
 const ruleToString = (rule: Rule): string => {
   switch (rule.type) {
