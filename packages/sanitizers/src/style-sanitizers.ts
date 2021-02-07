@@ -51,11 +51,19 @@ const sanitizerError = (msg: string, value: any) => {
   throw new Error(`Sanitizer error [${msg}]`);
 };
 
-export const getStyleSanitizers = (
-  pluginDomain: string,
-  pluginUrl: string,
-  allowedStyleValues: AllowedStyleValues
-) => {
+export type StyleSanitizerOptions = {
+  pluginDomain: string;
+  pluginUrl: string;
+  allowedStyleValues: AllowedStyleValues;
+  isPluginRoot: boolean;
+};
+
+export const getStyleSanitizers = ({
+  pluginDomain,
+  pluginUrl,
+  allowedStyleValues,
+  isPluginRoot,
+}: StyleSanitizerOptions) => {
   const containsComment = (s: string): boolean => /[\][*]/.test(s);
 
   const conditionSanitizer: PropSanitizer<string> = (condition: string) =>
@@ -63,10 +71,23 @@ export const getStyleSanitizers = (
       ? (condition as Sanitized<string>)
       : sanitizerError("invalid condition", condition);
 
-  const selectorSanitizer: PropSanitizer<string> = (selector: string) =>
+  const descendantSelectorSanitizer: PropSanitizer<string> = (
+    selector: string
+  ) =>
     /^[()\s\w,:+>.*#"\[\]~\-=]+$/.test(selector) && !containsComment(selector)
       ? (selector as Sanitized<string>)
       : sanitizerError("invalid selector", selector);
+
+  const rootSelectorSanitizer: PropSanitizer<string> = (selector: string) =>
+    /^[()\s\w,:+>.*#"\[\]~\-=]+$/.test(selector) &&
+    !containsComment(selector) &&
+    !/:host/.test(selector) // no :host or :host-context
+      ? (selector as Sanitized<string>)
+      : sanitizerError("invalid selector", selector);
+
+  const selectorSanitizer = isPluginRoot
+    ? rootSelectorSanitizer
+    : descendantSelectorSanitizer;
 
   const styleSanitizer: PropSanitizer<Style> = (style: Style) =>
     getValidStyle("", "", {}, style) as Sanitized<Style>;

@@ -18,7 +18,7 @@ import type {
 import { sanitizing, getStyleSanitizers } from "@pluginsdotdev/sanitizers";
 
 import type {
-  AllowedStyleValues,
+  StyleSanitizerOptions,
   Sanitized,
   ObjSanitized,
 } from "@pluginsdotdev/sanitizers";
@@ -28,9 +28,7 @@ export type StyleSheetRulesStringifier = (
 ) => string;
 
 export const getStyleSheetRulesStringifier = (
-  pluginDomain: string,
-  pluginUrl: string,
-  allowedStyleValues: AllowedStyleValues
+  opts: StyleSanitizerOptions
 ): StyleSheetRulesStringifier => {
   const {
     styleRuleSanitizer,
@@ -42,7 +40,7 @@ export const getStyleSheetRulesStringifier = (
     keyframesStylesSanitizer,
     fontRuleSanitizer,
     importRuleSanitizer,
-  } = getStyleSanitizers(pluginDomain, pluginUrl, allowedStyleValues);
+  } = getStyleSanitizers(opts);
 
   const styleToString = (style: Sanitized<Style>): string =>
     Object.keys(style)

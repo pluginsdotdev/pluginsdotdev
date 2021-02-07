@@ -74,7 +74,7 @@ type NodeComponentProps = {
   pluginPoint: string;
   pluginDomain: string;
   pluginUrl: string;
-  stylesheetRulesToString: StyleSheetRulesStringifier;
+  isPluginRoot: boolean;
 };
 const NodeComponent: React.FC<NodeComponentProps> = ({
   node,
@@ -84,7 +84,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
   pluginPoint,
   pluginDomain,
   pluginUrl,
-  stylesheetRulesToString,
+  isPluginRoot,
 }) => {
   const ref = useRef<HTMLElement>(null);
   const prevHandlers = useRef<Array<NodeEventConfig>>([]);
@@ -142,11 +142,18 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
     return null;
   }
 
+  const isRoot = node.type === "root";
   const nodeType = getNodeType(exposedComponents ?? {}, node.type);
   const isHtmlElement = typeof nodeType === "string";
   const valid = isHtmlElement ? isValidElement(nodeType as string) : true;
 
   if (nodeType === "style") {
+    const stylesheetRulesToString = getStyleSheetRulesStringifier({
+      pluginDomain,
+      pluginUrl,
+      isPluginRoot,
+      allowedStyleValues: {},
+    });
     return React.createElement(
       "style",
       {},
@@ -183,7 +190,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
         pluginPoint,
         pluginDomain,
         pluginUrl,
-        stylesheetRulesToString,
+        isPluginRoot: useShadow ? isRoot : isPluginRoot,
       })
     );
 
@@ -297,11 +304,6 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
 
     const { exposedComponents, hostId, pluginPoint, pluginUrl } = this.props;
     const pluginDomain = domainFromUrl(pluginUrl);
-    const stylesheetRulesToString = getStyleSheetRulesStringifier(
-      pluginDomain,
-      pluginUrl,
-      {}
-    );
 
     return React.createElement(NodeComponent, {
       node: rootNode,
@@ -311,7 +313,7 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
       pluginPoint,
       pluginDomain,
       pluginUrl,
-      stylesheetRulesToString,
+      isPluginRoot: true,
     });
   }
 }
