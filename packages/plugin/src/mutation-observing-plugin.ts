@@ -153,7 +153,7 @@ const globalEventHandlerQueue = new WeakMap<
 
 type Reconcile = (updates: Array<ReconciliationUpdate>) => Promise<void>;
 
-type NodeHandle = (Node | DocumentFragment) & {
+type NodeHandle = (Node | ShadowRoot) & {
   _NodeHandle: true;
 };
 
@@ -177,9 +177,15 @@ class NodeIdContainer {
   addNode(node: Node, parentContext: NodeId): NodeId {
     const id = `${!!parentContext ? parentContext + "." : ""}${nextId++}`;
     this.nodeToId.set(nodeHandle(node), id);
-    const el = node as HTMLElement;
-    if (el.setAttribute) {
-      el.setAttribute(nodeIdAttr, "" + id);
+    const el = node as any;
+    // attrHolder is the element or, if el is a document fragment, its host
+    const attrHolder = el.setAttribute
+      ? el
+      : el?.host?.setAttribute
+      ? el.host
+      : null;
+    if (attrHolder && attrHolder.setAttribute) {
+      attrHolder.setAttribute(nodeIdAttr, "" + id);
     }
     return id;
   }
@@ -431,7 +437,7 @@ const queueRemovedUpdates = (
   );
 };
 
-const renderRootById = new Map<RenderRootId, DocumentFragment>();
+const renderRootById = new Map<RenderRootId, ShadowRoot>();
 
 const isStyleNode = (node: Node | null): node is HTMLStyleElement =>
   node?.nodeName === "STYLE";
@@ -451,7 +457,7 @@ const getStyleUpdate = (
 const constructRenderRootIfNeeded = (
   rootId: RenderRootId,
   pluginBridge: PluginBridge
-): Element | DocumentFragment => {
+): Element | ShadowRoot => {
   const prevRoot = renderRootById.get(rootId);
   if (prevRoot) {
     return prevRoot;
@@ -811,8 +817,8 @@ const eventCtorMap: Record<string, EventCtor> = {
 };
 
 type FragAndEl = {
-  fragment: DocumentFragment | null;
-  element: HTMLElement | null;
+  fragment: ShadowRoot | null;
+  element: Element | null;
 };
 
 const getNodeById = (nodeId: NodeId): Node | null => {
@@ -822,17 +828,33 @@ const getNodeById = (nodeId: NodeId): Node | null => {
     return nodeIds.concat([next]);
   }, [] as Array<NodeId>);
 
-  const results = nodeIds.reduce((roots: Array<FragAndEl>, nodeId: NodeId) => {
-    const nextEl = roots.reduce(
-      (result, { fragment, element }) =>
-        result ||
-        (fragment && fragment.querySelector(`[${nodeIdAttr}="${nodeId}"]`)),
-      null as HTMLElement | null
-    );
-    return nextEl
-      ? [{ fragment: nextEl.shadowRoot || null, element: nextEl }]
-      : [];
-  }, Array.from(renderRootById.values()).map((fragment) => ({ fragment, element: null })) as Array<FragAndEl>);
+  const results: Array<FragAndEl> = nodeIds.reduce(
+    (roots: Array<FragAndEl>, nodeId: NodeId) => {
+      const nextEl: Element | null = roots.reduce(
+        (result: Element | null, { fragment, element }: FragAndEl) => {
+          if (result || !fragment) {
+            return result;
+          }
+
+          const selector = `[${nodeIdAttr}="${nodeId}"]`;
+
+          if (fragment.host && fragment.host.matches(selector)) {
+            return fragment.host;
+          }
+
+          return fragment.querySelector(selector) || null;
+        },
+        null as Element | null
+      );
+      return nextEl
+        ? [{ fragment: nextEl.shadowRoot || null, element: nextEl }]
+        : [];
+    },
+    Array.from(renderRootById.values()).map((fragment) => ({
+      fragment,
+      element: null,
+    })) as Array<FragAndEl>
+  );
 
   return results.length ? results[0].element : null;
 };
