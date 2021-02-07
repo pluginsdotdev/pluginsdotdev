@@ -245,7 +245,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
           { key: "css-var-reset" },
           `:host {
         ${Array.from(cssVarBindings)
-          .map(([varName, value]) => `${varName}: ${value}`)
+          .map(([varName, value]) => `${varName}: ${value};`)
           .join("\n")}
       }`
         )
