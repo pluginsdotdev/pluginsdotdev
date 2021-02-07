@@ -37,14 +37,14 @@ registerSyntheticEventHandler();
 const isHostComponent = (type: string) => type.startsWith("host:");
 const hostComponentName = (type: string) => type.replace(/^host:/, "");
 
-const getNodeType = (
+const resolveElement = (
   exposedComponents: Record<string, ComponentType>,
   nodeType: string
-) => {
+): React.ComponentType | string => {
   if (nodeType === "root") {
     // TODO: root should return Fragment but need to attach event handlers to
     //       the PluginPoint itself
-    return "div";
+    return "span";
   }
 
   if (nodeType === "text") {
@@ -65,6 +65,52 @@ const getNodeType = (
 };
 
 const needShadowRoot = (nodeType: string): boolean => nodeType === "root";
+
+const memoized = <A extends string | number, R>(
+  cache: Record<A, R>,
+  fn: (arg: A) => R
+): ((arg: A) => R) => (arg: A) => {
+  if (!cache[arg]) {
+    cache[arg] = fn(arg);
+  }
+  return cache[arg];
+};
+
+// TODO: I don't care what type of component it is or how it was created.
+//       I only care that it can be passed to createElement. Why is this so hard?
+type AnyReactComponent = any;
+
+const withShadowDOMCache: Record<string, AnyReactComponent> = {};
+const withShadowDOM = memoized(withShadowDOMCache, (C: string) =>
+  React.forwardRef<HTMLElement, any>(({ children, ...props }, ref) => {
+    const shadowRef = useRef<HTMLElement>(null);
+    const [root, setRoot] = useState<ShadowRoot | null>(null);
+    useEffect(() => {
+      const el = shadowRef.current;
+
+      if (ref && typeof ref === "function") {
+        ref(el);
+      }
+
+      if (!el || root) {
+        return;
+      }
+
+      setRoot(el.attachShadow({ mode: "open" }));
+    }, [root]);
+
+    return React.createElement(
+      C,
+      { ...props, ref: shadowRef },
+      root
+        ? ReactDOM.createPortal(
+            React.createElement(React.Fragment, {}, children),
+            (root as any) as HTMLElement
+          )
+        : null
+    );
+  })
+);
 
 type NodeComponentProps = {
   node: Node | undefined;
@@ -124,28 +170,14 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
     });
     prevHandlers.current = node.handlers || [];
   }, [node && node.handlers]);
-  const [initialized, setInitialized] = useState<boolean>(false);
   const useShadow = node && needShadowRoot(node.type);
-  const shadowRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const el = shadowRef.current;
-    if (!node || !el || initialized) {
-      return;
-    }
-
-    if (useShadow) {
-      el.attachShadow({ mode: "open" });
-    }
-
-    setInitialized(true);
-  }, [initialized]);
 
   if (!node) {
     return null;
   }
 
   const isRoot = node.type === "root";
-  const nodeType = getNodeType(exposedComponents ?? {}, node.type);
+  const nodeType = resolveElement(exposedComponents ?? {}, node.type);
   const isHtmlElement = typeof nodeType === "string";
   const valid = isHtmlElement ? isValidElement(nodeType as string) : true;
 
@@ -224,24 +256,11 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
     contents
   );
 
-  const result = React.createElement(
-    nodeType,
+  return React.createElement(
+    useShadow ? withShadowDOM(nodeType as string) : nodeType,
     props,
     children.length ? children : null
   );
-
-  return useShadow
-    ? React.createElement(
-        "span",
-        { ref: shadowRef },
-        initialized
-          ? ReactDOM.createPortal(
-              result,
-              (shadowRef.current!.shadowRoot! as any) as HTMLElement
-            )
-          : null
-      )
-    : result;
 };
 
 export interface PluginPointProps<P> {
