@@ -207,6 +207,32 @@ class NodeIdContainer {
     return typeof this.getId(node) !== "undefined";
   }
 
+  getNodeType(node: Node): string {
+    if (this.isRoot(node)) {
+      return "root";
+    }
+
+    if (node.nodeType === Node.TEXT_NODE) {
+      return "text";
+    }
+
+    const el = node as HTMLElement;
+    const isCustomElement =
+      window.customElements && !!window.customElements.get(el.localName);
+    if (isCustomElement) {
+      return "shadow:span";
+    }
+
+    const hostComponent = el.getAttribute
+      ? el.getAttribute(hostComponentAttr)
+      : null;
+    if (hostComponent) {
+      return `host:${hostComponent}`;
+    }
+
+    return node.nodeName.toLowerCase();
+  }
+
   queueUpdate(
     node: Node,
     update: PartialReconciliationUpdate,
@@ -215,21 +241,7 @@ class NodeIdContainer {
     const previouslyQueued = globalEventHandlerQueue.get(node);
     globalEventHandlerQueue.delete(node);
 
-    const el = node as HTMLElement;
-    const isCustomElement =
-      window.customElements && !!window.customElements.get(el.localName);
-    const hostComponent = el.getAttribute
-      ? el.getAttribute(hostComponentAttr)
-      : null;
-    const type = this.isRoot(node)
-      ? "root"
-      : node.nodeType === Node.TEXT_NODE
-      ? "text"
-      : isCustomElement
-      ? "div" // TODO: custom elements should render a context, not a div
-      : hostComponent
-      ? `host:${hostComponent}`
-      : node.nodeName.toLowerCase();
+    const type = this.getNodeType(node);
     const fullUpdate = this.updateCreationHook(node, {
       ...mergePartialUpdates(update, previouslyQueued),
       nodeId: this.getOrAddNode(node, parentContext),

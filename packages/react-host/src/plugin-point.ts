@@ -36,12 +36,15 @@ registerSyntheticEventHandler();
 
 const isHostComponent = (type: string) => type.startsWith("host:");
 const hostComponentName = (type: string) => type.replace(/^host:/, "");
+const isShadowComponent = (type: string) => type.startsWith("shadow:");
+const isRootComponent = (type: string) => type === "root";
+const shadowComponentName = (type: string) => type.replace(/^shadow:/, "");
 
 const resolveElement = (
   exposedComponents: Record<string, ComponentType>,
   nodeType: string
 ): React.ComponentType | string => {
-  if (nodeType === "root") {
+  if (isRootComponent(nodeType)) {
     // TODO: root should return Fragment but need to attach event handlers to
     //       the PluginPoint itself
     return "span";
@@ -49,6 +52,10 @@ const resolveElement = (
 
   if (nodeType === "text") {
     return React.Fragment;
+  }
+
+  if (isShadowComponent(nodeType)) {
+    return resolveElement(exposedComponents, shadowComponentName(nodeType));
   }
 
   if (isHostComponent(nodeType)) {
@@ -64,7 +71,8 @@ const resolveElement = (
   return nodeType;
 };
 
-const needShadowRoot = (nodeType: string): boolean => nodeType === "root";
+const needShadowRoot = (nodeType: string): boolean =>
+  isRootComponent(nodeType) || isShadowComponent(nodeType);
 
 const memoized = <A extends string | number, R>(
   cache: Record<A, R>,
@@ -192,7 +200,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
     return null;
   }
 
-  const isRoot = node.type === "root";
+  const isRoot = isRootComponent(node.type);
   const nodeType = resolveElement(exposedComponents ?? {}, node.type);
   const isHtmlElement = typeof nodeType === "string";
   const valid = isHtmlElement ? isValidElement(nodeType as string) : true;
