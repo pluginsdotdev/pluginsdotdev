@@ -88,8 +88,10 @@ const withShadowDOM = memoized(withShadowDOMCache, (C: string) =>
     useEffect(() => {
       const el = shadowRef.current;
 
-      if (ref && typeof ref === "function") {
+      if (typeof ref === "function") {
         ref(el);
+      } else if (ref) {
+        ref.current = el;
       }
 
       if (!el || root) {
@@ -112,30 +114,10 @@ const withShadowDOM = memoized(withShadowDOMCache, (C: string) =>
   })
 );
 
-type NodeComponentProps = {
-  node: Node | undefined;
-  nodesById: Map<NodeId, Node>;
-  cssVarBindings: Map<string, string>;
-  exposedComponents?: Record<string, ComponentType>;
-  hostId: HostId;
-  pluginPoint: string;
-  pluginDomain: string;
-  pluginUrl: string;
-  isPluginRoot: boolean;
-};
-const NodeComponent: React.FC<NodeComponentProps> = ({
-  node,
-  nodesById,
-  cssVarBindings,
-  exposedComponents,
-  hostId,
-  pluginPoint,
-  pluginDomain,
-  pluginUrl,
-  isPluginRoot,
-}) => {
+const useEventHandlerWiring = (node: Node | undefined) => {
   const ref = useRef<HTMLElement>(null);
   const prevHandlers = useRef<Array<NodeEventConfig>>([]);
+
   useEffect(() => {
     const el = ref.current;
     if (!el || !node) {
@@ -169,7 +151,34 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
       );
     });
     prevHandlers.current = node.handlers || [];
-  }, [node && node.handlers]);
+  }, [node && node.id, node && node.handlers]);
+
+  return ref;
+};
+
+type NodeComponentProps = {
+  node: Node | undefined;
+  nodesById: Map<NodeId, Node>;
+  cssVarBindings: Map<string, string>;
+  exposedComponents?: Record<string, ComponentType>;
+  hostId: HostId;
+  pluginPoint: string;
+  pluginDomain: string;
+  pluginUrl: string;
+  isPluginRoot: boolean;
+};
+const NodeComponent: React.FC<NodeComponentProps> = ({
+  node,
+  nodesById,
+  cssVarBindings,
+  exposedComponents,
+  hostId,
+  pluginPoint,
+  pluginDomain,
+  pluginUrl,
+  isPluginRoot,
+}) => {
+  const ref = useEventHandlerWiring(node);
   const useShadow = node && needShadowRoot(node.type);
 
   if (!node) {
@@ -244,13 +253,13 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
         })
       );
 
-  const props: RefAttributes<HTMLElement> =
+  const props: any =
     typeof nodeType === "string"
       ? {
           ...sanitizedProps,
           ref,
         }
-      : sanitizedProps;
+      : sanitizeProps;
 
   const children: Array<ReactNode> = (cssVarReset ? [cssVarReset] : []).concat(
     contents
