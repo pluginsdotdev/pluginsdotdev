@@ -5,7 +5,7 @@ import {
   initializeHostBridge,
   registerFromBridgeProxyHandler,
 } from "@pluginsdotdev/bridge";
-import { stylesheetRulesToString } from "@pluginsdotdev/style-utils";
+import { getStyleSheetRulesStringifier } from "@pluginsdotdev/style-utils";
 import {
   isValidElement,
   sanitizeProps,
@@ -24,6 +24,7 @@ import type {
   HostBridge,
   NodeId,
 } from "@pluginsdotdev/bridge";
+import type { StyleSheetRulesStringifier } from "@pluginsdotdev/style-utils";
 import type { StyleSheetRules } from "@pluginsdotdev/style-types";
 import type { Node, RootNode, NodeEventConfig } from "./update-utils";
 
@@ -73,6 +74,7 @@ type NodeComponentProps = {
   pluginPoint: string;
   pluginDomain: string;
   pluginUrl: string;
+  stylesheetRulesToString: StyleSheetRulesStringifier;
 };
 const NodeComponent: React.FC<NodeComponentProps> = ({
   node,
@@ -82,6 +84,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
   pluginPoint,
   pluginDomain,
   pluginUrl,
+  stylesheetRulesToString,
 }) => {
   const ref = useRef<HTMLElement>(null);
   const prevHandlers = useRef<Array<NodeEventConfig>>([]);
@@ -180,6 +183,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
         pluginPoint,
         pluginDomain,
         pluginUrl,
+        stylesheetRulesToString,
       })
     );
 
@@ -293,6 +297,11 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
 
     const { exposedComponents, hostId, pluginPoint, pluginUrl } = this.props;
     const pluginDomain = domainFromUrl(pluginUrl);
+    const stylesheetRulesToString = getStyleSheetRulesStringifier(
+      pluginDomain,
+      pluginUrl,
+      {}
+    );
 
     return React.createElement(NodeComponent, {
       node: rootNode,
@@ -302,6 +311,7 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
       pluginPoint,
       pluginDomain,
       pluginUrl,
+      stylesheetRulesToString,
     });
   }
 }
