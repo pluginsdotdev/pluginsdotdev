@@ -114,6 +114,15 @@ const withShadowDOM = memoized(withShadowDOMCache, (C: string) =>
   })
 );
 
+const eventConfigSetDiff = (
+  all: Array<NodeEventConfig>,
+  toRemove: Array<NodeEventConfig>
+): Array<NodeEventConfig> =>
+  all.filter(
+    (a) =>
+      !toRemove.find((r) => eventConfigsMatch(a, r) && a.handler === r.handler)
+  );
+
 const useEventHandlerWiring = (node: Node | undefined) => {
   const ref = useRef<HTMLElement>(null);
   const prevHandlers = useRef<Array<NodeEventConfig>>([]);
@@ -127,13 +136,11 @@ const useEventHandlerWiring = (node: Node | undefined) => {
     nodeIdByNode.set(el, node.id);
 
     const existingHandlers = prevHandlers.current;
-    const handlersToDelete = existingHandlers.filter(
-      (existing) =>
-        !node.handlers.find(
-          (h) =>
-            eventConfigsMatch(h, existing) && h.handler === existing.handler
-        )
+    const handlersToDelete = eventConfigSetDiff(
+      existingHandlers,
+      node.handlers
     );
+    const handlersToAdd = eventConfigSetDiff(node.handlers, existingHandlers);
 
     handlersToDelete.forEach((h) => {
       el.removeEventListener(
@@ -143,7 +150,7 @@ const useEventHandlerWiring = (node: Node | undefined) => {
       );
     });
 
-    node.handlers.forEach((h) => {
+    handlersToAdd.forEach((h) => {
       el.addEventListener(
         h.eventType as keyof GlobalEventHandlersEventMap,
         h.handler,
