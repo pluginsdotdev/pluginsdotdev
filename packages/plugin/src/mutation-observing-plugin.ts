@@ -283,10 +283,9 @@ class NodeIdContainer {
     node: Node,
     update: ReconciliationUpdate
   ): ReconciliationUpdate {
-    if (update.type === "canvas") {
+    if (node.nodeName === "CANVAS") {
       const canvas = node as HTMLCanvasElement;
       let url = canvas.toDataURL("image/png");
-      update.type = "img";
       update.propUpdates = (update.propUpdates || []).concat([
         {
           op: "set",

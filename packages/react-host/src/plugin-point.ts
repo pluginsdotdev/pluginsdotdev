@@ -16,7 +16,7 @@ import { applyUpdates, emptyRootNode, eventConfigsMatch } from "./update-utils";
 import { registerHandler as registerEventHandler } from "./event-bridge-proxy";
 import { registerHandler as registerSyntheticEventHandler } from "./synthetic-event-bridge-proxy";
 
-import type { ComponentType, RefAttributes, ReactNode } from "react";
+import type { ComponentType, RefAttributes, ReactNode, RefObject } from "react";
 import type {
   HostId,
   RenderRootId,
@@ -171,6 +171,38 @@ const useEventHandlerWiring = (node: Node | undefined) => {
   return ref;
 };
 
+const useCustomCanvasHydrator = (
+  node: Node | undefined,
+  ref: RefObject<Element>
+) => {
+  useEffect(() => {
+    if (!node) {
+      return;
+    }
+
+    const canvas = ref.current as HTMLCanvasElement;
+    if (!canvas || canvas.nodeName !== "CANVAS") {
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        return;
+      }
+      const { width, height } = canvas.getBoundingClientRect();
+      ctx.clearRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0);
+    };
+    img.src = node.props.src;
+  }, [node]);
+};
+
+const useCustomHydrator = (node: Node | undefined, ref: RefObject<Element>) => {
+  useCustomCanvasHydrator(node, ref);
+};
+
 type NodeComponentProps = {
   node: Node | undefined;
   nodesById: Map<NodeId, Node>;
@@ -195,6 +227,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
 }) => {
   const ref = useEventHandlerWiring(node);
   const useShadow = node && needShadowRoot(node.type);
+  useCustomHydrator(node, ref);
 
   if (!node) {
     return null;
