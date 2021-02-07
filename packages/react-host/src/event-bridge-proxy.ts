@@ -21,6 +21,16 @@ const allKeys = (obj: object): Array<string> => {
 
 const ignoredProps = new Set<string>(["currentTarget", "srcElement", "view"]);
 
+const proxyEventTarget = (
+  nodeIdByNode: WeakMap<EventTarget, NodeId>,
+  val: EventTarget
+) => ({
+  nodeId: nodeIdByNode.get(val),
+  checked: (val as any).checked,
+  value: (val as any).value,
+  selectedIndex: (val as any).selectedIndex,
+});
+
 const toSimpleObj = (
   nodeIdByNode: WeakMap<EventTarget, NodeId>,
   orig: { [key: string]: any }
@@ -37,13 +47,18 @@ const toSimpleObj = (
       return o;
     }
 
+    if (
+      key === "target" &&
+      (orig.path || typeof orig.composedPath === "function")
+    ) {
+      const path = orig.path || orig.composedPath();
+      const target = (path && path[0]) || val;
+      o[key] = proxyEventTarget(nodeIdByNode, target);
+      return o;
+    }
+
     if (val instanceof EventTarget) {
-      o[key] = {
-        nodeId: nodeIdByNode.get(val),
-        checked: (val as any).checked,
-        value: (val as any).value,
-        selectedIndex: (val as any).selectedIndex,
-      };
+      o[key] = proxyEventTarget(nodeIdByNode, val);
       return o;
     }
 
