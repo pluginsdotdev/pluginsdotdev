@@ -1,3 +1,5 @@
+import { extractStyleVariables } from "@pluginsdotdev/style-utils";
+
 import type {
   EventHandler,
   EventOptions,
@@ -8,6 +10,9 @@ import type {
   ReconciliationSetChildUpdate,
   ReconciliationDeleteChildUpdate,
 } from "@pluginsdotdev/bridge";
+
+import type { VarBindings } from "@pluginsdotdev/style-utils";
+import type { StyleSheetRules } from "@pluginsdotdev/style-types";
 
 type BaseEventConfig = {
   eventType: string;
@@ -38,7 +43,10 @@ export interface RealizedNode {
   props: Record<string, any>;
 }
 
-export type RootNode = Node & { nodesById: Map<NodeId, Node> };
+export type RootNode = Node & {
+  nodesById: Map<NodeId, Node>;
+  cssVarBindings: Map<string, string>;
+};
 
 const rootId = "" + 0;
 
@@ -49,6 +57,7 @@ const emptyRootNode = () => ({
   children: [],
   handlers: [],
   nodesById: new Map<NodeId, Node>(),
+  cssVarBindings: new Map<string, string>(),
 });
 
 const exhaustive = (x: never): never => x;
@@ -78,7 +87,7 @@ const applyUpdates = (
   updates: ReconciliationUpdate[]
 ): RootNode =>
   updates.reduce((rootNode: RootNode, update: ReconciliationUpdate) => {
-    const { nodesById } = rootNode;
+    const { nodesById, cssVarBindings } = rootNode;
     const { nodeId } = update;
     const isRoot = nodeId === rootId;
     if (!isRoot && !nodesById.has(nodeId)) {
@@ -105,6 +114,18 @@ const applyUpdates = (
         }
         return props;
       }, Object.assign({}, node.props));
+
+      if (node.type === "style" || node.type === "link") {
+        const style = update.propUpdates.find((p) => p.prop === "stylesheet");
+        if (style) {
+          const varBindings = extractStyleVariables(
+            style.value as StyleSheetRules
+          );
+          Object.keys(varBindings).forEach((varName) => {
+            cssVarBindings.set(varName, varBindings[varName]);
+          });
+        }
+      }
     }
 
     if (update.childUpdates) {
@@ -147,6 +168,7 @@ const applyUpdates = (
     return {
       ...(isRoot ? node : rootNode),
       nodesById,
+      cssVarBindings,
     };
   }, rootNode);
 

@@ -16,7 +16,7 @@ import { applyUpdates, emptyRootNode, eventConfigsMatch } from "./update-utils";
 import { registerHandler as registerEventHandler } from "./event-bridge-proxy";
 import { registerHandler as registerSyntheticEventHandler } from "./synthetic-event-bridge-proxy";
 
-import type { ComponentType, RefAttributes } from "react";
+import type { ComponentType, RefAttributes, ReactNode } from "react";
 import type {
   HostId,
   RenderRootId,
@@ -69,6 +69,7 @@ const needShadowRoot = (nodeType: string): boolean => nodeType === "root";
 type NodeComponentProps = {
   node: Node | undefined;
   nodesById: Map<NodeId, Node>;
+  cssVarBindings: Map<string, string>;
   exposedComponents?: Record<string, ComponentType>;
   hostId: HostId;
   pluginPoint: string;
@@ -79,6 +80,7 @@ type NodeComponentProps = {
 const NodeComponent: React.FC<NodeComponentProps> = ({
   node,
   nodesById,
+  cssVarBindings,
   exposedComponents,
   hostId,
   pluginPoint,
@@ -178,21 +180,37 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
       })
     : node.props;
 
-  const contents =
-    node.text ??
-    node.children.map((childId: NodeId) =>
-      React.createElement(NodeComponent, {
-        key: childId,
-        node: nodesById.get(childId),
-        nodesById,
-        exposedComponents,
-        hostId,
-        pluginPoint,
-        pluginDomain,
-        pluginUrl,
-        isPluginRoot: useShadow ? isRoot : isPluginRoot,
-      })
-    );
+  // since css variables leak across the shadow dom boundary, we reset
+  // them to prevent accidental information leakage
+  const cssVarReset: ReactNode =
+    isRoot && cssVarBindings.size
+      ? React.createElement(
+          "style",
+          { key: "css-var-reset" },
+          `:host {
+        ${Array.from(cssVarBindings)
+          .map(([varName, value]) => `${varName}: ${value}`)
+          .join("\n")}
+      }`
+        )
+      : null;
+
+  const contents: Array<ReactNode> = node.text
+    ? [node.text]
+    : node.children.map((childId: NodeId) =>
+        React.createElement(NodeComponent, {
+          key: childId,
+          node: nodesById.get(childId),
+          nodesById,
+          cssVarBindings,
+          exposedComponents,
+          hostId,
+          pluginPoint,
+          pluginDomain,
+          pluginUrl,
+          isPluginRoot: useShadow ? isRoot : isPluginRoot,
+        })
+      );
 
   const props: RefAttributes<HTMLElement> =
     typeof nodeType === "string"
@@ -202,10 +220,14 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
         }
       : sanitizedProps;
 
+  const children: Array<ReactNode> = (cssVarReset ? [cssVarReset] : []).concat(
+    contents
+  );
+
   const result = React.createElement(
     nodeType,
     props,
-    Array.isArray(contents) && !contents.length ? null : contents
+    children.length ? children : null
   );
 
   return useShadow
@@ -308,6 +330,7 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
     return React.createElement(NodeComponent, {
       node: rootNode,
       nodesById: rootNode.nodesById,
+      cssVarBindings: rootNode.cssVarBindings,
       exposedComponents,
       hostId,
       pluginPoint,
