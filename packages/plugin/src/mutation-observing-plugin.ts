@@ -230,7 +230,13 @@ class NodeIdContainer {
       return `host:${hostComponent}`;
     }
 
-    return node.nodeName.toLowerCase();
+    const nodeName = node.nodeName.toLowerCase();
+
+    if (el.shadowRoot) {
+      return `shadow:${nodeName}`;
+    }
+
+    return nodeName;
   }
 
   queueUpdate(
