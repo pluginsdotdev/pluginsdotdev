@@ -33,6 +33,7 @@ const intermediateFrameScript = `
 `;
 
 const loadSameOriginFrameScript = (
+  { scriptNonce }: HostConfig,
   iframe: HTMLIFrameElement,
   scriptBody: string
 ): void => {
@@ -40,6 +41,7 @@ const loadSameOriginFrameScript = (
     throw new Error("Failed to access frame document");
   }
   const script = iframe.contentDocument.createElement("script");
+  script.nonce = scriptNonce;
   script.type = "application/javascript";
   script.innerText = scriptBody;
   iframe.contentDocument.body.appendChild(script);
@@ -432,8 +434,14 @@ const makeHostBridge = async (
   return bridge;
 };
 
+interface HostConfig {
+  scriptNonce?: string;
+  styleNonce?: string;
+}
+
 const initializeHostBridge = (
   hostId: HostId,
+  hostConfig: HostConfig = {},
   reconcile: (
     rootId: RenderRootId,
     updates: Array<ReconciliationUpdate>
@@ -482,7 +490,11 @@ const initializeHostBridge = (
             intermediateFrame.contentWindow
           )).sendCommand = onReceiveCommandFromIntermediateFrame;
 
-          loadSameOriginFrameScript(intermediateFrame, intermediateFrameScript);
+          loadSameOriginFrameScript(
+            hostConfig,
+            intermediateFrame,
+            intermediateFrameScript
+          );
 
           resolve(intermediateFrame);
         } catch (err) {

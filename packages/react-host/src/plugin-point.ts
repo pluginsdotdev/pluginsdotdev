@@ -203,6 +203,11 @@ const useCustomHydrator = (node: Node | undefined, ref: RefObject<Element>) => {
   useCustomCanvasHydrator(node, ref);
 };
 
+type HostConfig = {
+  scriptNonce?: string;
+  styleNonce?: string;
+};
+
 type NodeComponentProps = {
   node: Node | undefined;
   nodesById: Map<NodeId, Node>;
@@ -213,6 +218,7 @@ type NodeComponentProps = {
   pluginDomain: string;
   pluginUrl: string;
   isPluginRoot: boolean;
+  hostConfig: HostConfig;
 };
 const NodeComponent: React.FC<NodeComponentProps> = ({
   node,
@@ -224,6 +230,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
   pluginDomain,
   pluginUrl,
   isPluginRoot,
+  hostConfig,
 }) => {
   const ref = useEventHandlerWiring(node);
   const useShadow = node && needShadowRoot(node.type);
@@ -247,7 +254,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
     });
     return React.createElement(
       "style",
-      {},
+      { nonce: hostConfig.styleNonce },
       stylesheetRulesToString(node.props.stylesheet as StyleSheetRules)
     );
   }
@@ -275,7 +282,10 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
     isRoot && cssVarBindings.size
       ? React.createElement(
           "style",
-          { key: "css-var-reset" },
+          {
+            key: "css-var-reset",
+            nonce: hostConfig.styleNonce,
+          },
           `:host {
         ${Array.from(cssVarBindings)
           .map(([varName, value]) => `${varName}: ${value};`)
@@ -298,6 +308,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
           pluginDomain,
           pluginUrl,
           isPluginRoot: useShadow ? isRoot : isPluginRoot,
+          hostConfig,
         })
       );
 
@@ -322,6 +333,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
 
 export interface PluginPointProps<P> {
   hostId: HostId;
+  hostConfig?: HostConfig;
   pluginPoint: string;
   jwt: string;
   pluginUrl: string;
@@ -360,7 +372,7 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
   componentDidMount() {
     // TODO: re-run if pluginUrl or hostId changes??
     const {
-      props: { hostId, pluginUrl, pluginPoint, props },
+      props: { hostId, pluginUrl, pluginPoint, props, hostConfig },
     } = this;
 
     const { search: _, ...parsedPluginUrl } = url.parse(pluginUrl, true);
@@ -372,7 +384,7 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
       },
     });
 
-    initializeHostBridge(hostId, this.onReconcile.bind(this))
+    initializeHostBridge(hostId, hostConfig, this.onReconcile.bind(this))
       .then((bridgeMaker) => bridgeMaker(pluginUrlWithParams))
       .then((bridge) => {
         this.setState({ bridge });
@@ -400,7 +412,13 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
       return null;
     }
 
-    const { exposedComponents, hostId, pluginPoint, pluginUrl } = this.props;
+    const {
+      exposedComponents,
+      hostId,
+      pluginPoint,
+      pluginUrl,
+      hostConfig,
+    } = this.props;
     const pluginDomain = domainFromUrl(pluginUrl);
 
     return React.createElement(NodeComponent, {
@@ -413,6 +431,7 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
       pluginDomain,
       pluginUrl,
       isPluginRoot: true,
+      hostConfig: hostConfig || {},
     });
   }
 }

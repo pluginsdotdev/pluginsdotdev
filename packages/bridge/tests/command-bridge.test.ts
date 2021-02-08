@@ -24,9 +24,22 @@ describe("initializeHostBridge", () => {
 
   it("intermediate iframe created", async () => {
     const page = t.page();
-    await page.evaluate(() => (<any>window).index.initializeHostBridge("host"));
+    await page.evaluate(() =>
+      (<any>window).index.initializeHostBridge("host", {
+        scriptNonce: "my-nonce",
+      })
+    );
     await page.waitForSelector("iframe");
     expect(await page.$("iframe")).toBeTruthy();
+    await page.mainFrame().childFrames()[0].waitForSelector("script");
+    expect(
+      await page.evaluate(
+        () =>
+          document
+            .querySelector("iframe")!
+            .contentDocument!.querySelector("script")!.nonce
+      )
+    ).toEqual("my-nonce");
   });
 
   it("plugin iframe created", async () => {
