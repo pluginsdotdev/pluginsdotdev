@@ -82,11 +82,42 @@ const makeHandler = (
     handler(nodeId, event.type, event);
   };
 
+const deleteDescendants = (
+  nodesById: Map<NodeId, Node>,
+  saved: Set<NodeId>,
+  id: NodeId
+): void => {
+  if (saved.has(id)) {
+    return;
+  }
+
+  const node = nodesById.get(id);
+  if (!node) {
+    return;
+  }
+
+  nodesById.delete(id);
+  node.children.forEach((childId) => {
+    deleteDescendants(nodesById, saved, childId);
+  });
+};
+
 const applyUpdates = (
   rootNode: RootNode,
   updates: ReconciliationUpdate[]
-): RootNode =>
-  updates.reduce((rootNode: RootNode, update: ReconciliationUpdate) => {
+): RootNode => {
+  const addedChildren = updates.reduce((added, update) => {
+    if (update.childUpdates) {
+      update.childUpdates.forEach((update) => {
+        if (update.op === "set") {
+          added.add(update.childId);
+        }
+      });
+    }
+    return added;
+  }, new Set<NodeId>());
+
+  return updates.reduce((rootNode: RootNode, update: ReconciliationUpdate) => {
     const { nodesById, cssVarBindings } = rootNode;
     const { nodeId } = update;
     const isRoot = nodeId === rootId;
@@ -129,11 +160,11 @@ const applyUpdates = (
     }
 
     if (update.childUpdates) {
-      // TODO: this doesn't work. need to process in-order due to ids
       node.children = update.childUpdates.reduce((children, update) => {
         if (update.op === "set") {
           children[update.childIdx] = update.childId;
         } else if (update.op === "delete") {
+          deleteDescendants(nodesById, addedChildren, update.childId);
           const idx = children.findIndex((c) => c === update.childId);
           children.splice(idx, 1);
         } else {
@@ -171,6 +202,7 @@ const applyUpdates = (
       cssVarBindings,
     };
   }, rootNode);
+};
 
 const realizeTree = (
   nodesById: Map<NodeId, Node>,
