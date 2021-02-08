@@ -1,4 +1,8 @@
-import { fromBridge, toBridge } from "./data-bridge";
+import {
+  fromBridge,
+  toBridge,
+  registerFromBridgeProxyHandlerMiddleware,
+} from "./data-bridge";
 
 import type {
   Bridge,
@@ -13,6 +17,7 @@ import type {
   Props,
   ReconciliationUpdate,
   HostValue,
+  FromBridgeProxyHandler,
 } from "./types";
 
 const intermediateFrameScript = `
@@ -171,6 +176,13 @@ interface ReconcileMessage {
   };
 }
 
+interface DisposeMessage {
+  msg: "dispose";
+  payload: {
+    proxyIds: Array<ProxyId>;
+  };
+}
+
 /**
  * PluginMessage is the interface between the host and the plugin frame.
  * PluginMessages are passed through Commands (i.e. they are sent in a
@@ -181,7 +193,8 @@ type PluginMessage =
   | InvokeMessage
   | InvocationResponseMessage
   | RenderMessage
-  | ReconcileMessage;
+  | ReconcileMessage
+  | DisposeMessage;
 
 type PluginMessageHandler = (msg: PluginMessage) => void;
 
@@ -189,9 +202,33 @@ const assertNever = (n: never): never => {
   throw new Error("Unexpected branch");
 };
 
+type InternalBridge = Bridge & {
+  registerDisposalWatcher: (proxyId: ProxyId, value: any) => void;
+};
+
+const isInternalBridge = (bridge: Bridge): bridge is InternalBridge =>
+  typeof (bridge as InternalBridge).registerDisposalWatcher === "function";
+
+registerFromBridgeProxyHandlerMiddleware(
+  (
+    handler: FromBridgeProxyHandler,
+    bridge: Bridge,
+    proxyId: ProxyId,
+    value?: any
+  ) => {
+    const result = handler(bridge, proxyId, value);
+    if (isInternalBridge(bridge)) {
+      bridge.registerDisposalWatcher(proxyId, result);
+    }
+    return result;
+  }
+);
+
 const makeCommonBridge = (
   sendMessage: (msg: PluginMessage) => Promise<void>,
-  firstClassHandlers?: Array<(bridge: Bridge, msg: PluginMessage) => boolean>
+  firstClassHandlers?: Array<
+    (bridge: InternalBridge, msg: PluginMessage) => boolean
+  >
 ): {
   bridge: Bridge & { handleMessage: (pluginMsg: PluginMessage) => void };
   fromThisBridge: (bridgeValue: Readonly<BridgeValue>) => any;
@@ -284,12 +321,61 @@ const makeCommonBridge = (
     }
   };
 
+  const handleDisposeMessage = (bridge: Bridge, msg: DisposeMessage) => {
+    const { proxyIds } = msg.payload;
+    proxyIds.forEach((proxyId) => {
+      localState.localProxies.delete(proxyId);
+    });
+  };
+
+  let disposeScheduled = false;
+  let disposeQueue = [] as Array<ProxyId>;
+
+  const scheduleDispose = () => {
+    if (disposeScheduled) {
+      return;
+    }
+
+    disposeScheduled = true;
+
+    setTimeout(() => {
+      const disposeMessage: DisposeMessage = {
+        msg: "dispose",
+        payload: {
+          proxyIds: disposeQueue,
+        },
+      };
+      disposeQueue = [];
+      disposeScheduled = false;
+      sendMessage(disposeMessage);
+    }, 1000);
+  };
+
+  const dispose = (proxyId: ProxyId): void => {
+    disposeQueue.push(proxyId);
+    scheduleDispose();
+  };
+
+  const finalizationRegistry =
+    "FinalizationRegistry" in window
+      ? new (window as any).FinalizationRegistry(dispose)
+      : null;
+
   const bridge = {
+    registerDisposalWatcher(proxyId: ProxyId, value: any): void {
+      if (finalizationRegistry && value === Object(value)) {
+        finalizationRegistry.register(value, proxyId);
+      }
+    },
     handleMessage(pluginMsg: PluginMessage) {
       // we handle all proactive (i.e. non-response) messages directly
       if (pluginMsg.msg === "invoke") {
         handleInvokeMessage(this, pluginMsg);
         return;
+      }
+
+      if (pluginMsg.msg === "dispose") {
+        handleDisposeMessage(this, pluginMsg);
       }
 
       const handled = firstClassHandlers?.filter((handler) =>
@@ -385,7 +471,10 @@ const makeHostBridge = async (
     return run(msg);
   };
 
-  const reconcileHandler = (bridge: Bridge, msg: PluginMessage): boolean => {
+  const reconcileHandler = (
+    bridge: InternalBridge,
+    msg: PluginMessage
+  ): boolean => {
     if (msg.msg !== "reconcile") {
       return false;
     }
@@ -530,7 +619,10 @@ const initializePluginBridge = async (
   origin: string,
   render: (rootId: RenderRootId, props: Props) => void
 ): Promise<PluginBridge> => {
-  const renderHandler = (bridge: Bridge, msg: PluginMessage): boolean => {
+  const renderHandler = (
+    bridge: InternalBridge,
+    msg: PluginMessage
+  ): boolean => {
     if (msg.msg !== "render") {
       return false;
     }
