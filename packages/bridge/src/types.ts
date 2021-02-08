@@ -50,10 +50,40 @@ export interface LocalBridgeState {
   knownProxies: WeakMap<ProxyValue, ProxyId>;
 }
 
-export type ToBridgeProxyValue = null | {
-  proxyId?: ProxyId;
-  replacementValue?: HostValue;
+export type ToBridgeProxyValueProxyId = {
+  proxyId: ProxyId;
+  retainedValue?: HostValue;
 };
+
+export type ToBridgeProxyValueReplacementValue = {
+  replacementValue: HostValue;
+};
+
+/**
+ * This is the type returned by a to-bridge proxy (registered via
+ * dataBridge::registerToBridgeProxyHandler).
+ *
+ * proxyId
+ *   If a to-bridge proxy returns a proxyId, we will include a mapping from
+ *   path of the in-process item to the proxyId in the bridge-ified value.
+ *
+ *   This map is used to indicate that some special handling must be
+ *   performed to fromBridge the value at that path. ProxyIds contain
+ *   the type of the proxy, which indicates what that handling should be.
+ *
+ * replacementValue
+ *   If a to-bridge proxy returns a replacementValue, we will include it
+ *   instead of the passed hostValue in the bridge-ified data.
+ *
+ * retainedValue
+ *   If a to-bridge proxy returns a retainedValue, we will store a mapping
+ *   from the given proxyId to the retainedValue in our localState.
+ **/
+export type ToBridgeProxyValue =
+  | null
+  | ToBridgeProxyValueProxyId
+  | ToBridgeProxyValueReplacementValue
+  | (ToBridgeProxyValueProxyId & ToBridgeProxyValueReplacementValue);
 
 /**
  * ProxyIdFactory generates a new ProxyId

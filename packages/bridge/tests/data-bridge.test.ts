@@ -12,6 +12,7 @@ import type {
   LocalBridgeState,
   RenderRootId,
   Props,
+  ProxyValue,
 } from "../src/types";
 
 expect.extend({
@@ -62,10 +63,10 @@ expect.extend({
   toMatchLocalState(
     received: LocalBridgeState,
     bridgeValue: BridgeValue,
-    localProxiesByPath: Map<ObjectPath, Function>
+    localProxiesByPath: Map<ObjectPath, ProxyValue>
   ) {
-    const expectedLocalProxies = new Map<ProxyId, Function>();
-    const expectedKnownProxies = new Map<Function, ProxyId>();
+    const expectedLocalProxies = new Map<ProxyId, ProxyValue>();
+    const expectedKnownProxies = new Map<ProxyValue, ProxyId>();
 
     for (const [path, fnId] of bridgeValue.bridgeProxyIds) {
       const fn = localProxiesByPath.get(path);
@@ -89,7 +90,7 @@ declare global {
       toMatchBridgeValue(expected: BridgeValue): R;
       toMatchLocalState(
         bridgeValue: BridgeValue,
-        localProxiesByPath: Map<ObjectPath, Function>
+        localProxiesByPath: Map<ObjectPath, ProxyValue>
       ): R;
     }
   }
@@ -98,8 +99,8 @@ declare global {
 describe("toBridge", () => {
   it("basic examples", () => {
     const localState = {
-      localProxies: new Map<ProxyId, Function>(),
-      knownProxies: new Map<Function, ProxyId>(),
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new Map<ProxyValue, ProxyId>(),
     };
 
     expect(toBridge(localState, 4)).toMatchBridgeValue({
@@ -147,8 +148,8 @@ describe("toBridge", () => {
   });
   it("should dedup functions", () => {
     const localState = {
-      localProxies: new Map<ProxyId, Function>(),
-      knownProxies: new WeakMap<Function, ProxyId>(),
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
     };
 
     const fn = () => {};
@@ -168,8 +169,8 @@ describe("toBridge", () => {
   });
   it("should reject custom prototypes in development but not in production", () => {
     const localState = {
-      localProxies: new Map<ProxyId, Function>(),
-      knownProxies: new WeakMap<Function, ProxyId>(),
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
     };
 
     const a = Object.create({ myInheritedProp: 4 });
@@ -185,8 +186,8 @@ describe("toBridge", () => {
   });
   it("nested examples", () => {
     const localState = {
-      localProxies: new Map<ProxyId, Function>(),
-      knownProxies: new WeakMap<Function, ProxyId>(),
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
     };
 
     const fn1 = () => {};
@@ -224,6 +225,24 @@ describe("toBridge", () => {
       ])
     );
   });
+  it("should not store proxied values without a retainedValue", () => {
+    const localState = {
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
+    };
+
+    const fn = () => {};
+    const error = new Error("message");
+    const bridgeVal = toBridge(localState, { error });
+    expect(bridgeVal).toMatchBridgeValue({
+      bridgeData: { error: { name: error.name, message: error.message } },
+      bridgeProxyIds: new Map([
+        [pathPartsToObjectPath(["error"]), expect.any(Number)],
+      ]),
+    });
+    expect(localState.localProxies.size).toEqual(0);
+    expect(localState.knownProxies.has(error)).toBeFalsy();
+  });
 });
 
 const bridgeFromLocalState = (localState: LocalBridgeState) => {
@@ -245,8 +264,8 @@ const bridgeFromLocalState = (localState: LocalBridgeState) => {
 describe("fromBridge", () => {
   it("basic examples", () => {
     const localState = {
-      localProxies: new Map<ProxyId, Function>(),
-      knownProxies: new WeakMap<Function, ProxyId>(),
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
     };
 
     const fn1 = () => {};
@@ -296,8 +315,8 @@ describe("properties", () => {
     fc.assert(
       fc.property(fc.object(), (obj) => {
         const localState = {
-          localProxies: new Map<ProxyId, Function>(),
-          knownProxies: new WeakMap<Function, ProxyId>(),
+          localProxies: new Map<ProxyId, ProxyValue>(),
+          knownProxies: new WeakMap<ProxyValue, ProxyId>(),
         };
         const bridgeValue = toBridge(localState, obj);
         const bridge = bridgeFromLocalState(localState);
@@ -313,8 +332,8 @@ describe("properties", () => {
         fc.array(fc.array(fc.string(6, 8), 1, 10)),
         (simpleObj, fnPaths) => {
           const localState = {
-            localProxies: new Map<ProxyId, Function>(),
-            knownProxies: new WeakMap<Function, ProxyId>(),
+            localProxies: new Map<ProxyId, ProxyValue>(),
+            knownProxies: new WeakMap<ProxyValue, ProxyId>(),
           };
           const preBridgeVal = fnPaths.reduce(
             (obj, fnPath) =>

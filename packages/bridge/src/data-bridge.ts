@@ -9,6 +9,8 @@ import type {
   FromBridgeProxyHandler,
   ToBridgeProxyHandler,
   ToBridgeProxyValue,
+  ToBridgeProxyValueProxyId,
+  ToBridgeProxyValueReplacementValue,
   ProxyIdFactory,
 } from "./types";
 
@@ -198,6 +200,7 @@ const toBridgeFnProxyHandler = (
   // bridgeData
   return {
     proxyId: proxyId(localState, hostValue),
+    retainedValue: hostValue,
   };
 };
 
@@ -238,6 +241,18 @@ const toBridgeErrorProxyHandler = (
 
 registerToBridgeProxyHandler("plugins.dev/error", toBridgeErrorProxyHandler);
 
+const isToBridgeProxyValueProxyId = (
+  v: ToBridgeProxyValue
+): v is ToBridgeProxyValueProxyId =>
+  !!v && typeof (v as ToBridgeProxyValueProxyId).proxyId !== "undefined";
+
+const isToBridgeProxyValueReplacementValue = (
+  v: ToBridgeProxyValue
+): v is ToBridgeProxyValueReplacementValue =>
+  !!v &&
+  typeof (v as ToBridgeProxyValueReplacementValue).replacementValue !==
+    "undefined";
+
 const _toBridge = (
   localState: LocalBridgeState,
   bridgeProxyIds: Map<ObjectPath, ProxyId>,
@@ -250,18 +265,18 @@ const _toBridge = (
   );
 
   if (handlerValue) {
-    if (typeof handlerValue.proxyId !== "undefined") {
+    if (isToBridgeProxyValueProxyId(handlerValue)) {
       const { proxyId } = handlerValue;
-      localState.localProxies.set(proxyId, hostValue);
-      localState.knownProxies.set(hostValue, proxyId);
-      // TODO: split storage of local state and setting a proxy id at a path
-      //       funcitons require both but errors really should not store
-      //       local state
+      if (typeof handlerValue.retainedValue !== "undefined") {
+        const { retainedValue } = handlerValue;
+        localState.localProxies.set(proxyId, retainedValue);
+        localState.knownProxies.set(retainedValue, proxyId);
+      }
       bridgeProxyIds.set(pathPartsToObjectPath(path), proxyId);
     }
 
     // TODO: should we recursively process replacementValue? (here and in frombridge?)
-    return typeof handlerValue.replacementValue !== "undefined"
+    return isToBridgeProxyValueReplacementValue(handlerValue)
       ? handlerValue.replacementValue
       : null;
   } else if (Array.isArray(hostValue)) {
