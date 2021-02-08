@@ -30,6 +30,7 @@ describe("mutation-observing-plugin", () => {
       (<any>window).index
         .initializeHostBridge(
           "host",
+          {},
           (rootId: RenderRootId, updates: Array<ReconciliationUpdate>) => {
             const d = document.createElement("div");
             d.id = "target";
@@ -51,31 +52,33 @@ describe("mutation-observing-plugin", () => {
     const { rootId, updates } = JSON.parse(json!);
     expect(rootId).toEqual(123);
     expect(updates).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: "text",
       textUpdate: {
         text: "Hello World!",
       },
     });
     expect(updates).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: "p",
       propUpdates: [],
+      handlerUpdates: [],
       childUpdates: [
         {
           op: "set",
           childIdx: 0,
-          childId: expect.any(Number),
+          childId: expect.any(String),
         },
       ],
     });
     expect(updates).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: "div",
+      handlerUpdates: [],
       propUpdates: [
         {
           op: "set",
-          prop: "className",
+          prop: "class",
           value: "my-class",
         },
       ],
@@ -83,18 +86,20 @@ describe("mutation-observing-plugin", () => {
         {
           op: "set",
           childIdx: 0,
-          childId: expect.any(Number),
+          childId: expect.any(String),
         },
       ],
     });
     expect(updates).toContainEqual({
-      nodeId: 0,
+      nodeId: "0",
       type: "root",
+      handlerUpdates: expect.any(Array),
+      propUpdates: [],
       childUpdates: [
         {
           op: "set",
           childIdx: 0,
-          childId: expect.any(Number),
+          childId: expect.any(String),
         },
       ],
     });
@@ -106,6 +111,7 @@ describe("mutation-observing-plugin", () => {
       (<any>window).index
         .initializeHostBridge(
           "host",
+          {},
           (rootId: RenderRootId, updates: Array<ReconciliationUpdate>) => {
             const d = document.createElement("div");
             d.id = "target";
@@ -132,26 +138,26 @@ describe("mutation-observing-plugin", () => {
     expect(rootId).toEqual(123);
 
     expect(updates).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: "text",
       textUpdate: {
         text: "Hello World!",
       },
     });
     expect(updates).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: "p",
       propUpdates: [],
       childUpdates: [
         {
           op: "set",
           childIdx: 0,
-          childId: expect.any(Number),
+          childId: expect.any(String),
         },
       ],
     });
     expect(updates).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: "div",
       propUpdates: [
         {
@@ -164,17 +170,17 @@ describe("mutation-observing-plugin", () => {
         {
           op: "set",
           childIdx: 0,
-          childId: expect.any(Number),
+          childId: expect.any(String),
         },
         {
           op: "set",
           childIdx: 1,
-          childId: expect.any(Number),
+          childId: expect.any(String),
         },
       ],
     });
     expect(updates).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: "host:MyHostComponent",
       propUpdates: [
         {
@@ -191,7 +197,7 @@ describe("mutation-observing-plugin", () => {
         {
           op: "set",
           childIdx: 0,
-          childId: expect.any(Number),
+          childId: expect.any(String),
         },
       ],
     });
