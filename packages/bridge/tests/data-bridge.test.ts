@@ -148,7 +148,7 @@ describe("toBridge", () => {
   it("should dedup functions", () => {
     const localState = {
       localProxies: new Map<ProxyId, Function>(),
-      knownProxies: new Map<Function, ProxyId>(),
+      knownProxies: new WeakMap<Function, ProxyId>(),
     };
 
     const fn = () => {};
@@ -161,16 +161,15 @@ describe("toBridge", () => {
       ]),
     });
     expect(localState.localProxies.size).toEqual(1);
-    expect(localState.knownProxies.size).toEqual(1);
 
     expect(toBridge(localState, { f1: fn, f2: fn })).toMatchObject(bridgeVal);
     expect(localState.localProxies.size).toEqual(1);
-    expect(localState.knownProxies.size).toEqual(1);
+    expect(localState.knownProxies.has(fn)).toBeTruthy();
   });
   it("should reject custom prototypes in development but not in production", () => {
     const localState = {
       localProxies: new Map<ProxyId, Function>(),
-      knownProxies: new Map<Function, ProxyId>(),
+      knownProxies: new WeakMap<Function, ProxyId>(),
     };
 
     const a = Object.create({ myInheritedProp: 4 });
@@ -187,7 +186,7 @@ describe("toBridge", () => {
   it("nested examples", () => {
     const localState = {
       localProxies: new Map<ProxyId, Function>(),
-      knownProxies: new Map<Function, ProxyId>(),
+      knownProxies: new WeakMap<Function, ProxyId>(),
     };
 
     const fn1 = () => {};
@@ -247,7 +246,7 @@ describe("fromBridge", () => {
   it("basic examples", () => {
     const localState = {
       localProxies: new Map<ProxyId, Function>(),
-      knownProxies: new Map<Function, ProxyId>(),
+      knownProxies: new WeakMap<Function, ProxyId>(),
     };
 
     const fn1 = () => {};
@@ -298,7 +297,7 @@ describe("properties", () => {
       fc.property(fc.object(), (obj) => {
         const localState = {
           localProxies: new Map<ProxyId, Function>(),
-          knownProxies: new Map<Function, ProxyId>(),
+          knownProxies: new WeakMap<Function, ProxyId>(),
         };
         const bridgeValue = toBridge(localState, obj);
         const bridge = bridgeFromLocalState(localState);
@@ -315,7 +314,7 @@ describe("properties", () => {
         (simpleObj, fnPaths) => {
           const localState = {
             localProxies: new Map<ProxyId, Function>(),
-            knownProxies: new Map<Function, ProxyId>(),
+            knownProxies: new WeakMap<Function, ProxyId>(),
           };
           const preBridgeVal = fnPaths.reduce(
             (obj, fnPath) =>

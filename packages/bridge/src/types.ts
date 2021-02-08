@@ -47,7 +47,7 @@ export interface LocalBridgeState {
    * knownProxies is a map from proxies to proxy ids. This allows us
    * to re-use proxy ids for known proxies.
    **/
-  knownProxies: Map<ProxyValue, ProxyId>;
+  knownProxies: WeakMap<ProxyValue, ProxyId>;
 }
 
 export type ToBridgeProxyValue = null | {

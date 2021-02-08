@@ -217,7 +217,7 @@ const makeCommonBridge = (
 
   const localState: LocalBridgeState = {
     localProxies: new Map(),
-    knownProxies: new Map(),
+    knownProxies: new WeakMap(),
   };
 
   const toThisBridge = (value: any): BridgeValue => {
