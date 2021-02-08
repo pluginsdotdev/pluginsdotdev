@@ -107,6 +107,32 @@ const toBridgeProxyHandlers: Array<{
 }> = [];
 const fromBridgeProxyHandlers = new Map<ProxyType, FromBridgeProxyHandler>();
 
+type FromBridgeProxyHandlerMiddleware = (
+  handler: FromBridgeProxyHandler,
+  bridge: Bridge,
+  proxyId: ProxyId,
+  value?: any
+) => any;
+
+let fromBridgeProxyHandlerMiddleware = (
+  handler: FromBridgeProxyHandler,
+  bridge: Bridge,
+  proxyId: ProxyId,
+  value?: any
+) => handler(bridge, proxyId, value);
+
+export const registerFromBridgeProxyHandlerMiddleware = (
+  middleware: FromBridgeProxyHandlerMiddleware
+): void => {
+  const prev = fromBridgeProxyHandlerMiddleware;
+  fromBridgeProxyHandlerMiddleware = (
+    handler: FromBridgeProxyHandler,
+    bridge: Bridge,
+    proxyId: ProxyId,
+    value?: any
+  ) => middleware(prev.bind(null, handler), bridge, proxyId, value);
+};
+
 type UnwrappedProxyId = {
   id: number;
   type: ProxyType;
@@ -391,10 +417,16 @@ export const fromBridge = (
     const handler = fromBridgeProxyHandlers.get(type)!;
     const pathParts = objectPathToPathParts(path);
     const val = getAtPath(stubbedBridgeValue, pathParts);
+    const replacedValue = fromBridgeProxyHandlerMiddleware(
+      handler,
+      bridge,
+      proxyId,
+      val
+    );
     stubbedBridgeValue = assignAtPath(
       stubbedBridgeValue,
       pathParts,
-      handler(bridge, proxyId, val)
+      replacedValue
     );
   }
 
