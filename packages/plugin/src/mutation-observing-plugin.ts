@@ -16,12 +16,14 @@ import type {
   ReconciliationUpdate,
   ReconciliationPropUpdate,
   ReconciliationHandlerUpdate,
+  ReconciliationSetPropUpdate,
+  ReconciliationDeletePropUpdate,
 } from "@pluginsdotdev/bridge";
 
 export interface ExposedComponent {
   type: string;
-  props: Record<string, string>;
-  el: () => HTMLElement;
+  attrs: (props?: Record<string, any>) => Record<string, any>;
+  el: (props: Record<string, any>) => HTMLElement;
 }
 
 type ExposedComponents = Record<string, ExposedComponent>;
@@ -65,6 +67,14 @@ const hostComponentAttr = `data-pluginsdotdev-host-component-${Math.floor(
   Math.random() * 10000
 )}`;
 
+const hostComponentPropsAttr = `data-pluginsdotdev-host-component-props-${Math.floor(
+  Math.random() * 10000
+)}`;
+
+const hostComponentOldPropsAttr = `data-pluginsdotdev-host-component-old-props-${Math.floor(
+  Math.random() * 10000
+)}`;
+
 const nodeIdAttr = `data-pluginsdotdev-node-id-${Math.floor(
   Math.random() * 10000
 )}`;
@@ -73,26 +83,29 @@ const ignoredAttrs = new Set<string>([hostComponentAttr, nodeIdAttr, "is"]);
 
 const makeExposedComponents = (
   exposedComponentsList: Array<keyof ExposedComponents>
-): ExposedComponents => {
-  return exposedComponentsList.reduce((exposedComponents, component) => {
+): ExposedComponents =>
+  exposedComponentsList.reduce((exposedComponents, component) => {
     const type = "div";
-    const props: Record<string, string> = {
+    const hostProps: Record<string, string> = {
       [hostComponentAttr]: component,
     };
     exposedComponents[component] = {
       type,
-      props,
-      el: () => {
+      attrs: (props?: Record<string, any>) => ({
+        ...hostProps,
+        ...(props ? { [hostComponentPropsAttr]: props } : {}),
+      }),
+      el: (props: object) => {
         const el = document.createElement(type);
-        Object.keys(props).forEach((prop) => {
-          el.setAttribute(prop, props[prop]);
+        (el as any)[hostComponentPropsAttr] = props;
+        Object.keys(hostProps).forEach((prop) => {
+          el.setAttribute(prop, hostProps[prop]);
         });
         return el;
       },
     };
     return exposedComponents;
   }, {} as ExposedComponents);
-};
 
 type PartialReconciliationUpdate = Omit<
   ReconciliationUpdate,
@@ -156,6 +169,12 @@ type Reconcile = (updates: Array<ReconciliationUpdate>) => Promise<void>;
 type NodeHandle = (Node | ShadowRoot) & {
   _NodeHandle: true;
 };
+
+const getHostComponent = (el: HTMLElement): string | null =>
+  el.getAttribute ? el.getAttribute(hostComponentAttr) : null;
+
+const getHostComponentProps = (el: Element): Record<string, any> =>
+  (el as any)[hostComponentPropsAttr] as Record<string, any>;
 
 const nodeHandle = (node: Node): NodeHandle =>
   ((node as any).shadowRoot || node) as NodeHandle;
@@ -223,9 +242,7 @@ class NodeIdContainer {
       return "shadow:span";
     }
 
-    const hostComponent = el.getAttribute
-      ? el.getAttribute(hostComponentAttr)
-      : null;
+    const hostComponent = getHostComponent(el);
     if (hostComponent) {
       return `host:${hostComponent}`;
     }
@@ -350,6 +367,35 @@ const calculateChildIdx = (node: Node): number => {
 
 type Observe = (node: Node | null) => void;
 
+const propUpdatesForHostComponent = (
+  el: Element
+): Array<ReconciliationPropUpdate> => {
+  const oldProps = ((el as any)[hostComponentOldPropsAttr] || {}) as Record<
+    string,
+    any
+  >;
+  const hostComponentProps = getHostComponentProps(el) || {};
+  (el as any)[hostComponentOldPropsAttr] = hostComponentProps;
+  const curPropNames: Array<string> = Object.keys(hostComponentProps);
+  const oldPropNames: Array<string> = Object.keys(oldProps);
+  const addedPropNames = curPropNames.filter(
+    (n: string) => oldPropNames.indexOf(n) < 0
+  );
+  const removedPropNames = oldPropNames.filter(
+    (n: string) => curPropNames.indexOf(n) < 0
+  );
+  return (addedPropNames.map((prop) => ({
+    op: "set",
+    prop,
+    value: hostComponentProps[prop],
+  })) as Array<ReconciliationPropUpdate>).concat(
+    removedPropNames.map((prop) => ({
+      op: "delete",
+      prop,
+    })) as Array<ReconciliationPropUpdate>
+  );
+};
+
 const queueTreeUpdates = (
   observe: Observe,
   nodeIdContainer: NodeIdContainer,
@@ -369,11 +415,13 @@ const queueTreeUpdates = (
       },
     ],
   };
+  const elChild = child as HTMLElement;
   // TODO: handle other node types https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType
   const attrs: Array<Attr> =
     child.nodeType === Node.ELEMENT_NODE
       ? Array.from((child as Element).attributes)
       : [];
+  const isHostComponent = getHostComponent(elChild);
   const propUpdates: Array<ReconciliationPropUpdate> =
     child.nodeName === "STYLE"
       ? [
@@ -391,6 +439,8 @@ const queueTreeUpdates = (
             value: extractStylesheetRules((child as HTMLLinkElement).sheet),
           },
         ]
+      : isHostComponent
+      ? propUpdatesForHostComponent(elChild)
       : attrs
           .filter((attr) => !ignoredAttrs.has(attr.name))
           .map((attr) => ({
@@ -410,7 +460,6 @@ const queueTreeUpdates = (
         };
 
   // queue children updates first
-  const elChild = child as HTMLElement;
   const children: Array<Node> = Array.from(
     elChild.shadowRoot ? elChild.shadowRoot.childNodes : child.childNodes
   );
@@ -528,6 +577,16 @@ const constructRenderRootIfNeeded = (
             return;
           case "attributes":
             const targetEl = target as HTMLElement;
+            const isHostComponent = !!getHostComponent(targetEl);
+
+            if (isHostComponent) {
+              const update: PartialReconciliationUpdate = {
+                propUpdates: propUpdatesForHostComponent(targetEl),
+              };
+              // TODO: verify "" as parentContext
+              nodeIdContainer.queueUpdate(target, update, "");
+              return;
+            }
 
             if (
               attributeName &&
