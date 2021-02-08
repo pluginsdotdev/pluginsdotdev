@@ -1,4 +1,5 @@
 import { browserTest } from "@pluginsdotdev/test-utils";
+import type { Page, ElementHandle } from "puppeteer";
 
 const hostPort = 8080;
 const pluginPort = 8081;
@@ -7,6 +8,28 @@ const t = browserTest(
   [hostPort, pluginPort],
   `http://localhost:${hostPort}/tests/host.html`
 );
+
+const getMainPluginDiv = async (
+  page: Page,
+  cls: string
+): Promise<ElementHandle<HTMLDivElement>> => {
+  await page.waitForFunction(
+    (cls: string) =>
+      document
+        .querySelector("#root")
+        ?.firstElementChild?.shadowRoot?.querySelector(`div.${cls}`),
+    {},
+    cls
+  );
+
+  return page.evaluateHandle(
+    (cls: string) =>
+      document
+        .querySelector("#root")
+        ?.firstElementChild?.shadowRoot?.querySelector(`div.${cls}`),
+    cls
+  ) as Promise<ElementHandle<HTMLDivElement>>;
+};
 
 describe("plugin-point", () => {
   beforeAll(t.beforeAll);
@@ -34,11 +57,9 @@ describe("plugin-point", () => {
         document.getElementById("root")
       );
     });
-    await page.waitForSelector("div.hello");
-    expect(await page.$("div.hello")).toBeTruthy();
-    expect(await page.$eval("div.hello > p", (p) => p.innerHTML)).toEqual(
-      "world"
-    );
+    const div = await getMainPluginDiv(page, "hello");
+    expect(div).toBeTruthy();
+    expect(await div.$eval("p", (p) => p.innerHTML)).toEqual("world");
   });
 
   it("rendering updates should work", async () => {
@@ -58,9 +79,9 @@ describe("plugin-point", () => {
         document.getElementById("root")
       );
     });
-    await page.waitForSelector("div.hello");
-    expect(await page.$("div.hello")).toBeTruthy();
-    expect(await page.$eval("div.hello > p", (p) => p.innerHTML)).toEqual(
+    const div = await getMainPluginDiv(page, "hello");
+    expect(div).toBeTruthy();
+    expect(await div.$eval("div.hello > p", (p) => p.innerHTML)).toEqual(
       "world"
     );
 
@@ -79,12 +100,17 @@ describe("plugin-point", () => {
         document.getElementById("root")
       );
     });
-    await page.waitForSelector("div.hello2");
-    expect(await page.$("div.hello")).toBeFalsy();
-    expect(await page.$("div.hello2")).toBeTruthy();
-    expect(await page.$eval("div.hello2 > p", (p) => p.innerHTML)).toEqual(
-      "world!"
+    const div2 = await getMainPluginDiv(page, "hello2");
+    const oldDivExists = await page.evaluate(() =>
+      document
+        .querySelector("#root")
+        ?.firstElementChild?.shadowRoot?.querySelector("div.hello")
+        ? true
+        : false
     );
+    expect(oldDivExists).toBeFalsy();
+    expect(div2).toBeTruthy();
+    expect(await div2.$eval("p", (p) => p.innerHTML)).toEqual("world!");
   });
 
   it("plugin->host events should work", async () => {
@@ -111,23 +137,30 @@ describe("plugin-point", () => {
         document.getElementById("root")
       );
     });
-    await page.waitForSelector("div.hello");
-    expect(await page.$("div.hello")).toBeTruthy();
-    expect(await page.$eval("div.hello > p", (p) => p.innerHTML)).toEqual(
-      "world"
-    );
-    expect(await page.$("button")).toBeTruthy();
+    const div = await getMainPluginDiv(page, "hello");
+    expect(div).toBeTruthy();
+    expect(await div.$eval("p", (p) => p.innerHTML)).toEqual("world");
+    expect(await div.$("button")).toBeTruthy();
 
-    await page.click("button");
-    await page.waitForSelector("[data-count='1']");
+    const btn = await div.$("button");
+    await btn!.click();
+    await page.waitForFunction(
+      (div) => div.querySelector('[data-count="1"]'),
+      {},
+      div
+    );
     expect(
-      await page.evaluate(() => document.querySelector(".count")!.innerHTML)
+      await page.evaluate((div) => div.querySelector(".count")!.innerHTML, div)
     ).toEqual("1");
 
-    await page.click("button");
-    await page.waitForSelector("[data-count='2']");
+    await btn!.click();
+    await page.waitForFunction(
+      (div) => div.querySelector('[data-count="2"]'),
+      {},
+      div
+    );
     expect(
-      await page.evaluate(() => document.querySelector(".count")!.innerHTML)
+      await page.evaluate((div) => div.querySelector(".count")!.innerHTML, div)
     ).toEqual("2");
   });
 
@@ -156,14 +189,15 @@ describe("plugin-point", () => {
         document.getElementById("root")
       );
     });
-    await page.waitForSelector("p.from-plugin");
-    expect(await page.$("p.from-plugin")).toBeTruthy();
-    expect(await page.$eval("p.from-plugin", (p) => p.innerHTML)).toEqual(
+    const div = await getMainPluginDiv(page, "hello");
+    const hostComponent = await div.$("p.from-plugin");
+    expect(hostComponent).toBeTruthy();
+    expect(await hostComponent!.evaluate((p: Element) => p.innerHTML)).toEqual(
       "hello world"
     );
   });
 
-  it("sanitizes dangerouslySetInnerHTML", async () => {
+  xit("sanitizes dangerouslySetInnerHTML", async () => {
     const page = t.page();
     await page.evaluate(() => {
       const RD = (window as any).ReactDOM as any;

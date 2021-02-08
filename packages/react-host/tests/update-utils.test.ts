@@ -8,25 +8,25 @@ describe("apply-updates", () => {
     const root = emptyRootNode();
     let result = applyUpdates(root, [
       {
-        nodeId: 1,
+        nodeId: "1",
         type: "div",
         propUpdates: [{ op: "set", prop: "a", value: 7 }],
       },
       {
-        nodeId: 0,
+        nodeId: "0",
         type: "root",
         childUpdates: [
           {
             op: "set",
             childIdx: 0,
-            childId: 1,
+            childId: "1",
           },
         ],
       },
     ]);
     let realized = realizeTree(result.nodesById, result);
     expect(realized.children[0]).toMatchObject({
-      id: 1,
+      id: "1",
       type: "div",
       props: { a: 7 },
       children: [],
@@ -34,39 +34,39 @@ describe("apply-updates", () => {
 
     result = applyUpdates(result, [
       {
-        nodeId: 2,
+        nodeId: "2",
         type: "text",
         textUpdate: {
           text: "Hello world!",
         },
       },
       {
-        nodeId: 1,
+        nodeId: "1",
         type: "div",
         childUpdates: [
           {
             op: "set",
             childIdx: 0,
-            childId: 2,
+            childId: "2",
           },
         ],
       },
     ]);
     realized = realizeTree(result.nodesById, result);
     expect(realized.children[0]).toMatchObject({
-      id: 1,
+      id: "1",
       type: "div",
       props: { a: 7 },
     });
     expect(realized.children[0].children[0]).toMatchObject({
-      id: 2,
+      id: "2",
       type: "text",
       text: "Hello world!",
     });
 
     result = applyUpdates(result, [
       {
-        nodeId: 1,
+        nodeId: "1",
         type: "div",
         propUpdates: [
           { op: "delete", prop: "a" },
@@ -76,21 +76,21 @@ describe("apply-updates", () => {
     ]);
     realized = realizeTree(result.nodesById, result);
     expect(realized.children[0]).toMatchObject({
-      id: 1,
+      id: "1",
       type: "div",
       props: { b: { hello: "world" } },
     });
 
     result = applyUpdates(result, [
       {
-        nodeId: 1,
+        nodeId: "1",
         type: "div",
-        childUpdates: [{ op: "delete", childId: 2 }],
+        childUpdates: [{ op: "delete", childId: "2" }],
       },
     ]);
     realized = realizeTree(result.nodesById, result);
     expect(realized.children[0]).toMatchObject({
-      id: 1,
+      id: "1",
       type: "div",
       props: { b: { hello: "world" } },
       children: [],

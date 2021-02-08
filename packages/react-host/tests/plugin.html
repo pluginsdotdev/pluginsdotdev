@@ -5,19 +5,39 @@
     data-user-id="user-id"
     data-host-origin="http://localhost:8080"
     data-exposed-components="[&quot;MyHostComponent&quot;]"></body>
-  <script type="application/javascript" src="../node_modules/@pluginsdotdev/react-plugin/dist/index.js"></script>
+  <script type="application/javascript" src="../node_modules/@pluginsdotdev/plugin/dist/index.js"></script>
   <script type="application/javascript" src="../node_modules/react/umd/react.development.js"></script>
+  <script type="application/javascript" src="../node_modules/react-dom/umd/react-dom.development.js"></script>
   <script type="application/javascript">
-    window.index.exposeReactPlugin(
+    const R = window.React;
+
+    const HostComponentWrapper = ({ cfg, ...props }) => {
+      const ref = R.useRef(null);
+      R.useEffect(
+        () => {
+          const attrs = cfg.attrs(props);
+          Object.keys(attrs).forEach(a => {
+            ref.current[a] = attrs[a];
+          });
+          ref.current.setAttribute("pluginsdotdev-tick-prop", (ref.current.getAttribute("pluginsdotdev-tick-prop") || 0) + 1);
+        },
+        [props]
+      );
+      return React.createElement(cfg.type, { ref, ...cfg.attrs() });
+    };
+
+    window.index.registerPlugin(
       function pluginFactory(pluginConfig) {
-        return function(props) {
-          const R = window.React;
+        function Plugin(props) {
           return R.createElement('div', { className: props.className },
             R.createElement('p', {}, props.title),
             props.renderHostComponent
               ? R.createElement(
-                  pluginConfig.exposedComponents.MyHostComponent,
-                  { pluginProp: 'hello world' }
+                  HostComponentWrapper,
+                  {
+                    cfg: pluginConfig.exposedComponents.MyHostComponent,
+                    pluginProp: 'hello world'
+                  }
                 ) : null,
             props.onClick
               ? R.createElement(
@@ -31,6 +51,10 @@
               props.count ? props.count : 0
             )
           );
+        }
+
+        return function(props, root) {
+          return window.ReactDOM.render(R.createElement(Plugin, props), root);
         }
       }
     );
