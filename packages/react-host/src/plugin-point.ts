@@ -312,13 +312,13 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
         })
       );
 
-  const props: any =
+  const props: Record<string, any> =
     typeof nodeType === "string"
       ? {
           ...sanitizedProps,
           ref,
         }
-      : sanitizeProps;
+      : sanitizedProps;
 
   const children: Array<ReactNode> = (cssVarReset ? [cssVarReset] : []).concat(
     contents
