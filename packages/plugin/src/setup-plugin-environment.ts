@@ -4,6 +4,7 @@ import { wrapEventTarget } from "./wrap-event-target";
 import { disableExecFunctions } from "./disable-exec-functions";
 import { disableNavigationFunctions } from "./disable-navigation-functions";
 import { wrapFetch } from "./wrap-fetch";
+import { wrapXMLHttpRequest } from "./wrap-xmlhttprequest";
 
 import type { GetNodeById, QueueHandlerUpdate } from "./types";
 
@@ -22,4 +23,5 @@ export const setupPluginEnvironment = ({
   disableExecFunctions();
   disableNavigationFunctions();
   wrapFetch();
+  wrapXMLHttpRequest();
 };
