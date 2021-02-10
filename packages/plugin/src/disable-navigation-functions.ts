@@ -1,4 +1,5 @@
 import u from "url";
+import { urlAllowed } from "./url-allowed";
 import { browserData } from "./browser-data";
 
 const { open } = window;
@@ -23,12 +24,7 @@ window.open = (url, name, features) => {
     return null;
   }
 
-  const matches = allowedDomains.some(
-    (domain) =>
-      hostname === domain ||
-      (domain.indexOf("*") === 0 && hostname.endsWith(domain.slice(1)))
-  );
-  if (!matches) {
+  if (!urlAllowed(allowedDomains, url)) {
     return null;
   }
 
