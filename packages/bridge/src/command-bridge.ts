@@ -21,20 +21,23 @@ import type {
 } from "./types";
 
 const intermediateFrameScript = `
-  window.onReceiveCommand(function(cmd) {
-    var payload = cmd.payload;
-    if ( cmd.cmd === 'send' ) {
-      payload.targetWindow.postMessage(payload.msg, payload.targetOrigin);
-    }
-  });
-  window.addEventListener(
-    'message',
-    function receiveMessage(evt) {
-      window.sendCommand({cmd: 'message', payload: {data: evt.data, origin: evt.origin, source: evt.source}});
-    },
-    false
-  );
-  window.sendCommand({cmd: 'ready'});
+  (function() {
+    var sendCommand = window.sendCommand;
+    window.onReceiveCommand(function(cmd) {
+      var payload = cmd.payload;
+      if ( cmd.cmd === 'send' ) {
+        payload.targetWindow.postMessage(payload.msg, payload.targetOrigin);
+      }
+    });
+    window.addEventListener(
+      'message',
+      function receiveMessage(evt) {
+        sendCommand({cmd: 'message', payload: {data: evt.data, origin: evt.origin, source: evt.source}});
+      },
+      false
+    );
+    sendCommand({cmd: 'ready'});
+  })();
 `;
 
 const loadSameOriginFrameScript = (
@@ -224,6 +227,11 @@ registerFromBridgeProxyHandlerMiddleware(
   }
 );
 
+const FinalizationRegistry =
+  "FinalizationRegistry" in window
+    ? (window as any).FinalizationRegistry
+    : null;
+
 const makeCommonBridge = (
   sendMessage: (msg: PluginMessage) => Promise<void>,
   firstClassHandlers?: Array<
@@ -357,9 +365,7 @@ const makeCommonBridge = (
   };
 
   const finalizationRegistry =
-    "FinalizationRegistry" in window
-      ? new (window as any).FinalizationRegistry(dispose)
-      : null;
+    FinalizationRegistry === null ? null : new FinalizationRegistry(dispose);
 
   const bridge = {
     registerDisposalWatcher(proxyId: ProxyId, value: any): void {
@@ -615,6 +621,8 @@ const initializeHostBridge = (
   );
 };
 
+const { parent, addEventListener } = window;
+
 const initializePluginBridge = async (
   origin: string,
   render: (rootId: RenderRootId, props: Props) => void
@@ -633,7 +641,7 @@ const initializePluginBridge = async (
   };
   const firstClassHandlers = [renderHandler];
   const sendMessage = (msg: PluginMessage) => {
-    window.parent.postMessage(msg, origin);
+    parent.postMessage(msg, origin);
     return Promise.resolve();
   };
   const {
@@ -658,10 +666,11 @@ const initializePluginBridge = async (
     },
   };
 
-  window.addEventListener(
+  (addEventListener as any).call(
+    window,
     "message",
     (evt: MessageEvent) => {
-      if (evt.source !== window.parent) {
+      if (evt.source !== parent) {
         console.log("Invalid message source received");
         return;
       }
@@ -673,7 +682,7 @@ const initializePluginBridge = async (
     false
   );
 
-  window.parent.postMessage({ msg: "plugin-ready" }, origin);
+  parent.postMessage({ msg: "plugin-ready" }, origin);
 
   return bridge;
 };

@@ -16,13 +16,41 @@ import type {
 
 export type ObjectPathParts = Array<string | number>;
 
+const { stringify, parse } = JSON;
+
 export const pathPartsToObjectPath = (parts: ObjectPathParts): ObjectPath =>
-  JSON.stringify(parts);
+  stringify(parts);
 
 export const objectPathToPathParts = (p: ObjectPath): ObjectPathParts =>
-  JSON.parse(p);
+  parse(p);
 
 const isObject = (o: any) => Object(o) === o;
+
+const validPrototypes = [
+  typeof Object !== "undefined" && Object.prototype,
+  typeof Date !== "undefined" && Date.prototype,
+  typeof String !== "undefined" && String.prototype,
+  typeof Boolean !== "undefined" && Boolean.prototype,
+  typeof RegExp !== "undefined" && RegExp.prototype,
+  typeof Blob !== "undefined" && Blob.prototype,
+  typeof File !== "undefined" && File.prototype,
+  typeof FileList !== "undefined" && FileList.prototype,
+  typeof ArrayBuffer !== "undefined" && ArrayBuffer.prototype,
+  typeof Int8Array !== "undefined" && Int8Array.prototype,
+  typeof Uint8Array !== "undefined" && Uint8Array.prototype,
+  typeof Uint8ClampedArray !== "undefined" && Uint8ClampedArray.prototype,
+  typeof Int16Array !== "undefined" && Int16Array.prototype,
+  typeof Uint16Array !== "undefined" && Uint16Array.prototype,
+  typeof Int32Array !== "undefined" && Int32Array.prototype,
+  typeof Uint32Array !== "undefined" && Uint32Array.prototype,
+  typeof Float32Array !== "undefined" && Float32Array.prototype,
+  typeof Float64Array !== "undefined" && Float64Array.prototype,
+  typeof DataView !== "undefined" && DataView.prototype,
+  typeof ImageBitmap !== "undefined" && ImageBitmap.prototype,
+  typeof ImageData !== "undefined" && ImageData.prototype,
+  typeof Map !== "undefined" && Map.prototype,
+  typeof Set !== "undefined" && Set.prototype,
+];
 
 /**
  * Check if we have a custom prototype.
@@ -33,31 +61,7 @@ const isObject = (o: any) => Object(o) === o;
  **/
 const hasValidPrototype = (v: object): boolean => {
   const p = Object.getPrototypeOf(v);
-  const idx = [
-    typeof Object !== "undefined" && Object.prototype,
-    typeof Date !== "undefined" && Date.prototype,
-    typeof String !== "undefined" && String.prototype,
-    typeof Boolean !== "undefined" && Boolean.prototype,
-    typeof RegExp !== "undefined" && RegExp.prototype,
-    typeof Blob !== "undefined" && Blob.prototype,
-    typeof File !== "undefined" && File.prototype,
-    typeof FileList !== "undefined" && FileList.prototype,
-    typeof ArrayBuffer !== "undefined" && ArrayBuffer.prototype,
-    typeof Int8Array !== "undefined" && Int8Array.prototype,
-    typeof Uint8Array !== "undefined" && Uint8Array.prototype,
-    typeof Uint8ClampedArray !== "undefined" && Uint8ClampedArray.prototype,
-    typeof Int16Array !== "undefined" && Int16Array.prototype,
-    typeof Uint16Array !== "undefined" && Uint16Array.prototype,
-    typeof Int32Array !== "undefined" && Int32Array.prototype,
-    typeof Uint32Array !== "undefined" && Uint32Array.prototype,
-    typeof Float32Array !== "undefined" && Float32Array.prototype,
-    typeof Float64Array !== "undefined" && Float64Array.prototype,
-    typeof DataView !== "undefined" && DataView.prototype,
-    typeof ImageBitmap !== "undefined" && ImageBitmap.prototype,
-    typeof ImageData !== "undefined" && ImageData.prototype,
-    typeof Map !== "undefined" && Map.prototype,
-    typeof Set !== "undefined" && Set.prototype,
-  ].indexOf(p);
+  const idx = validPrototypes.indexOf(p);
   return idx >= 0;
 };
 
@@ -139,10 +143,10 @@ type UnwrappedProxyId = {
 };
 
 const wrapProxyId = (unwrapped: UnwrappedProxyId): ProxyId =>
-  JSON.stringify(unwrapped) as ProxyId;
+  stringify(unwrapped) as ProxyId;
 
 const unwrapProxyId = (proxyId: ProxyId): UnwrappedProxyId =>
-  JSON.parse(proxyId) as UnwrappedProxyId;
+  parse(proxyId) as UnwrappedProxyId;
 
 // TODO: proxy id needs to be a string. maps don't handle object equality
 const makeProxyIdFactory = (type: ProxyType) => {
