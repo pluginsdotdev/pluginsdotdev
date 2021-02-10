@@ -1,6 +1,8 @@
 import { registerEventFromBridgeProxyHandler } from "./event-proxy-handler";
 import { ensureOpenShadowRoots } from "./ensure-open-shadow-roots";
 import { wrapEventTarget } from "./wrap-event-target";
+import { disableExecFunctions } from "./disable-exec-functions";
+import { disableNavigationFunctions } from "./disable-navigation-functions";
 
 import type { GetNodeById, QueueHandlerUpdate } from "./types";
 
@@ -16,4 +18,6 @@ export const setupPluginEnvironment = ({
   ensureOpenShadowRoots();
   wrapEventTarget(queueHandlerUpdate);
   registerEventFromBridgeProxyHandler(getNodeById);
+  disableExecFunctions();
+  disableNavigationFunctions();
 };

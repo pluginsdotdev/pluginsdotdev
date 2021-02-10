@@ -1,6 +1,8 @@
 import { initializePluginBridge } from "@pluginsdotdev/bridge";
 import { extractStylesheetRules } from "@pluginsdotdev/style-utils";
 import { setupPluginEnvironment } from "./setup-plugin-environment";
+import { isCustomElement } from "./is-custom-element";
+import { browserData } from "./browser-data";
 
 import type {
   Bridge,
@@ -17,14 +19,7 @@ import type {
   ReconciliationDeletePropUpdate,
 } from "@pluginsdotdev/bridge";
 import type { QueueHandlerUpdate, GetNodeById } from "./types";
-
-export interface ExposedComponent {
-  type: string;
-  attrs: (props?: Record<string, any>) => Record<string, any>;
-  el: (props: Record<string, any>) => HTMLElement;
-}
-
-type ExposedComponents = Record<string, ExposedComponent>;
+import type { ExposedComponents } from "./browser-data";
 
 interface PluginConfig {
   pluginId: string;
@@ -36,30 +31,6 @@ interface PluginConfig {
 type PluginFactory = (
   pluginConfig: PluginConfig
 ) => (props: Props, container: Element | DocumentFragment) => void;
-
-interface BrowserData {
-  pluginId: string;
-  hostId: string;
-  userId: string;
-  hostOrigin: string;
-  exposedComponentsList: Array<keyof ExposedComponents>;
-}
-
-const browserData = async (): Promise<BrowserData> => {
-  return new Promise((resolve, reject) => {
-    document.addEventListener("DOMContentLoaded", () => {
-      resolve({
-        pluginId: document.body.getAttribute("data-plugin-id")!,
-        hostId: document.body.getAttribute("data-host-id")!,
-        userId: document.body.getAttribute("data-user-id")!,
-        hostOrigin: document.body.getAttribute("data-host-origin")!,
-        exposedComponentsList: JSON.parse(
-          document.body.getAttribute("data-exposed-components")!
-        ) as Array<keyof ExposedComponents>,
-      });
-    });
-  });
-};
 
 const hostComponentAttr = `data-pluginsdotdev-host-component-${Math.floor(
   Math.random() * 10000
@@ -234,9 +205,7 @@ class NodeIdContainer {
     }
 
     const el = node as HTMLElement;
-    const isCustomElement =
-      window.customElements && !!window.customElements.get(el.localName);
-    if (isCustomElement) {
+    if (isCustomElement(el.localName)) {
       return "shadow:span";
     }
 

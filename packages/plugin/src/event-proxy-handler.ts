@@ -24,6 +24,7 @@ const eventCtorMap: Record<string, EventCtor> = {
   WheelEvent,
 };
 
+const { InputDeviceCapabilities } = window as any;
 export const registerEventFromBridgeProxyHandler = (
   getNodeById: GetNodeById
 ) => {
@@ -36,7 +37,7 @@ export const registerEventFromBridgeProxyHandler = (
     const EventCtor = eventCtorMap[type] || Event;
     if (data.sourceCapabilities) {
       // sourceCapabilities must be of type InputDeviceCapabilities if present
-      data.sourceCapabilities = new (window as any).InputDeviceCapabilities(
+      data.sourceCapabilities = new InputDeviceCapabilities(
         data.sourceCapabilities
       );
     }
