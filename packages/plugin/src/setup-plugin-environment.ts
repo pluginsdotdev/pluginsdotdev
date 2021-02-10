@@ -5,6 +5,7 @@ import { disableExecFunctions } from "./disable-exec-functions";
 import { disableNavigationFunctions } from "./disable-navigation-functions";
 import { wrapFetch } from "./wrap-fetch";
 import { wrapXMLHttpRequest } from "./wrap-xmlhttprequest";
+import { wrapSendBeacon } from "./wrap-sendbeacon";
 
 import type { GetNodeById, QueueHandlerUpdate } from "./types";
 
@@ -24,4 +25,5 @@ export const setupPluginEnvironment = ({
   disableNavigationFunctions();
   wrapFetch();
   wrapXMLHttpRequest();
+  wrapSendBeacon();
 };
