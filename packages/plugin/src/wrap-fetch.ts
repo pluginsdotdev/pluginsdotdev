@@ -3,7 +3,7 @@ import { urlAllowed } from "./url-allowed";
 
 const { Request, URL, fetch } = window;
 
-export const wrapFetch = async () => {
+export const wrapFetch = () => {
   if (fetch) {
     window.fetch = (resource, init) => {
       const anyResource = resource as any;
