@@ -4,7 +4,7 @@ import { browserData } from "./browser-data";
 
 const { open } = window;
 
-let allowedDomains: Array<string> | null = null;
+let allowedDomains: Array<string> = [];
 browserData().then((bd) => {
   allowedDomains = bd.allowedDomains;
 });
@@ -15,7 +15,7 @@ browserData().then((bd) => {
  * Only urls for allowed domains will work.
  **/
 window.open = (url, name, features) => {
-  if (!allowedDomains || !url) {
+  if (!url) {
     return null;
   }
 
