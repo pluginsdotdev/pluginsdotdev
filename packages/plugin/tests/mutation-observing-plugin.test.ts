@@ -105,37 +105,39 @@ describe("mutation-observing-plugin", () => {
     });
   });
 
-  xit("rendering with host component should work", async () => {
+  it("rendering with host component should work", async () => {
     const page = t.page();
-    await page.evaluate(() => {
-      (<any>window).index
-        .initializeHostBridge(
-          "host",
-          {},
-          (rootId: RenderRootId, updates: Array<ReconciliationUpdate>) => {
-            const d = document.createElement("div");
-            d.id = "target";
-            d.textContent = JSON.stringify({ rootId, updates });
-            document.body.appendChild(d);
+    const { rootId, updates } = await page.evaluate(
+      () =>
+        new Promise<{ rootId: number; updates: Array<ReconciliationUpdate> }>(
+          (resolve, reject) => {
+            (<any>window).index
+              .initializeHostBridge(
+                "host",
+                {},
+                (
+                  rootId: RenderRootId,
+                  updates: Array<ReconciliationUpdate>
+                ) => {
+                  resolve({ rootId, updates });
+                }
+              )
+              .then((makeBridge: (pluginUrl: PluginUrl) => HostBridge) =>
+                makeBridge("http://localhost:8081/tests/plugin.html")
+              )
+              .then((bridge: HostBridge) => {
+                bridge.render(123, {
+                  className: "my-class",
+                  title: "Hello World!",
+                  useHostComponent: true,
+                });
+              });
           }
         )
-        .then((makeBridge: (pluginUrl: PluginUrl) => HostBridge) =>
-          makeBridge("http://localhost:8081/tests/plugin.html")
-        )
-        .then((bridge: HostBridge) => {
-          bridge.render(123, {
-            className: "my-class",
-            title: "Hello World!",
-            useHostComponent: true,
-          });
-        });
-    });
-    await page.waitForSelector("div#target");
-    const json = await page.evaluate(
-      () => document.getElementById("target")!.textContent
     );
-    const { rootId, updates } = JSON.parse(json!);
     expect(rootId).toEqual(123);
+
+    console.log(JSON.stringify(updates));
 
     expect(updates).toContainEqual({
       nodeId: expect.any(String),
@@ -148,6 +150,7 @@ describe("mutation-observing-plugin", () => {
       nodeId: expect.any(String),
       type: "p",
       propUpdates: [],
+      handlerUpdates: [],
       childUpdates: [
         {
           op: "set",
@@ -159,10 +162,11 @@ describe("mutation-observing-plugin", () => {
     expect(updates).toContainEqual({
       nodeId: expect.any(String),
       type: "div",
+      handlerUpdates: [],
       propUpdates: [
         {
           op: "set",
-          prop: "className",
+          prop: "class",
           value: "my-class",
         },
       ],
@@ -182,16 +186,10 @@ describe("mutation-observing-plugin", () => {
     expect(updates).toContainEqual({
       nodeId: expect.any(String),
       type: "host:MyHostComponent",
-      propUpdates: [
-        {
-          op: "set",
-          prop: "myProp",
-          value: "plugin-provided-prop",
-        },
-      ],
+      propUpdates: [], // TODO: props get filled in on the next turn
     });
-    expect(updates).toContainEqual({
-      nodeId: 0,
+    expect(updates.find((u) => u.type === "root")).toMatchObject({
+      nodeId: "0",
       type: "root",
       childUpdates: [
         {

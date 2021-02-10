@@ -11,6 +11,21 @@
   <script type="application/javascript">
     const R = window.React;
 
+    const HostComponentWrapper = ({ cfg, ...props }) => {
+      const ref = R.useRef(null);
+      R.useEffect(
+        () => {
+          const attrs = cfg.attrs(props);
+          Object.keys(attrs).forEach(a => {
+            ref.current[a] = attrs[a];
+          });
+          ref.current.setAttribute("pluginsdotdev-tick-prop", (ref.current.getAttribute("pluginsdotdev-tick-prop") || 0) + 1);
+        },
+        [props]
+      );
+      return React.createElement(cfg.type, { ref, ...cfg.attrs() });
+    };
+
     window.index.registerPlugin(
       function pluginFactory(pluginConfig) {
         const Plugin = (props) => {
@@ -27,8 +42,11 @@
             : R.createElement('p', {}, props.title),
             props.useHostComponent
             ? R.createElement(
-              pluginConfig.exposedComponents.MyHostComponent,
-              { myProp: 'plugin-provided-prop' }
+              HostComponentWrapper,
+              {
+                cfg: pluginConfig.exposedComponents.MyHostComponent,
+                myProp: 'plugin-provided-prop'
+              }
             ) : null
           );
         }
