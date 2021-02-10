@@ -15,6 +15,8 @@ export interface BrowserData {
   allowedDomains: Array<string>;
 }
 
+const { parse } = JSON;
+
 let cachedBrowserData: BrowserData | null = null;
 
 export const browserData = async (): Promise<BrowserData> => {
@@ -29,10 +31,10 @@ export const browserData = async (): Promise<BrowserData> => {
         hostId: document.body.getAttribute("data-host-id")!,
         userId: document.body.getAttribute("data-user-id")!,
         hostOrigin: document.body.getAttribute("data-host-origin")!,
-        allowedDomains: JSON.parse(
+        allowedDomains: parse(
           document.body.getAttribute("data-allowed-domains")!
         ) as Array<string>,
-        exposedComponentsList: JSON.parse(
+        exposedComponentsList: parse(
           document.body.getAttribute("data-exposed-components")!
         ) as Array<keyof ExposedComponents>,
       };
