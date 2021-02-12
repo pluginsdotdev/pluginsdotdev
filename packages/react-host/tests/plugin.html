@@ -26,6 +26,45 @@
       return React.createElement(cfg.type, { ref, ...cfg.attrs() });
     };
 
+    class MyPExtender extends HTMLParagraphElement {
+      constructor() {
+        super();
+        this.attachShadow({mode: 'closed'});
+      }
+
+      connectedCallback() {
+        var style = document.createElement('style');
+        style.nonce = "xyz";
+        this.shadowRoot.appendChild(style);
+        var span = document.createElement('span');
+        span.textContent = "hello world";
+        span.addEventListener('click', evt => console.log('clicked inside MyPExtender', evt));
+        this.shadowRoot.appendChild(span);
+        style.sheet.insertRule('span { background-color: var(--bg2, red); }');
+      }
+    }
+    customElements.define('my-p', MyPExtender, { extends: 'p' });
+
+    class MyAutonomous extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({mode: 'closed'});
+      }
+
+      connectedCallback() {
+        this.className = "my-autonomous";
+        var style = document.createElement('style');
+        style.nonce = "xyz";
+        this.shadowRoot.appendChild(style);
+        var span = document.createElement('span');
+        span.textContent = "hello autonomous world";
+        span.addEventListener('click', evt => console.log('clicked inside Autonomous', evt));
+        this.shadowRoot.appendChild(span);
+        style.sheet.insertRule('span { background-color: var(--bg, green); }');
+      }
+    }
+    customElements.define('my-autonomous', MyAutonomous);
+
     window.index.registerPlugin(
       function pluginFactory(pluginConfig) {
         function Plugin(props) {
@@ -39,6 +78,12 @@
                     pluginProp: 'hello world'
                   }
                 ) : null,
+            props.customElement
+              ?  R.createElement('p', { is: "my-p", class: "my-p" })
+              : null,
+            props.autonomousCustomElement
+              ? R.createElement('my-autonomous', {})
+              : null,
             props.onClick
               ? R.createElement(
                   'button',
