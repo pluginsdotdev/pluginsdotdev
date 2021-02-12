@@ -68,7 +68,13 @@
     window.index.registerPlugin(
       function pluginFactory(pluginConfig) {
         function Plugin(props) {
-          return R.createElement('div', { className: props.className },
+          const ref = R.useRef(null);
+          R.useEffect(() => {
+            if (props.comment) {
+              ref.current.innerHTML += '<div class="comment-marker"><!--comment here--></div>';
+            }
+          }, [props.comment]);
+          return R.createElement('div', { ref, className: props.className },
             R.createElement('p', {}, props.title),
             props.renderHostComponent
               ? R.createElement(

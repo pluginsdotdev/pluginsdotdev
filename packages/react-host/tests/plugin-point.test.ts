@@ -256,4 +256,37 @@ describe("plugin-point", () => {
       )
     ).toBeTruthy();
   });
+
+  it("comments are ignored", async () => {
+    const page = t.page();
+    await page.evaluate((baseProps) => {
+      const RD = (window as any).ReactDOM as any;
+      const R = (window as any).React as any;
+
+      RD.render(
+        R.createElement(
+          (<any>window).index.PluginPoint,
+          Object.assign(
+            {
+              props: {
+                className: "hello",
+                comment: true,
+              },
+            },
+            baseProps
+          )
+        ),
+        document.getElementById("root")
+      );
+    }, baseProps);
+    const div = await getMainPluginDiv(page, "hello");
+    await page.waitForFunction(
+      (div: Element) => div.querySelector("div.comment-marker"),
+      {},
+      div
+    );
+    const c = await div.$("div.comment-marker");
+    expect(c).toBeTruthy();
+    expect(await c!.evaluate((c: Element) => c.childNodes.length)).toEqual(0);
+  });
 });
