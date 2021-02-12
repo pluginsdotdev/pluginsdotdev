@@ -4,6 +4,153 @@ import { fixWhitespace } from "../src/regex-utils";
 import { getUnescapedCssValue, getValidStyle } from "../src/css-utils";
 import { anySpaceArb, urlPathArb } from "./arbs";
 
+const testUrlLike = (
+  pluginDomain: string,
+  pluginUrl: string,
+  wrapInFn: (url: string) => string
+) => () => {
+  const eachQuoteStyle = (val: string, fn: (url: string) => void) => {
+    fn(wrapInFn(val));
+    fn(wrapInFn(`"${val}"`));
+    fn(wrapInFn(`'${val}'`));
+  };
+
+  it("leaves strings without a url unchanged", () => {
+    fc.assert(
+      fc.property(
+        fc
+          .string()
+          .filter(
+            (s) =>
+              s
+                .toLowerCase()
+                .indexOf(wrapInFn("").replace(/[)(]/g, "").toLowerCase()) < 0
+          ),
+        (s: string) => {
+          expect(
+            getValidStyle(pluginDomain, pluginUrl, {}, { background: s })
+          ).toMatchObject({ background: getUnescapedCssValue(s) });
+        }
+      )
+    );
+  });
+
+  it("rejects unsafe urls", () => {
+    fc.assert(
+      fc.property(
+        fc.string().filter((s) => !s.startsWith(pluginDomain)),
+        (s: string) => {
+          eachQuoteStyle(s, (background: string) => {
+            expect(
+              getValidStyle(pluginDomain, pluginUrl, {}, { background })
+            ).toMatchObject({});
+          });
+        }
+      )
+    );
+  });
+
+  it("accepts safe absolute urls", () => {
+    fc.assert(
+      fc.property(urlPathArb, (path: string) => {
+        const url = URL.resolve(pluginDomain, `/${path}`);
+        const expected = {
+          background: wrapInFn(`"${getUnescapedCssValue(url)}"`),
+        };
+        eachQuoteStyle(url, (background: string) => {
+          expect(
+            getValidStyle(pluginDomain, pluginUrl, {}, { background })
+          ).toMatchObject(expected);
+        });
+      })
+    );
+  });
+
+  it("accepts safe absolute urls with same ports (pluginDomain implied)", () => {
+    fc.assert(
+      fc.property(urlPathArb, (path: string) => {
+        const url = `${pluginDomain}:443/${path}`;
+        const expected = {
+          background: wrapInFn(`"${getUnescapedCssValue(url)}"`),
+        };
+        eachQuoteStyle(url, (background: string) => {
+          expect(
+            getValidStyle(pluginDomain, pluginUrl, {}, { background })
+          ).toMatchObject(expected);
+        });
+      })
+    );
+  });
+
+  it("accepts safe absolute urls with same ports (provided implied)", () => {
+    fc.assert(
+      fc.property(urlPathArb, (path: string) => {
+        const url = `${pluginDomain}/${path}`;
+        const expected = {
+          background: wrapInFn(`"${getUnescapedCssValue(url)}"`),
+        };
+        const explicitPluginDomain = `${pluginDomain}:443`;
+        eachQuoteStyle(url, (background: string) => {
+          expect(
+            getValidStyle(explicitPluginDomain, pluginUrl, {}, { background })
+          ).toMatchObject(expected);
+        });
+      })
+    );
+  });
+
+  it("rejects absolute urls with different implied ports", () => {
+    fc.assert(
+      fc.property(urlPathArb, (path: string) => {
+        const url = `${pluginDomain}:444/${path}`;
+        const expected = {};
+
+        eachQuoteStyle(url, (background: string) => {
+          expect(
+            getValidStyle(pluginDomain, pluginUrl, {}, { background })
+          ).toMatchObject(expected);
+        });
+      })
+    );
+  });
+
+  it("rejects absolute urls with a bad protocol", () => {
+    fc.assert(
+      fc.property(urlPathArb, (path: string) => {
+        const url = `${pluginDomain.replace("https:", "http:")}/${path}`;
+        const expected = { color: "purple" };
+
+        eachQuoteStyle(url, (background: string) => {
+          expect(
+            getValidStyle(
+              pluginDomain,
+              pluginUrl,
+              {},
+              { color: "purple", background }
+            )
+          ).toMatchObject(expected);
+        });
+      })
+    );
+  });
+
+  it("accepts safe relative urls", () => {
+    fc.assert(
+      fc.property(urlPathArb, (path: string) => {
+        const url = URL.resolve(pluginUrl, path);
+        const expected = {
+          background: wrapInFn(`"${getUnescapedCssValue(url)}"`),
+        };
+        eachQuoteStyle(url, (background: string) => {
+          expect(
+            getValidStyle(pluginDomain, pluginUrl, {}, { background })
+          ).toMatchObject(expected);
+        });
+      })
+    );
+  });
+};
+
 describe("css-utils", () => {
   describe("getUnescapedCssValue", () => {
     it("unescapes unicode and constant encoding for ascii", () => {
@@ -56,263 +203,10 @@ describe("css-utils", () => {
     const pluginDomain = "https://plugins.dev";
     const pluginUrl = "https://plugins.dev/my-plugin";
 
-    describe("url()", () => {
-      it("leaves strings without a url unchanged", () => {
-        fc.assert(
-          fc.property(
-            fc.string().filter((s) => !/url/i.test(s)),
-            (s: string) => {
-              expect(
-                getValidStyle(pluginDomain, pluginUrl, {}, { background: s })
-              ).toMatchObject({ background: getUnescapedCssValue(s) });
-            }
-          )
-        );
-      });
-
-      it("rejects unsafe urls", () => {
-        fc.assert(
-          fc.property(
-            fc.string().filter((s) => !s.startsWith(pluginDomain)),
-            (s: string) => {
-              expect(
-                getValidStyle(
-                  pluginDomain,
-                  pluginUrl,
-                  {},
-                  { background: `url(${s})` }
-                )
-              ).toMatchObject({});
-              expect(
-                getValidStyle(
-                  pluginDomain,
-                  pluginUrl,
-                  {},
-                  { background: `url("${s}")` }
-                )
-              ).toMatchObject({});
-              expect(
-                getValidStyle(
-                  pluginDomain,
-                  pluginUrl,
-                  {},
-                  { background: `url('${s}')` }
-                )
-              ).toMatchObject({});
-            }
-          )
-        );
-      });
-
-      it("accepts safe absolute urls", () => {
-        fc.assert(
-          fc.property(urlPathArb, (path: string) => {
-            const url = URL.resolve(pluginDomain, `/${path}`);
-            const expected = {
-              background: `url("${getUnescapedCssValue(url)}")`,
-            };
-            expect(
-              getValidStyle(
-                pluginDomain,
-                pluginUrl,
-                {},
-                { background: `url(${url})` }
-              )
-            ).toMatchObject(expected);
-            expect(
-              getValidStyle(
-                pluginDomain,
-                pluginUrl,
-                {},
-                { background: `url("${url}")` }
-              )
-            ).toMatchObject(expected);
-            expect(
-              getValidStyle(
-                pluginDomain,
-                pluginUrl,
-                {},
-                { background: `url('${url}')` }
-              )
-            ).toMatchObject(expected);
-          })
-        );
-      });
-
-      it("accepts safe absolute urls with same ports (pluginDomain implied)", () => {
-        fc.assert(
-          fc.property(urlPathArb, (path: string) => {
-            const url = `${pluginDomain}:443/${path}`;
-            const expected = {
-              background: `url("${getUnescapedCssValue(url)}")`,
-            };
-            expect(
-              getValidStyle(
-                pluginDomain,
-                pluginUrl,
-                {},
-                { background: `url(${url})` }
-              )
-            ).toMatchObject(expected);
-            expect(
-              getValidStyle(
-                pluginDomain,
-                pluginUrl,
-                {},
-                { background: `url("${url}")` }
-              )
-            ).toMatchObject(expected);
-            expect(
-              getValidStyle(
-                pluginDomain,
-                pluginUrl,
-                {},
-                { background: `url('${url}')` }
-              )
-            ).toMatchObject(expected);
-          })
-        );
-      });
-
-      it("accepts safe absolute urls with same ports (provided implied)", () => {
-        fc.assert(
-          fc.property(urlPathArb, (path: string) => {
-            const url = `${pluginDomain}/${path}`;
-            const expected = {
-              background: `url("${getUnescapedCssValue(url)}")`,
-            };
-            const explicitPluginDomain = `${pluginDomain}:443`;
-            expect(
-              getValidStyle(
-                explicitPluginDomain,
-                pluginUrl,
-                {},
-                { background: `url(${url})` }
-              )
-            ).toMatchObject(expected);
-            expect(
-              getValidStyle(
-                explicitPluginDomain,
-                pluginUrl,
-                {},
-                { background: `url("${url}")` }
-              )
-            ).toMatchObject(expected);
-            expect(
-              getValidStyle(
-                explicitPluginDomain,
-                pluginUrl,
-                {},
-                { background: `url('${url}')` }
-              )
-            ).toMatchObject(expected);
-          })
-        );
-      });
-
-      it("rejects absolute urls with different implied ports", () => {
-        fc.assert(
-          fc.property(urlPathArb, (path: string) => {
-            const url = `${pluginDomain}:444/${path}`;
-            const expected = {};
-
-            expect(
-              getValidStyle(
-                pluginDomain,
-                pluginUrl,
-                {},
-                { background: `url(${url})` }
-              )
-            ).toMatchObject(expected);
-            expect(
-              getValidStyle(
-                pluginDomain,
-                pluginUrl,
-                {},
-                { background: `url("${url}")` }
-              )
-            ).toMatchObject(expected);
-            expect(
-              getValidStyle(
-                pluginDomain,
-                pluginUrl,
-                {},
-                { background: `url('${url}')` }
-              )
-            ).toMatchObject(expected);
-          })
-        );
-      });
-
-      it("rejects absolute urls with a bad protocol", () => {
-        fc.assert(
-          fc.property(urlPathArb, (path: string) => {
-            const url = `${pluginDomain.replace("https:", "http:")}/${path}`;
-            const expected = { color: "purple" };
-
-            expect(
-              getValidStyle(
-                pluginDomain,
-                pluginUrl,
-                {},
-                { color: "purple", background: `url(${url})` }
-              )
-            ).toMatchObject(expected);
-            expect(
-              getValidStyle(
-                pluginDomain,
-                pluginUrl,
-                {},
-                { color: "purple", background: `url("${url}")` }
-              )
-            ).toMatchObject(expected);
-            expect(
-              getValidStyle(
-                pluginDomain,
-                pluginUrl,
-                {},
-                { color: "purple", background: `url('${url}')` }
-              )
-            ).toMatchObject(expected);
-          })
-        );
-      });
-
-      it("accepts safe relative urls", () => {
-        fc.assert(
-          fc.property(urlPathArb, (path: string) => {
-            const url = URL.resolve(pluginUrl, path);
-            const expected = {
-              background: `url("${getUnescapedCssValue(url)}")`,
-            };
-            expect(
-              getValidStyle(
-                pluginDomain,
-                pluginUrl,
-                {},
-                { background: `url(${path})` }
-              )
-            ).toMatchObject(expected);
-            expect(
-              getValidStyle(
-                pluginDomain,
-                pluginUrl,
-                {},
-                { background: `url("${path}")` }
-              )
-            ).toMatchObject(expected);
-            expect(
-              getValidStyle(
-                pluginDomain,
-                pluginUrl,
-                {},
-                { background: `url('${path}')` }
-              )
-            ).toMatchObject(expected);
-          })
-        );
-      });
-    });
+    describe(
+      "url()",
+      testUrlLike(pluginDomain, pluginUrl, (url: string) => `url(${url})`)
+    );
 
     it("rejects images and elements", () => {
       fc.assert(
