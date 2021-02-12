@@ -383,6 +383,15 @@ const queueTreeUpdates = (
     ],
   };
   const elChild = child as HTMLElement;
+  if (
+    child.nodeType !== Node.ELEMENT_NODE &&
+    child.nodeType !== Node.TEXT_NODE &&
+    child.nodeType !== Node.DOCUMENT_NODE &&
+    child.nodeType !== Node.DOCUMENT_FRAGMENT_NODE
+  ) {
+    return;
+  }
+
   // TODO: handle other node types https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType
   const attrs: Array<Attr> =
     child.nodeType === Node.ELEMENT_NODE
