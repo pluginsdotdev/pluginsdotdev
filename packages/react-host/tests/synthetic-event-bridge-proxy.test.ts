@@ -1,3 +1,7 @@
+/**
+ * @jest-environment jsdom
+ **/
+
 import fc from "fast-check";
 
 class Event {}
