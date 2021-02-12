@@ -166,7 +166,12 @@ const applyUpdates = (
         } else if (update.op === "delete") {
           deleteDescendants(nodesById, addedChildren, update.childId);
           const idx = children.findIndex((c) => c === update.childId);
-          children.splice(idx, 1);
+          if (idx >= 0) {
+            // we can't guarantee the order of replacements vs deletes
+            // so we may not have the deleted child in our child list
+            // anymore. if we do, delete it.
+            children.splice(idx, 1);
+          }
         } else {
           // TODO: exhaustive(update.op);
         }
