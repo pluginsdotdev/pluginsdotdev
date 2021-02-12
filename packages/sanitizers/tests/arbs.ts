@@ -61,7 +61,9 @@ const cssPropertyArb = fc.constantFrom(
 
 const cssValueArb = fc.oneof(
   fc.nat(),
-  fc.asciiString().filter((s) => s.indexOf(";") < 0)
+  fc
+    .stringOf(fc.ascii().filter((s) => /[\w%]/.test(s)))
+    .filter((s) => s.indexOf(";") < 0)
 );
 
 const cssStyleArb = fc
@@ -82,3 +84,34 @@ export const cssSelectorArb = fc.oneof(
 export const cssStyleRuleArb = fc
   .tuple(cssSelectorArb, cssStyleBodyArb)
   .map(([sel, body]: [string, string]) => `${sel} ${body}`);
+
+const rawConditionArb = fc.constantFrom("screen", "print");
+
+const ruleConditionArb = fc
+  .tuple(cssStyleArb, fc.boolean())
+  .map(
+    ([style, not]: [string, boolean]) =>
+      `${not ? "not(" : ""}${style.replace(/;$/, "")}${not ? ")" : ""}`
+  );
+
+const conditionArb = fc.oneof(rawConditionArb, ruleConditionArb);
+
+const ruleCombinatorArg = fc.constantFrom(" or ", " and ");
+
+export const cssConditionArb = fc
+  .array(fc.tuple(conditionArb, ruleCombinatorArg), {
+    minLength: 1,
+    maxLength: 5,
+  })
+  .map((items: Array<[string, string]>) =>
+    items.reduce(
+      (fullCond, [cond, combinator], i) =>
+        `${fullCond}${cond}${i === items.length - 1 ? "" : combinator}`,
+      ""
+    )
+  );
+
+// filter out /* because it's a comment
+export const cssNamespaceURIArb = fc.webUrl().filter((s) => !/[\/][*]/.test(s));
+
+export const cssNamespacePrefixArb = idArb;

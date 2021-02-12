@@ -64,10 +64,10 @@ export const getStyleSanitizers = ({
   allowedStyleValues,
   isPluginRoot,
 }: StyleSanitizerOptions) => {
-  const containsComment = (s: string): boolean => /[\][*]/.test(s);
+  const containsComment = (s: string): boolean => /[\/][*]/.test(s);
 
   const conditionSanitizer: PropSanitizer<string> = (condition: string) =>
-    /^[()\s\w*:\-]*$/.test(condition) && !containsComment(condition)
+    /^[()\s\w*:\-%]*$/.test(condition) && !containsComment(condition)
       ? (condition as Sanitized<string>)
       : sanitizerError("invalid condition", condition);
 
