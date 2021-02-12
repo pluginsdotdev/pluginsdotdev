@@ -5,8 +5,8 @@ const defaultPorts: Record<string, number> = {
   "https:": 443,
 };
 
-export const domainFromUrl = (urlString: string) => {
-  const { protocol, host } = url.parse(urlString);
+export const canonicalizeDomain = (domain: string) => {
+  const { protocol, host } = url.parse(domain);
   const defaultPort = protocol ? defaultPorts[protocol] : null;
   const canonicalHost =
     defaultPort && host
@@ -14,6 +14,9 @@ export const domainFromUrl = (urlString: string) => {
       : host;
   return `${protocol}//${canonicalHost}`;
 };
+
+export const domainFromUrl = (urlString: string) =>
+  canonicalizeDomain(urlString);
 
 export const resolveUrl = (base: string, urlString: string) =>
   url.resolve(base, urlString);

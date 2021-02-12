@@ -1,5 +1,5 @@
 import { fixWhitespace } from "./regex-utils";
-import { domainFromUrl, resolveUrl } from "./domain-utils";
+import { domainFromUrl, resolveUrl, canonicalizeDomain } from "./domain-utils";
 
 export type AllowedStyleValues = Record<string, Array<string>>;
 
@@ -10,10 +10,10 @@ export type AllowedStyleValues = Record<string, Array<string>>;
  **/
 export const getUnescapedCssValue = (value: string) =>
   fixWhitespace(value, " ")
-    .replace(/\\[0-9a-z]+\s/gi, (c) =>
-      String.fromCodePoint(parseInt(c.slice(1, -1), 16))
+    .replace(/\\[0-9a-f]{1,6}(?:\s|(?=[^0-9a-f])|$)/gi, (c) =>
+      String.fromCodePoint(parseInt(c.slice(1).trim(), 16))
     )
-    .replace(/\\[^\\]/g, (c) => c.slice(1));
+    .replace(/\\./g, (c) => c.slice(1));
 
 const sanitizeCSSUrlString = (
   pluginDomain: string,
@@ -22,7 +22,7 @@ const sanitizeCSSUrlString = (
 ) => {
   const url = resolveUrl(pluginUrl, urlString);
   const domain = domainFromUrl(url);
-  if (domain !== pluginDomain) {
+  if (domain !== canonicalizeDomain(pluginDomain)) {
     throw new Error("Bad domain");
   }
   return url;
@@ -34,7 +34,7 @@ const sanitizeCSSUrlString = (
  *
  * https://developer.mozilla.org/en-US/docs/Web/CSS/url
  **/
-export const sanitizeCSSUrls = (
+const sanitizeCSSUrls = (
   pluginDomain: string,
   pluginUrl: string,
   value: string
