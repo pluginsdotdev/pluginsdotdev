@@ -7,7 +7,8 @@ import { anySpaceArb, urlPathArb } from "./arbs";
 const testUrlLike = (
   pluginDomain: string,
   pluginUrl: string,
-  wrapInFn: (url: string) => string
+  wrapInFn: (url: string) => string,
+  accepted: (url: string) => string
 ) => () => {
   const eachQuoteStyle = (val: string, fn: (url: string) => void) => {
     fn(wrapInFn(val));
@@ -18,14 +19,14 @@ const testUrlLike = (
   it("leaves strings without a url unchanged", () => {
     fc.assert(
       fc.property(
-        fc
-          .string()
-          .filter(
-            (s) =>
-              s
+        fc.string().filter(
+          (s) =>
+            s.toLowerCase().indexOf(
+              wrapInFn("")
+                .replace(/\(.*\)/, "")
                 .toLowerCase()
-                .indexOf(wrapInFn("").replace(/[)(]/g, "").toLowerCase()) < 0
-          ),
+            ) < 0
+        ),
         (s: string) => {
           expect(
             getValidStyle(pluginDomain, pluginUrl, {}, { background: s })
@@ -55,7 +56,7 @@ const testUrlLike = (
       fc.property(urlPathArb, (path: string) => {
         const url = URL.resolve(pluginDomain, `/${path}`);
         const expected = {
-          background: wrapInFn(`"${getUnescapedCssValue(url)}"`),
+          background: accepted(url),
         };
         eachQuoteStyle(url, (background: string) => {
           expect(
@@ -69,9 +70,9 @@ const testUrlLike = (
   it("accepts safe absolute urls with same ports (pluginDomain implied)", () => {
     fc.assert(
       fc.property(urlPathArb, (path: string) => {
-        const url = `${pluginDomain}:443/${path}`;
+        const url = URL.resolve(`${pluginDomain}:443`, `/${path}`);
         const expected = {
-          background: wrapInFn(`"${getUnescapedCssValue(url)}"`),
+          background: accepted(url),
         };
         eachQuoteStyle(url, (background: string) => {
           expect(
@@ -85,9 +86,9 @@ const testUrlLike = (
   it("accepts safe absolute urls with same ports (provided implied)", () => {
     fc.assert(
       fc.property(urlPathArb, (path: string) => {
-        const url = `${pluginDomain}/${path}`;
+        const url = URL.resolve(pluginDomain, `/${path}`);
         const expected = {
-          background: wrapInFn(`"${getUnescapedCssValue(url)}"`),
+          background: accepted(url),
         };
         const explicitPluginDomain = `${pluginDomain}:443`;
         eachQuoteStyle(url, (background: string) => {
@@ -102,7 +103,7 @@ const testUrlLike = (
   it("rejects absolute urls with different implied ports", () => {
     fc.assert(
       fc.property(urlPathArb, (path: string) => {
-        const url = `${pluginDomain}:444/${path}`;
+        const url = URL.resolve(`${pluginDomain}:444`, `/${path}`);
         const expected = {};
 
         eachQuoteStyle(url, (background: string) => {
@@ -117,7 +118,10 @@ const testUrlLike = (
   it("rejects absolute urls with a bad protocol", () => {
     fc.assert(
       fc.property(urlPathArb, (path: string) => {
-        const url = `${pluginDomain.replace("https:", "http:")}/${path}`;
+        const url = URL.resolve(
+          pluginDomain.replace("https:", "http:"),
+          `/${path}`
+        );
         const expected = { color: "purple" };
 
         eachQuoteStyle(url, (background: string) => {
@@ -139,7 +143,7 @@ const testUrlLike = (
       fc.property(urlPathArb, (path: string) => {
         const url = URL.resolve(pluginUrl, path);
         const expected = {
-          background: wrapInFn(`"${getUnescapedCssValue(url)}"`),
+          background: accepted(url),
         };
         eachQuoteStyle(url, (background: string) => {
           expect(
@@ -205,7 +209,45 @@ describe("css-utils", () => {
 
     describe(
       "url()",
-      testUrlLike(pluginDomain, pluginUrl, (url: string) => `url(${url})`)
+      testUrlLike(
+        pluginDomain,
+        pluginUrl,
+        (url: string) => `url(${url})`,
+        (url: string) => `url("${getUnescapedCssValue(url)}")`
+      )
+    );
+
+    describe(
+      "image-set(single-param)",
+      testUrlLike(
+        pluginDomain,
+        pluginUrl,
+        (url: string) => `image-set(${url} 1x)`,
+        (url: string) => `image-set(url("${getUnescapedCssValue(url)}") 1x)`
+      )
+    );
+
+    describe(
+      "image-set(single-param, wrapped in url)",
+      testUrlLike(
+        pluginDomain,
+        pluginUrl,
+        (url: string) => `image-set(url(${url}) 1x)`,
+        (url: string) => `image-set(url("${getUnescapedCssValue(url)}") 1x)`
+      )
+    );
+
+    describe(
+      "image-set(multiple-param)",
+      testUrlLike(
+        pluginDomain,
+        pluginUrl,
+        (url: string) => `image-set(${url} 1x, ${url} 2x)`,
+        (url: string) =>
+          `image-set(url("${getUnescapedCssValue(
+            url
+          )}") 1x,url("${getUnescapedCssValue(url)}") 2x)`
+      )
     );
 
     it("rejects images and elements", () => {

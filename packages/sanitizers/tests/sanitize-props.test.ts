@@ -506,7 +506,7 @@ describe("sanitize-props", () => {
         background2:
           'image-set(url("https://plugins.dev/good2.png") 1x"malformed",url("https://plugins.dev/good.png") )',
         background3:
-          'image-set(url("https://plugins.dev/good3.png")    1x, "https://plugins.dev/good.png")',
+          'image-set(url("https://plugins.dev/good3.png") 1x,url("https://plugins.dev/good.png") )',
         width: 100,
       },
       className: "hello-world",

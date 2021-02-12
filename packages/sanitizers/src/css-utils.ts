@@ -28,6 +28,8 @@ const sanitizeCSSUrlString = (
   return url;
 };
 
+const isSanitizedUrl = (value: string) => /^url\("[^"]+"\)$/.test(value);
+
 /**
  * url(...)
  * Return a sanitized value or throw if the value is evil
@@ -56,6 +58,7 @@ const sanitizeCSSUrls = (
         ? quotedUrl.slice(firstQuote + 1, lastQuote)
         : quotedUrl;
     const url = sanitizeCSSUrlString(pluginDomain, pluginUrl, unquotedUrl);
+    // TODO: assert that our returned value matches isSanitizedUrl
     return `url("${url}")`;
   });
 
@@ -70,12 +73,12 @@ const sanitizeCSSImageSets = (
   pluginUrl: string,
   value: string
 ) =>
-  value.replace(/image-set\s*\(\s*(.*?)\s*\)/gi, (imageSetContainingString) => {
+  value.replace(/image-set\s*\(\s*(.*)\s*\)/gi, (imageSetContainingString) => {
     const imgSet = imageSetContainingString.slice(
       imageSetContainingString.indexOf("(") + 1,
       imageSetContainingString.lastIndexOf(")")
     );
-    const matcher = /\s*(['"]?)(.*?)\1([^,]*)[,]?/gi;
+    const matcher = /\s*(['"]?)([^\s\1]+)\1([^,]*)[,]?/gi;
     const sanitizedImgSet = [];
     for (
       let maxIter = 20, match = matcher.exec(imgSet);
@@ -91,13 +94,20 @@ const sanitizeCSSImageSets = (
       const trimmedUrl = url.trim();
 
       if (!trimmedUrl.length) {
-        // we fall into this if we don't have a quoted string
+        // we fall into this if we don't have a resolution
         // make sure that means that we have a url(...) in resolution
-        if (!/(?:url|image)\s*\(/i.test(resolution)) {
+        // if we do, we already handled it by the url/image sanitizer
+        if (!isSanitizedUrl(resolution)) {
           throw new Error("Malformatted image-set");
         }
 
         sanitizedImgSet.push(resolution);
+        continue;
+      }
+
+      if (isSanitizedUrl(url)) {
+        // url already handled by the url/image sanitizer
+        sanitizedImgSet.push(`${url} ${resolution.trim()}`);
         continue;
       }
 
