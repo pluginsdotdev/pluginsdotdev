@@ -14,7 +14,7 @@ interface Props {
   [key: string]: Prop;
 }
 
-type NodeId = number;
+type NodeId = string;
 
 interface Instance {
   id: Readonly<NodeId>;
@@ -215,11 +215,11 @@ class RootNode implements RootInstance {
   container: OpaqueRoot;
 
   props: Props = {};
-  id: NodeId = 0;
+  id: NodeId = "0";
   children: Array<PublicInstance> = [];
   type: "root" = "root";
 
-  private _nextId: NodeId = 1;
+  private _nextId: number = 1;
   private updates: Array<ReconciliationUpdate> = [];
 
   constructor(public onCommit: RootNodeCommitCallback) {
@@ -281,7 +281,7 @@ class RootNode implements RootInstance {
   }
 
   nextId() {
-    return this._nextId++;
+    return `${this._nextId++}`;
   }
 
   recordUpdate(update: ReconciliationUpdate): void {

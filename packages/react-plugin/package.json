@@ -35,9 +35,6 @@
     "url": "git+https://github.com/pluginsdotdev/pluginsdotdev.git"
   },
   "scripts": {
-    "test": "echo \"Error: run tests from root\" && exit 1"
-  },
-  "scripts": {
     "test": "tsc --module commonjs && rollup --config rollup.config.ts && npx jest",
     "lint": "tslint  --project tsconfig.json -t codeFrame 'src/**/*.ts' 'tests/**/*.ts'",
     "prebuild": "rimraf dist",
@@ -56,9 +53,10 @@
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
   },
   "dependencies": {
-    "@pluginsdotdev/plugin": "^0.0.1",
     "@pluginsdotdev/bridge": "^0.0.1",
-    "react": "^16.13.1"
+    "@pluginsdotdev/plugin": "^0.0.1",
+    "react": "^16.13.1",
+    "react-reconciler": "^0.25.1"
   },
   "devDependencies": {
     "@pluginsdotdev/test-utils": "^0.0.0",

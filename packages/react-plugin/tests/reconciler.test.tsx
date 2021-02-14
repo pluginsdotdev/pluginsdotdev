@@ -31,22 +31,22 @@ describe('reconcile', () => {
         //       to assert that they are the same when used multiple times.
         //       unification for the win.
         expect(updates).toContainEqual({
-          nodeId: expect.any(Number),
+          nodeId: expect.any(String),
           type: 'text',
           textUpdate: { text: "This is me!" }
         });
         expect(updates).toContainEqual({
-          nodeId: expect.any(Number),
+          nodeId: expect.any(String),
           type: 'p',
           propUpdates: [],
           childUpdates: [{
             op: 'set',
             childIdx: 0,
-            childId: expect.any(Number)
+            childId: expect.any(String)
           }]
         });
         expect(updates).toContainEqual({
-          nodeId: expect.any(Number),
+          nodeId: expect.any(String),
           type: 'div',
           propUpdates: [{
             op: 'set',
@@ -56,16 +56,16 @@ describe('reconcile', () => {
           childUpdates: [{
             op: 'set',
             childIdx: 0,
-            childId: expect.any(Number)
+            childId: expect.any(String)
           }]
         });
         expect(updates).toContainEqual({
-          nodeId: 0,
+          nodeId: "0",
           type: 'root',
           childUpdates: [{
             op: 'set',
             childIdx: 0,
-            childId: expect.any(Number)
+            childId: expect.any(String)
           }]
         });
         resolve();
@@ -92,7 +92,7 @@ describe('reconcile', () => {
     );
 
     expect(updates).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: 'text',
       textUpdate: {
         text: '4'
@@ -110,7 +110,7 @@ describe('reconcile', () => {
     );
 
     expect(updates).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: 'text',
       textUpdate: {
         text: 'This is me!'
@@ -127,16 +127,16 @@ describe('reconcile', () => {
     );
     expect(updates2.length).toEqual(2);
     expect(updates2).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: 'p',
       childUpdates: [
-        { op: 'delete', childId: expect.any(Number) },
-        { op: 'set', childId: expect.any(Number), childIdx: 0 }
+        { op: 'delete', childId: expect.any(String) },
+        { op: 'set', childId: expect.any(String), childIdx: 0 }
       ],
       propUpdates: []
     });
     expect(updates2).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: 'text',
       textUpdate: {
         text: 'This is me?'
@@ -152,26 +152,26 @@ describe('reconcile', () => {
       root
     );
     expect(updates3).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: "text",
       textUpdate: {
         text: "This is me?"
       }
     });
     expect(updates3).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: 'div',
       childUpdates: [
-        { op: 'set', childId: expect.any(Number), childIdx: 0 }
+        { op: 'set', childId: expect.any(String), childIdx: 0 }
       ],
       propUpdates: []
     });
     expect(updates3).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: 'div',
       childUpdates: [
-        { op: 'delete', childId: expect.any(Number) },
-        { op: 'set', childId: expect.any(Number), childIdx: 0 }
+        { op: 'delete', childId: expect.any(String) },
+        { op: 'set', childId: expect.any(String), childIdx: 0 }
       ]
     });
   });
@@ -186,7 +186,7 @@ describe('reconcile', () => {
     );
 
     expect(updates).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: 'text',
       textUpdate: {
         text: 'hi'
@@ -202,7 +202,7 @@ describe('reconcile', () => {
       root
     );
     expect(updates2).toContainEqual({
-      nodeId: expect.any(Number),
+      nodeId: expect.any(String),
       type: 'text',
       textUpdate: {
         text: 'bye'
@@ -237,7 +237,7 @@ describe('properties', () => {
 
           items.forEach(({ type, props }) => {
             expect(updates).toContainEqual({
-              nodeId: expect.any(Number),
+              nodeId: expect.any(String),
               type,
               propUpdates: Object.keys(props).map(prop => ({
                 op: 'set',
@@ -359,7 +359,7 @@ describe('properties', () => {
                 propUpdates: new Set(update.propUpdates)
               }))
             ).toContainEqual({
-              nodeId: expect.any(Number),
+              nodeId: expect.any(String),
               type,
               propUpdates: getSetProps(
                 props.filter(p => validStatesByPart.first.has(p.state))
@@ -396,7 +396,7 @@ describe('properties', () => {
                 propUpdates: new Set(update.propUpdates)
               }))
             ).toContainEqual({
-              nodeId: expect.any(Number),
+              nodeId: expect.any(String),
               type,
               propUpdates
             });
