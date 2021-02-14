@@ -21,6 +21,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - run: npm ci
+      - run: npm run bootstrap-ci
       - run: npm run lint
 
   test:
@@ -38,4 +39,5 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - run: npm ci
+      - run: npm run bootstrap-ci
       - run: npm run test
