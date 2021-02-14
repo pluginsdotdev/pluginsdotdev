@@ -56,6 +56,13 @@
         var style = document.createElement('style');
         style.nonce = "xyz";
         this.shadowRoot.appendChild(style);
+        var slot = document.createElement('slot');
+        slot.name = "contents";
+        var defaultContent = document.createElement('p');
+        defaultContent.textContent = "default";
+        defaultContent.className = "default-content";
+        slot.appendChild(defaultContent);
+        this.shadowRoot.appendChild(slot);
         var span = document.createElement('span');
         span.textContent = "hello autonomous world";
         span.addEventListener('click', evt => console.log('clicked inside Autonomous', evt));
@@ -88,7 +95,10 @@
               ?  R.createElement('p', { is: "my-p", class: "my-p" })
               : null,
             props.autonomousCustomElement
-              ? R.createElement('my-autonomous', {})
+              ? R.createElement('my-autonomous', {},
+                  props.autonomousCustomElementSlot
+                    ? R.createElement('p', {className: "override-content", slot: "contents"}, "override")
+                    : null)
               : null,
             props.onClick
               ? R.createElement(

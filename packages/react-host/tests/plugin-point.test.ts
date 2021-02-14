@@ -289,4 +289,94 @@ describe("plugin-point", () => {
     expect(c).toBeTruthy();
     expect(await c!.evaluate((c: Element) => c.childNodes.length)).toEqual(0);
   });
+
+  it("default slot contents work", async () => {
+    const page = t.page();
+    await page.evaluate((baseProps) => {
+      const RD = (window as any).ReactDOM as any;
+      const R = (window as any).React as any;
+
+      RD.render(
+        R.createElement(
+          (<any>window).index.PluginPoint,
+          Object.assign(
+            {
+              props: {
+                className: "hello",
+                autonomousCustomElement: true,
+                autonomousCustomElementSlot: false,
+              },
+            },
+            baseProps
+          )
+        ),
+        document.getElementById("root")
+      );
+    }, baseProps);
+    const div = await getMainPluginDiv(page, "hello");
+    const myP = await div.$("span.my-autonomous");
+    expect(
+      await myP!.evaluate(
+        (p: Element) => p.shadowRoot?.querySelector("slot")?.innerHTML
+      )
+    ).toBeFalsy();
+    expect(
+      await myP!.evaluate(
+        (p: Element) =>
+          p.shadowRoot?.querySelector("p.default-content")?.textContent
+      )
+    ).toEqual("default");
+    expect(
+      await myP!.evaluate(
+        (p: Element) =>
+          p.shadowRoot?.querySelector("p.default-content")?.nextSibling
+            ?.textContent
+      )
+    ).toEqual("hello autonomous world");
+  });
+
+  it("override slot contents work", async () => {
+    const page = t.page();
+    await page.evaluate((baseProps) => {
+      const RD = (window as any).ReactDOM as any;
+      const R = (window as any).React as any;
+
+      RD.render(
+        R.createElement(
+          (<any>window).index.PluginPoint,
+          Object.assign(
+            {
+              props: {
+                className: "hello",
+                autonomousCustomElement: true,
+                autonomousCustomElementSlot: true,
+              },
+            },
+            baseProps
+          )
+        ),
+        document.getElementById("root")
+      );
+    }, baseProps);
+    const div = await getMainPluginDiv(page, "hello");
+    const myP = await div.$("span.my-autonomous");
+    expect(
+      await myP!.evaluate(
+        (p: Element) => p.shadowRoot?.querySelector("slot")?.innerHTML
+      )
+    ).toBeFalsy();
+    expect(
+      await myP!.evaluate(
+        (p: Element) =>
+          p.shadowRoot?.querySelector("p.override-content")?.textContent
+      )
+    ).toEqual("override");
+    expect(
+      await myP!.evaluate(
+        (p: Element) =>
+          p.shadowRoot?.querySelector("p.override-content")?.nextSibling
+            ?.textContent
+      )
+    ).toEqual("hello autonomous world");
+  });
 });

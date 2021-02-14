@@ -322,12 +322,21 @@ class NodeIdContainer {
 
 const nodeIdContainers = new Set<NodeIdContainer>();
 
+const countNodeWidth = (node: Node): number => {
+  if (node.nodeName !== "SLOT") {
+    return 1;
+  }
+
+  const assigned = (node as HTMLSlotElement).assignedNodes({ flatten: true });
+  return assigned.length;
+};
+
 const calculateChildIdx = (node: Node): number => {
   let childIdx = 0;
   let currentNode = node;
   while (currentNode.previousSibling !== null) {
     currentNode = currentNode.previousSibling;
-    ++childIdx;
+    childIdx = childIdx + countNodeWidth(currentNode);
   }
   return childIdx;
 };
@@ -363,16 +372,54 @@ const propUpdatesForHostComponent = (
   );
 };
 
+const isIgnoredNodeType = (nodeType: number): boolean =>
+  nodeType !== Node.ELEMENT_NODE &&
+  nodeType !== Node.TEXT_NODE &&
+  nodeType !== Node.DOCUMENT_NODE &&
+  nodeType !== Node.DOCUMENT_FRAGMENT_NODE;
+
+const isSlotted = (node: Node): boolean => !!(node as HTMLElement).assignedSlot;
+
+const shouldIgnoreNode = (node: Node, isProcessingSlot: boolean): boolean =>
+  // we ignore some node types
+  isIgnoredNodeType(node.nodeType) ||
+  // we also ignore slotted elements unless we're intentionally processing a slot
+  (!isProcessingSlot && isSlotted(node));
+
 const queueTreeUpdates = (
   observe: Observe,
   nodeIdContainer: NodeIdContainer,
   target: Node,
   child: Node,
-  parentIdContext: NodeId = ""
+  parentIdContext: NodeId = "",
+  baseChildIdx: number = 0,
+  processingSlot: boolean = false
 ): void => {
+  if (shouldIgnoreNode(child, processingSlot)) {
+    return;
+  }
+
+  if (child.nodeName === "SLOT") {
+    const assigned = (child as HTMLSlotElement).assignedNodes({
+      flatten: true,
+    });
+    assigned.forEach((a: Node) => {
+      queueTreeUpdates(
+        observe,
+        nodeIdContainer,
+        target,
+        a,
+        parentIdContext,
+        calculateChildIdx(child),
+        true
+      );
+    });
+    return;
+  }
+
   const childId = nodeIdContainer.getOrAddNode(child, parentIdContext);
   const targetId = nodeIdContainer.getId(target)!;
-  const childIdx = calculateChildIdx(child);
+  const childIdx = baseChildIdx + calculateChildIdx(child);
   const targetUpdate: PartialReconciliationUpdate = {
     childUpdates: [
       {
@@ -382,17 +429,8 @@ const queueTreeUpdates = (
       },
     ],
   };
-  const elChild = child as HTMLElement;
-  if (
-    child.nodeType !== Node.ELEMENT_NODE &&
-    child.nodeType !== Node.TEXT_NODE &&
-    child.nodeType !== Node.DOCUMENT_NODE &&
-    child.nodeType !== Node.DOCUMENT_FRAGMENT_NODE
-  ) {
-    return;
-  }
 
-  // TODO: handle other node types https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType
+  const elChild = child as HTMLElement;
   const attrs: Array<Attr> =
     child.nodeType === Node.ELEMENT_NODE
       ? Array.from((child as Element).attributes)
@@ -533,6 +571,12 @@ const constructRenderRootIfNeeded = (
 
     mutationList.forEach(
       ({ type, target, addedNodes, removedNodes, attributeName }) => {
+        // we indicate that we are processing a slot here because any updates
+        // to un-slotted nodes should be ignored anyway
+        if (shouldIgnoreNode(target, true)) {
+          return;
+        }
+
         switch (type) {
           case "childList":
             if (isStyleNode(target)) {
