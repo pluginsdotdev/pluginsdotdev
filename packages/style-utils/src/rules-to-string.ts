@@ -44,15 +44,13 @@ export const getStyleSheetRulesStringifier = (
 
   const styleToString = (style: Sanitized<Style>): string =>
     Object.keys(style)
-      .map((prop) => `  ${prop}: ${style[prop]}`)
+      .map((prop) => `  ${prop}: ${style[prop]};`)
       .join("\n");
 
   const styleRuleToString = sanitizing(
     styleRuleSanitizer,
     ({ selector, style }: ObjSanitized<StyleRule>): string => {
-      return `${selector} {
-      ${styleToString(style)}
-    }`;
+      return `${selector} {\n${styleToString(style)}\n}`;
     }
   );
 
