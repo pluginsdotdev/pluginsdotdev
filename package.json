@@ -4,7 +4,8 @@
   "description": "Plugins.dev gives your app superpowers: allow your users to safely add 3rd party plugins to your site and let plugin authors extend your functionality and make you money.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "lerna run test",
+    "lint": "lerna run lint",
     "lerna": "lerna",
     "commit": "git-cz"
   },
