@@ -1,4 +1,4 @@
-# pluginsdotdev
+# [Plugins.dev](https://plugins.dev) &middot; [![CI status](https://github.com/pluginsdotdev/pluginsdotdev/workflows/ci/badge.svg)](https://github.com/pluginsdotdev/pluginsdotdev/actions?query=workflow%3Aci)
 Plugins.dev gives your app superpowers: allow your users to safely add 3rd party plugins to your site and let plugin authors extend your functionality and make you money.
 
 # Development
