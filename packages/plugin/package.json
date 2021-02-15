@@ -31,7 +31,7 @@
     "url": "git+https://github.com/pluginsdotdev/pluginsdotdev.git"
   },
   "scripts": {
-    "link": "mkdir node_modules && ln -s \"$(pwd)/../../node_modules/react\" node_modules/ && ln -s \"$(pwd)/../../node_modules/react-dom\" node_modules/",
+    "link": "rm -rf node_modules && mkdir -p \"node_modules/@pluginsdotdev\" && for m in react react-dom '@pluginsdotdev/bridge'; do ln -f -s \"$(pwd)/../../node_modules/${m}\" node_modules/${m}; done",
     "test": "npm run link && tsc --module commonjs && rollup --config rollup.config.ts && npx jest",
     "lint": "tslint  --project tsconfig.json -t codeFrame 'src/**/*.ts' 'tests/**/*.ts'",
     "prebuild": "rimraf dist",
