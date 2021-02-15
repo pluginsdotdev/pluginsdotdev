@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "lerna run test",
+    "build": "lerna run build",
     "lint": "lerna run lint",
     "bootstrap-ci": "lerna bootstrap --hoist --ci",
     "lerna": "lerna",
