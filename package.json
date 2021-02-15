@@ -48,10 +48,10 @@
     "@pluginsdotdev/test-utils": "file:packages/test-utils"
   },
   "devDependencies": {
-    "@pluginsdotdev/plugin": "file:../plugin",
-    "@pluginsdotdev/react-plugin": "^0.0.1",
-    "@pluginsdotdev/style-types": "file:../style-types",
-    "@pluginsdotdev/test-utils": "^0.0.0",
+    "@pluginsdotdev/plugin": "file:packages/plugin",
+    "@pluginsdotdev/react-plugin": "file:packages/react-plugin",
+    "@pluginsdotdev/style-types": "file:packages/style-types",
+    "@pluginsdotdev/test-utils": "file:packages/test-utils",
     "@rollup/plugin-replace": "^2.3.3",
     "@types/clone": "^2.1.0",
     "@types/jest": "^26.0.10",
