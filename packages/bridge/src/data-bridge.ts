@@ -295,7 +295,18 @@ const fromBridgeMapProxyHandler = (
   proxyId: ProxyId,
   value: any
 ) => {
-  return new Map(value as Array<[any, any]>);
+  const arr = value as Array<[any, any]>;
+  const m = new Map(arr);
+  arr.forEach(([k, v]) => {
+    const kIsArr = k === arr;
+    const vIsArr = v === arr;
+    const km = kIsArr ? m : k;
+    const vm = vIsArr ? m : v;
+    if (kIsArr || vIsArr) {
+      m.set(km, vm);
+    }
+  });
+  return m;
 };
 
 registerFromBridgeProxyHandler("plugins.dev/map", fromBridgeMapProxyHandler);
@@ -310,9 +321,11 @@ const toBridgeMapProxyHandler = (
     return null;
   }
 
+  const pId = proxyId(localState, hostValue);
+
   return {
-    proxyId: proxyId(localState, hostValue),
-    replacementValue: toBridge(Array.from(hostValue.entries()), [], true),
+    proxyId: pId,
+    replacementValue: toBridge(Array.from(hostValue.entries()), [], pId),
   };
 };
 
@@ -338,9 +351,10 @@ const toBridgeSetProxyHandler = (
     return null;
   }
 
+  const pId = proxyId(localState, hostValue);
   return {
-    proxyId: proxyId(localState, hostValue),
-    replacementValue: toBridge(Array.from(hostValue.values()), [], true),
+    proxyId: pId,
+    replacementValue: toBridge(Array.from(hostValue.values()), [], pId),
   };
 };
 
@@ -384,8 +398,10 @@ const _toBridge = (
   previouslySeenValues: Map<any, any>,
   hostValue: HostValue,
   path: Array<string | number>,
-  standinHostValue?: HostValue
+  standinHostValue?: HostValue,
+  overrideProxyId?: ProxyId
 ): any => {
+  const previouslySeenValueKey = standinHostValue ?? hostValue;
   const handlerValue = toBridgeProxyHandlers.reduce(
     (value, { handler }) =>
       value ||
@@ -395,27 +411,52 @@ const _toBridge = (
         (
           hostSubValue: HostValue,
           relativePath: Array<string | number>,
-          isHostValueStandin?: boolean
-        ) =>
-          _toBridge(
+          currentValueProxyId?: ProxyId
+        ) => {
+          // simple recursive call but:
+          // 1. to handle self-referential proxied objects, we need to pass the proxyId to use.
+          // 2. we may want the children to use our original host value as their previouslySeenValueKey
+
+          const descendantPreviouslySeenValues = new Map(previouslySeenValues);
+          return _toBridge(
             localState,
             bridgeProxyIds,
-            new Map(previouslySeenValues), // copy so we will be the value of record if a child refers to us
+            descendantPreviouslySeenValues,
             hostSubValue,
             path.concat(relativePath),
-            isHostValueStandin ? hostValue : void 0
-          )
+            currentValueProxyId ? hostValue : void 0,
+            currentValueProxyId
+          );
+        }
       ),
     null as ToBridgeProxyValue | null
   );
 
-  const previouslySeenValueKey = standinHostValue ?? hostValue;
-
   if (previouslySeenValues.has(previouslySeenValueKey)) {
-    return previouslySeenValues.get(previouslySeenValueKey);
+    const previouslySeenValue = previouslySeenValues.get(
+      previouslySeenValueKey
+    );
+    if (previouslySeenValue.proxyId) {
+      bridgeProxyIds.set(
+        pathPartsToObjectPath(path),
+        previouslySeenValue.proxyId
+      );
+    }
+
+    if (previouslySeenValue.hasOwnProperty("value")) {
+      // if we are descending into a proxied child, but have not yet determined its value,
+      // we will not have value set.
+      // we want to set our proxied path but will proceed to calculate our own value.
+      return previouslySeenValue.value;
+    }
+  }
+
+  if (overrideProxyId) {
+    bridgeProxyIds.set(pathPartsToObjectPath(path), overrideProxyId);
   }
 
   if (handlerValue) {
+    let proxyIdIfSet;
     if (isToBridgeProxyValueProxyId(handlerValue)) {
       const { proxyId } = handlerValue;
       if (typeof handlerValue.retainedValue !== "undefined") {
@@ -424,19 +465,29 @@ const _toBridge = (
         localState.knownProxies.set(retainedValue, proxyId);
       }
       bridgeProxyIds.set(pathPartsToObjectPath(path), proxyId);
+      proxyIdIfSet = proxyId;
     }
 
-    // TODO: should we recursively process replacementValue? (here and in frombridge?)
-    return isToBridgeProxyValueReplacementValue(handlerValue)
+    const value = isToBridgeProxyValueReplacementValue(handlerValue)
       ? handlerValue.replacementValue
       : null;
+
+    previouslySeenValues.set(previouslySeenValueKey, {
+      value,
+      proxyId: overrideProxyId ?? proxyIdIfSet,
+    });
+
+    return value;
   }
 
   if (Array.isArray(hostValue)) {
     // arrays are traversed item by item, each is converted from host->bridge
     // TODO: for large arrays, we may want to bail if they are monomorphic (by declaration or partial testing)
     const bridgeValue = new Array(hostValue.length);
-    previouslySeenValues.set(previouslySeenValueKey, bridgeValue);
+    previouslySeenValues.set(previouslySeenValueKey, {
+      value: bridgeValue,
+      proxyId: overrideProxyId,
+    });
     hostValue.forEach(
       (hostVal, idx) =>
         (bridgeValue[idx] = _toBridge(
@@ -448,11 +499,9 @@ const _toBridge = (
         ))
     );
     return bridgeValue;
-  } else if (
-    typeof hostValue === "object" &&
-    hostValue &&
-    isObject(hostValue)
-  ) {
+  }
+
+  if (typeof hostValue === "object" && hostValue && isObject(hostValue)) {
     if (process.env.NODE_ENV !== "production") {
       if (!hasValidPrototype(hostValue)) {
         console.error(
@@ -467,7 +516,10 @@ const _toBridge = (
 
     // objects are traversed property by property, each is converted from host->bridge
     const bridgeValue: Record<string, any> = {};
-    previouslySeenValues.set(previouslySeenValueKey, bridgeValue);
+    previouslySeenValues.set(previouslySeenValueKey, {
+      value: bridgeValue,
+      proxyId: overrideProxyId,
+    });
     Object.keys(hostValue).forEach((key: string) => {
       bridgeValue[key] = _toBridge(
         localState,
@@ -547,10 +599,14 @@ export const fromBridge = (
   bridgeValue: Readonly<BridgeValue>
 ): any => {
   const { bridgeProxyIds } = bridgeValue;
-  let stubbedBridgeValue = bridgeValue.bridgeData;
-  const iter = bridgeValue.bridgeProxyIds.entries();
-  for (let next = iter.next(); !next.done; next = iter.next()) {
-    const [path, proxyId] = next.value;
+  // we proceed by converting the longest paths first because this ensures that children are
+  // processed before parents.
+  const paths = Array.from(bridgeValue.bridgeProxyIds.keys()).sort(
+    (a, b) => b.length - a.length
+  );
+  const itemByProxyId = new Map<ProxyId, any>();
+  return paths.reduce((stubbedBridgeValue, path) => {
+    const proxyId = bridgeValue.bridgeProxyIds.get(path)!;
     const { type } = unwrapProxyId(proxyId);
     if (!fromBridgeProxyHandlers.has(type)) {
       throw new UnregisteredProxyTypeError(type);
@@ -559,18 +615,10 @@ export const fromBridge = (
     const handler = fromBridgeProxyHandlers.get(type)!;
     const pathParts = objectPathToPathParts(path);
     const val = getAtPath(stubbedBridgeValue, pathParts);
-    const replacedValue = fromBridgeProxyHandlerMiddleware(
-      handler,
-      bridge,
-      proxyId,
-      val
-    );
-    stubbedBridgeValue = assignAtPath(
-      stubbedBridgeValue,
-      pathParts,
-      replacedValue
-    );
-  }
-
-  return stubbedBridgeValue;
+    const replacedValue =
+      itemByProxyId.get(proxyId) ??
+      fromBridgeProxyHandlerMiddleware(handler, bridge, proxyId, val);
+    itemByProxyId.set(proxyId, replacedValue);
+    return assignAtPath(stubbedBridgeValue, pathParts, replacedValue);
+  }, bridgeValue.bridgeData);
 };

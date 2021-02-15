@@ -371,6 +371,21 @@ describe("fromBridge", () => {
     expect(fromBridgeVal[1][0]).toEqual("hi");
     expect(fromBridgeVal[1]).toBe(fromBridgeVal);
   });
+  it("should work for self-referential maps", () => {
+    const localState = {
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
+    };
+
+    const map = new Map<string, any>([["a", "hi"]]);
+    map.set("self", map);
+    const bridgeValue = toBridge(localState, map);
+    const bridge = bridgeFromLocalState(localState);
+    const fromBridgeVal = fromBridge(bridge, bridgeValue);
+    expect(fromBridgeVal.get("a")).toEqual("hi");
+    expect(fromBridgeVal.get("self").get("a")).toEqual("hi");
+    expect(fromBridgeVal.get("self")).toBe(fromBridgeVal);
+  });
 });
 
 const setAtPath = (obj: any, path: Array<string>, val: any) => {
@@ -410,7 +425,8 @@ describe("properties", () => {
           const bridge = bridgeFromLocalState(localState);
           expect(fromBridge(bridge, bridgeValue)).toEqual(input);
         }
-      )
+      ),
+      { seed: 1385033816, path: "13:1:1:1", endOnFailure: true }
     );
   });
 

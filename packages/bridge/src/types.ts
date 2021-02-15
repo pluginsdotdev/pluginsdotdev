@@ -98,21 +98,21 @@ export type ProxyIdFactory = (
  *
  * hostValue is the host value to be converted to a bridge value
  * path is the path **relative to the hostValue passed to ToBridgeProxyHandler** of hostValue.
- * isHostValueStandin specifies whether the provided hostValue corresponds to the HostValue this
- *                    proxy handler is currently processing. If true, any child objects that circularly
- *                    refer to the proxy handler's HostValue will resolve to the result of this toBridge
- *                    call.
+ * currentValueProxyId specifies the ProxyId for the currently-processing HostValue. If provided,
+ *                     any child objects that circularly refer to the proxy handler's HostValue will
+ *                     resolve to the result of this toBridge call and their path will be mapped to the
+ *                     provided proxyId.
  *
  * Note: Within a ToBridgeProxyHandler processing an object, a, the path passed to ProxyHandlerToBridge
  *       for property "prop" should be ["prop"] and **not** ["a", "prop"].
  *
  * Note: If a handler proceeds by converting its contents to an object or array and then calling ProxyHandlerToBridge
- *       on that stand-in, it should always pass isHostValueStandin = true to allow circular reference resolution.
+ *       on that stand-in, it should always pass currentValueProxyId to allow circular reference resolution.
  **/
 export type ProxyHandlerToBridge = (
   hostValue: HostValue,
   path: Array<string | number>,
-  isHostValueStandin?: boolean
+  currentValueProxyId?: ProxyId
 ) => any;
 
 /**
