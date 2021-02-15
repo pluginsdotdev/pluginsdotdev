@@ -243,6 +243,54 @@ describe("toBridge", () => {
     expect(localState.localProxies.size).toEqual(0);
     expect(localState.knownProxies.has(error)).toBeFalsy();
   });
+  it("should work for self-referential objects", () => {
+    const obj: any = {
+      a: 4,
+      b: 5,
+    };
+    obj.self = obj;
+    obj.selves = [obj];
+    const localState = {
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
+    };
+    const { bridgeData } = toBridge(localState, obj);
+    expect(bridgeData.self.a).toEqual(4);
+    expect(bridgeData.self.self.b).toEqual(5);
+    expect(bridgeData.selves[0].b).toEqual(5);
+    expect(bridgeData.selves[0].selves[0].a).toEqual(4);
+  });
+  it("should work for self-referential arrays", () => {
+    const arr: Array<any> = [
+      {
+        a: 4,
+        b: 5,
+      },
+    ];
+    arr[1] = arr;
+    const localState = {
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
+    };
+    const { bridgeData } = toBridge(localState, arr);
+    expect(bridgeData[0].a).toEqual(4);
+    expect(bridgeData[0].b).toEqual(5);
+    expect(bridgeData[1][0].a).toEqual(4);
+    expect(bridgeData[1][0].b).toEqual(5);
+  });
+  it("should work for self-referential maps", () => {
+    const map = new Map<string, any>([["a", 4]]);
+    map.set("self", map);
+    const localState = {
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
+    };
+    const { bridgeData, bridgeProxyIds } = toBridge(localState, map);
+    const entriesGet = (entries: Array<[string, any]>, key: string) =>
+      entries.find(([k, v]) => k === key)![1];
+    expect(entriesGet(bridgeData, "a")).toEqual(4);
+    expect(entriesGet(entriesGet(bridgeData, "self"), "a")).toEqual(4);
+  });
 });
 
 const bridgeFromLocalState = (localState: LocalBridgeState) => {
@@ -290,6 +338,38 @@ describe("fromBridge", () => {
         f: [expect.any(Function), "hello"],
       },
     });
+  });
+  it("should work for self-referential objects", () => {
+    const localState = {
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
+    };
+
+    const obj: any = {
+      a: "hi",
+    };
+    obj.self = obj;
+    const bridgeValue = toBridge(localState, obj);
+    const bridge = bridgeFromLocalState(localState);
+    const fromBridgeVal = fromBridge(bridge, bridgeValue);
+    expect(fromBridgeVal.a).toEqual("hi");
+    expect(fromBridgeVal.self.a).toEqual("hi");
+    expect(fromBridgeVal.self).toBe(fromBridgeVal);
+  });
+  it("should work for self-referential arrays", () => {
+    const localState = {
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
+    };
+
+    const arr: any = ["hi"];
+    arr[1] = arr;
+    const bridgeValue = toBridge(localState, arr);
+    const bridge = bridgeFromLocalState(localState);
+    const fromBridgeVal = fromBridge(bridge, bridgeValue);
+    expect(fromBridgeVal[0]).toEqual("hi");
+    expect(fromBridgeVal[1][0]).toEqual("hi");
+    expect(fromBridgeVal[1]).toBe(fromBridgeVal);
   });
 });
 

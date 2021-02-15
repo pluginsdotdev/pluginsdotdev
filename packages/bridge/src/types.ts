@@ -98,18 +98,34 @@ export type ProxyIdFactory = (
  *
  * hostValue is the host value to be converted to a bridge value
  * path is the path **relative to the hostValue passed to ToBridgeProxyHandler** of hostValue.
+ * isHostValueStandin specifies whether the provided hostValue corresponds to the HostValue this
+ *                    proxy handler is currently processing. If true, any child objects that circularly
+ *                    refer to the proxy handler's HostValue will resolve to the result of this toBridge
+ *                    call.
  *
- * e.g. Within a ToBridgeProxyHandler processing an object, a, the path passed to ProxyHandlerToBridge
- *      for property "prop" should be ["prop"] and **not** ["a", "prop"].
+ * Note: Within a ToBridgeProxyHandler processing an object, a, the path passed to ProxyHandlerToBridge
+ *       for property "prop" should be ["prop"] and **not** ["a", "prop"].
+ *
+ * Note: If a handler proceeds by converting its contents to an object or array and then calling ProxyHandlerToBridge
+ *       on that stand-in, it should always pass isHostValueStandin = true to allow circular reference resolution.
  **/
 export type ProxyHandlerToBridge = (
   hostValue: HostValue,
-  path: Array<string | number>
+  path: Array<string | number>,
+  isHostValueStandin?: boolean
 ) => any;
 
 /**
  * ToBridgeProxyHandler is a handler for a proxy type.
  * This allows the implementer to handle custom proxying to the bridge.
+ *
+ * proxyIdFactory returns new proxy ids that the handler can return as a { proxyId }.
+ * localState - to be removed
+ * hostValue is the value the handler should convert to a bridgeable value (or proxy)
+ * toBridge allows the handler to recursively convert sub-values to bridgeable values
+ * preregisterMutableResult allows the handler to register a mutable result it intends to return
+ *                          **before** calling toBridge on any children to allow self-referential
+ *                          children to resolve properly
  **/
 export type ToBridgeProxyHandler = (
   proxyIdFactory: ProxyIdFactory,
