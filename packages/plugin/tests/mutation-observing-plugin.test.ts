@@ -93,8 +93,6 @@ describe("mutation-observing-plugin", () => {
     expect(updates).toContainEqual({
       nodeId: "0",
       type: "root",
-      handlerUpdates: expect.any(Array),
-      propUpdates: [],
       childUpdates: [
         {
           op: "set",
@@ -136,8 +134,6 @@ describe("mutation-observing-plugin", () => {
         )
     );
     expect(rootId).toEqual(123);
-
-    console.log(JSON.stringify(updates));
 
     expect(updates).toContainEqual({
       nodeId: expect.any(String),
