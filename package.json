@@ -6,7 +6,7 @@
   "scripts": {
     "test": "lerna run test",
     "lint": "lerna run lint",
-    "bootstrap-ci": "lerna bootstrap --ci",
+    "bootstrap-ci": "lerna bootstrap --hoist --ci",
     "lerna": "lerna",
     "commit": "git-cz"
   },
