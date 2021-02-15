@@ -94,13 +94,28 @@ export type ProxyIdFactory = (
 ) => ProxyId;
 
 /**
+ * A toBridge function passed to proxy handlers to allow recursive toBridge conversion.
+ *
+ * hostValue is the host value to be converted to a bridge value
+ * path is the path **relative to the hostValue passed to ToBridgeProxyHandler** of hostValue.
+ *
+ * e.g. Within a ToBridgeProxyHandler processing an object, a, the path passed to ProxyHandlerToBridge
+ *      for property "prop" should be ["prop"] and **not** ["a", "prop"].
+ **/
+export type ProxyHandlerToBridge = (
+  hostValue: HostValue,
+  path: Array<string | number>
+) => any;
+
+/**
  * ToBridgeProxyHandler is a handler for a proxy type.
  * This allows the implementer to handle custom proxying to the bridge.
  **/
 export type ToBridgeProxyHandler = (
   proxyIdFactory: ProxyIdFactory,
   localState: LocalBridgeState,
-  hostValue: HostValue
+  hostValue: HostValue,
+  toBridge: ProxyHandlerToBridge
 ) => ToBridgeProxyValue | null;
 
 /**

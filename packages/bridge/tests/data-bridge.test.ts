@@ -316,9 +316,9 @@ describe("properties", () => {
       fc.property(
         fc.anything({
           withDate: true,
-          withMap: false,
+          withMap: true,
           withObjectString: true,
-          withSet: false,
+          withSet: true,
         }),
         (input: any) => {
           const localState = {

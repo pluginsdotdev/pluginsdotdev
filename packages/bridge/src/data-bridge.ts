@@ -12,6 +12,7 @@ import type {
   ToBridgeProxyValueProxyId,
   ToBridgeProxyValueReplacementValue,
   ProxyIdFactory,
+  ProxyHandlerToBridge,
 } from "./types";
 
 export type ObjectPathParts = Array<string | number>;
@@ -103,7 +104,8 @@ export class UnregisteredProxyTypeError extends Error {
 
 type ToBridgeProxyHandlerWithId = (
   localState: LocalBridgeState,
-  hostValue: HostValue
+  hostValue: HostValue,
+  toBridge: ProxyHandlerToBridge
 ) => ToBridgeProxyValue | null;
 const toBridgeProxyHandlers: Array<{
   type: ProxyType;
@@ -288,6 +290,60 @@ const toBridgeDateProxyHandler = (
 
 registerToBridgeProxyHandler("plugins.dev/date", toBridgeDateProxyHandler);
 
+const fromBridgeMapProxyHandler = (
+  bridge: Bridge,
+  proxyId: ProxyId,
+  value: any
+) => {
+  return new Map(value as Array<[any, any]>);
+};
+
+registerFromBridgeProxyHandler("plugins.dev/map", fromBridgeMapProxyHandler);
+const toBridgeMapProxyHandler = (
+  proxyId: ProxyIdFactory,
+  localState: LocalBridgeState,
+  hostValue: HostValue,
+  toBridge: ProxyHandlerToBridge
+) => {
+  if (!(hostValue instanceof Map)) {
+    return null;
+  }
+
+  return {
+    proxyId: proxyId(localState, hostValue),
+    replacementValue: toBridge(Array.from(hostValue.entries()), []),
+  };
+};
+
+registerToBridgeProxyHandler("plugins.dev/map", toBridgeMapProxyHandler);
+
+const fromBridgeSetProxyHandler = (
+  bridge: Bridge,
+  proxyId: ProxyId,
+  value: any
+) => {
+  return new Set(value as Array<any>);
+};
+
+registerFromBridgeProxyHandler("plugins.dev/set", fromBridgeSetProxyHandler);
+const toBridgeSetProxyHandler = (
+  proxyId: ProxyIdFactory,
+  localState: LocalBridgeState,
+  hostValue: HostValue,
+  toBridge: ProxyHandlerToBridge
+) => {
+  if (!(hostValue instanceof Set)) {
+    return null;
+  }
+
+  return {
+    proxyId: proxyId(localState, hostValue),
+    replacementValue: toBridge(Array.from(hostValue.values()), []),
+  };
+};
+
+registerToBridgeProxyHandler("plugins.dev/set", toBridgeSetProxyHandler);
+
 const isToBridgeProxyValueProxyId = (
   v: ToBridgeProxyValue
 ): v is ToBridgeProxyValueProxyId =>
@@ -307,7 +363,19 @@ const _toBridge = (
   path: Array<string | number>
 ): any => {
   const handlerValue = toBridgeProxyHandlers.reduce(
-    (value, { handler }) => value || handler(localState, hostValue),
+    (value, { handler }) =>
+      value ||
+      handler(
+        localState,
+        hostValue,
+        (hostValue: HostValue, relativePath: Array<string | number>) =>
+          _toBridge(
+            localState,
+            bridgeProxyIds,
+            hostValue,
+            path.concat(relativePath)
+          )
+      ),
     null as ToBridgeProxyValue | null
   );
 
