@@ -313,17 +313,26 @@ const getAtPath = (obj: any, path: Array<string>) =>
 describe("properties", () => {
   it("should be symmetric for simple data", () => {
     fc.assert(
-      fc.property(fc.object(), (obj) => {
-        const localState = {
-          localProxies: new Map<ProxyId, ProxyValue>(),
-          knownProxies: new WeakMap<ProxyValue, ProxyId>(),
-        };
-        const bridgeValue = toBridge(localState, obj);
-        const bridge = bridgeFromLocalState(localState);
-        expect(fromBridge(bridge, bridgeValue)).toEqual(obj);
-      })
+      fc.property(
+        fc.anything({
+          withDate: true,
+          withMap: false,
+          withObjectString: true,
+          withSet: false,
+        }),
+        (input: any) => {
+          const localState = {
+            localProxies: new Map<ProxyId, ProxyValue>(),
+            knownProxies: new WeakMap<ProxyValue, ProxyId>(),
+          };
+          const bridgeValue = toBridge(localState, input);
+          const bridge = bridgeFromLocalState(localState);
+          expect(fromBridge(bridge, bridgeValue)).toEqual(input);
+        }
+      )
     );
   });
+
   it("should be identical other than functions, which should proxy", () => {
     fc.assert(
       fc.property(
@@ -354,6 +363,46 @@ describe("properties", () => {
             );
             getAtPath(localVal, fnPath)();
             expect(getAtPath(preBridgeVal, fnPath)).toHaveBeenCalled();
+            expect(localState.localProxies.size).toEqual(fnPaths.length);
+          });
+        }
+      )
+    );
+  });
+
+  it("should be identical other than Errors, which should be transformed", () => {
+    fc.assert(
+      fc.property(
+        // we ensure that object keys won't conflict with function keys by restricting lengths
+        fc.object({ key: fc.string(0, 5) }),
+        fc.array(fc.array(fc.string(6, 8), 1, 10)),
+        (simpleObj, errorPaths) => {
+          const localState = {
+            localProxies: new Map<ProxyId, ProxyValue>(),
+            knownProxies: new WeakMap<ProxyValue, ProxyId>(),
+          };
+          const preBridgeVal = errorPaths.reduce(
+            (obj, errorPath) =>
+              setAtPath(
+                obj,
+                errorPath,
+                new Error("message: " + errorPath.join("."))
+              ),
+            clone(simpleObj)
+          );
+          const bridgeValue = toBridge(localState, preBridgeVal);
+          const bridge = bridgeFromLocalState(localState);
+          const localVal = fromBridge(bridge, bridgeValue);
+          expect(localVal).toMatchObject(simpleObj);
+          errorPaths.forEach((errorPath) => {
+            expect(getAtPath(preBridgeVal, errorPath)).not.toBe(
+              getAtPath(localVal, errorPath)
+            );
+            expect(getAtPath(localVal, errorPath).name).toEqual("Error");
+            expect(getAtPath(localVal, errorPath).message).toEqual(
+              "message: " + errorPath.join(".")
+            );
+            expect(localState.localProxies.size).toEqual(0);
           });
         }
       )
