@@ -319,6 +319,7 @@ describe("properties", () => {
           withMap: true,
           withObjectString: true,
           withSet: true,
+          withTypedArray: true,
         }),
         (input: any) => {
           const localState = {

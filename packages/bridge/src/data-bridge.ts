@@ -326,6 +326,7 @@ const fromBridgeSetProxyHandler = (
 };
 
 registerFromBridgeProxyHandler("plugins.dev/set", fromBridgeSetProxyHandler);
+
 const toBridgeSetProxyHandler = (
   proxyId: ProxyIdFactory,
   localState: LocalBridgeState,
@@ -343,6 +344,27 @@ const toBridgeSetProxyHandler = (
 };
 
 registerToBridgeProxyHandler("plugins.dev/set", toBridgeSetProxyHandler);
+
+const toBridgeSpecialArrayProxyHandler = (
+  proxyId: ProxyIdFactory,
+  localState: LocalBridgeState,
+  hostValue: HostValue,
+  toBridge: ProxyHandlerToBridge
+) => {
+  if (!(ArrayBuffer.isView(hostValue) || hostValue instanceof ArrayBuffer)) {
+    return null;
+  }
+
+  // ArrayBuffers, TypedArrays, and other views can pass through as-is, structured cloning handles them properly
+  return {
+    replacementValue: hostValue,
+  };
+};
+
+registerToBridgeProxyHandler(
+  "plugins.dev/special-array",
+  toBridgeSpecialArrayProxyHandler
+);
 
 const isToBridgeProxyValueProxyId = (
   v: ToBridgeProxyValue
