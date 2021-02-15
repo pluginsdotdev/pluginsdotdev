@@ -386,6 +386,20 @@ describe("fromBridge", () => {
     expect(fromBridgeVal.get("self").get("a")).toEqual("hi");
     expect(fromBridgeVal.get("self")).toBe(fromBridgeVal);
   });
+  it("should work for self-referential sets", () => {
+    const localState = {
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
+    };
+
+    const set = new Set<any>(["a"]);
+    set.add(set);
+    const bridgeValue = toBridge(localState, set);
+    const bridge = bridgeFromLocalState(localState);
+    const fromBridgeVal = fromBridge(bridge, bridgeValue);
+    expect(fromBridgeVal.has("a")).toBeTruthy();
+    expect(fromBridgeVal.has(fromBridgeVal)).toBeTruthy();
+  });
 });
 
 const setAtPath = (obj: any, path: Array<string>, val: any) => {

@@ -336,7 +336,14 @@ const fromBridgeSetProxyHandler = (
   proxyId: ProxyId,
   value: any
 ) => {
-  return new Set(value as Array<any>);
+  const setItems = value as Array<any>;
+  const regular = setItems.filter((item) => item !== set);
+  const set = new Set(setItems);
+  const hasSelf = setItems.find((item) => item === setItems);
+  if (hasSelf) {
+    set.add(set);
+  }
+  return set;
 };
 
 registerFromBridgeProxyHandler("plugins.dev/set", fromBridgeSetProxyHandler);
