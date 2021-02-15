@@ -52,7 +52,5 @@
   },
   "bugs": {
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
-  },
-  "dependencies": {},
-  "devDependencies": {}
+  }
 }

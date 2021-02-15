@@ -53,10 +53,7 @@
   "bugs": {
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
   },
-  "devDependencies": {
-    "@pluginsdotdev/style-types": "^0.0.1"
-  },
   "dependencies": {
-    "@pluginsdotdev/sanitizers": "^0.0.1"
+    "@pluginsdotdev/sanitizers": "file:../sanitizers"
   }
 }

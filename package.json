@@ -36,8 +36,22 @@
       "pre-commit": "lerna run pre-commit"
     }
   },
-  "dependencies": {},
+  "dependencies": {
+    "@pluginsdotdev/bridge": "file:packages/bridge",
+    "@pluginsdotdev/docs": "file:packages/docs",
+    "@pluginsdotdev/plugin": "file:packages/plugin",
+    "@pluginsdotdev/react-host": "file:packages/react-host",
+    "@pluginsdotdev/react-plugin": "file:packages/react-plugin",
+    "@pluginsdotdev/sanitizers": "file:packages/sanitizers",
+    "@pluginsdotdev/style-types": "file:packages/style-types",
+    "@pluginsdotdev/style-utils": "file:packages/style-utils",
+    "@pluginsdotdev/test-utils": "file:packages/test-utils"
+  },
   "devDependencies": {
+    "@pluginsdotdev/plugin": "file:../plugin",
+    "@pluginsdotdev/react-plugin": "^0.0.1",
+    "@pluginsdotdev/style-types": "file:../style-types",
+    "@pluginsdotdev/test-utils": "^0.0.0",
     "@rollup/plugin-replace": "^2.3.3",
     "@types/clone": "^2.1.0",
     "@types/jest": "^26.0.10",
@@ -49,6 +63,7 @@
     "@types/react-reconciler": "^0.18.0",
     "clone": "^2.1.2",
     "cz-conventional-changelog": "^3.3.0",
+    "dompurify": "^2.1.1",
     "fast-check": "^2.13.0",
     "flowgen": "^1.11.0",
     "husky": "^4.2.5",
@@ -56,8 +71,11 @@
     "lerna": "^3.22.1",
     "lint-staged": "^8.0.0",
     "lodash.camelcase": "^4.3.0",
+    "loose-envify": "^1.4.0",
     "prettier": "^2.1.1",
     "puppeteer": "^5.2.1",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
     "rimraf": "^2.6.2",
     "rollup": "^0.67.0",
     "rollup-plugin-commonjs": "^9.1.8",

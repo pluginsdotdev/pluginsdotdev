@@ -53,20 +53,16 @@
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
   },
   "dependencies": {
-    "@pluginsdotdev/bridge": "^0.0.1",
-    "@pluginsdotdev/sanitizers": "^0.0.1",
-    "@pluginsdotdev/style-types": "^0.0.1",
-    "@pluginsdotdev/style-utils": "^0.0.1",
+    "@pluginsdotdev/bridge": "file:../bridge",
+    "@pluginsdotdev/sanitizers": "file:../sanitizers",
+    "@pluginsdotdev/style-types": "file:../style-types",
+    "@pluginsdotdev/style-utils": "file:../style-utils",
     "murmurhash-js": "^1.0.0",
     "url": "^0.11.0"
   },
   "devDependencies": {
-    "@pluginsdotdev/plugin": "^0.0.1",
-    "@pluginsdotdev/react-plugin": "^0.0.1",
-    "@pluginsdotdev/test-utils": "^0.0.0",
-    "dompurify": "^2.1.1",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1"
+    "@pluginsdotdev/react-plugin": "file:../react-plugin",
+    "@pluginsdotdev/test-utils": "file:../test-utils"
   },
   "peerDependencies": {
     "react": "16.x"

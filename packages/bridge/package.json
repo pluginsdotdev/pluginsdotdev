@@ -57,6 +57,6 @@
     "loose-envify": "^1.4.0"
   },
   "devDependencies": {
-    "@pluginsdotdev/test-utils": "^0.0.0"
+    "@pluginsdotdev/test-utils": "file:../test-utils"
   }
 }

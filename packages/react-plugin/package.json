@@ -53,13 +53,12 @@
     "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
   },
   "dependencies": {
-    "@pluginsdotdev/bridge": "^0.0.1",
-    "@pluginsdotdev/plugin": "^0.0.1",
+    "@pluginsdotdev/bridge": "file:../bridge",
+    "@pluginsdotdev/plugin": "file:../plugin",
     "react": "^16.13.1",
     "react-reconciler": "^0.25.1"
   },
   "devDependencies": {
-    "@pluginsdotdev/test-utils": "^0.0.0",
-    "loose-envify": "^1.4.0"
+    "@pluginsdotdev/test-utils": "file:../test-utils"
   }
 }
