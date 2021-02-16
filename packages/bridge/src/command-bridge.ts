@@ -3,6 +3,7 @@ import {
   toBridge,
   registerFromBridgeProxyHandlerMiddleware,
 } from "./data-bridge";
+import { getDefaultProxyHandlers } from "./default-proxy-handlers";
 
 import type {
   Bridge,
@@ -18,6 +19,7 @@ import type {
   ReconciliationUpdate,
   HostValue,
   FromBridgeProxyHandler,
+  ProxyHandler,
 } from "./types";
 
 const intermediateFrameScript = `
@@ -234,9 +236,10 @@ const FinalizationRegistry =
 
 const makeCommonBridge = (
   sendMessage: (msg: PluginMessage) => Promise<void>,
-  firstClassHandlers?: Array<
+  firstClassHandlers: Array<
     (bridge: InternalBridge, msg: PluginMessage) => boolean
-  >
+  >,
+  proxyHandlers?: Array<ProxyHandler>
 ): {
   bridge: Bridge & { handleMessage: (pluginMsg: PluginMessage) => void };
   fromThisBridge: (bridgeValue: Readonly<BridgeValue>) => any;
@@ -266,7 +269,7 @@ const makeCommonBridge = (
   };
 
   const toThisBridge = (value: any): BridgeValue => {
-    return toBridge(localState, value);
+    return toBridge(localState, value, proxyHandlers);
   };
 
   const handleInvokeMessage = (bridge: Bridge, msg: InvokeMessage) => {
@@ -278,7 +281,7 @@ const makeCommonBridge = (
       return;
     }
 
-    const args: Array<any> = fromBridge(bridge, argsBridgeValue);
+    const args: Array<any> = fromBridge(bridge, argsBridgeValue, proxyHandlers);
 
     try {
       const result = fn.apply(null, args);
@@ -416,14 +419,15 @@ const makeCommonBridge = (
 
       switch (payload.resultType) {
         case "error":
-          throw fromBridge(this, payload.errorBridgeValue);
+          throw fromBridge(this, payload.errorBridgeValue, proxyHandlers);
         case "result":
-          return fromBridge(this, payload.resultBridgeValue);
+          return fromBridge(this, payload.resultBridgeValue, proxyHandlers);
       }
     },
   };
 
-  const fromThisBridge = fromBridge.bind(null, bridge);
+  const fromThisBridge = (bridgeValue: BridgeValue) =>
+    fromBridge(bridge, bridgeValue, proxyHandlers);
 
   return {
     bridge,
@@ -440,7 +444,8 @@ const makeHostBridge = async (
     updates: Array<ReconciliationUpdate>
   ) => void,
   hostId: HostId,
-  pluginUrl: PluginUrl
+  pluginUrl: PluginUrl,
+  proxyHandlers?: Array<ProxyHandler>
 ): Promise<HostBridge> => {
   const { frame, targetOrigin } = await initializeIntermediateToPluginBridge(
     intermediateFrameWindow,
@@ -485,7 +490,10 @@ const makeHostBridge = async (
       return false;
     }
 
-    reconcile(msg.payload.rootId, fromBridge(bridge, msg.payload.updates));
+    reconcile(
+      msg.payload.rootId,
+      fromBridge(bridge, msg.payload.updates, proxyHandlers)
+    );
 
     return true;
   };
@@ -495,7 +503,7 @@ const makeHostBridge = async (
     bridge: commonBridge,
     fromThisBridge,
     toThisBridge,
-  } = makeCommonBridge(queueOrRun, firstClassHandlers);
+  } = makeCommonBridge(queueOrRun, firstClassHandlers, proxyHandlers);
 
   const bridge = {
     ...commonBridge,
@@ -534,14 +542,40 @@ interface HostConfig {
   styleNonce?: string;
 }
 
-const initializeHostBridge = (
-  hostId: HostId,
-  hostConfig: HostConfig = {},
+const getProxyHandlers = (
+  opts: ProxyHandlerOptions
+): Array<ProxyHandler> | undefined => {
+  if (opts.proxyHandlers) {
+    return opts.proxyHandlers;
+  }
+
+  if (opts.extraProxyHandlers) {
+    return getDefaultProxyHandlers().concat(opts.extraProxyHandlers);
+  }
+
+  return void 0;
+};
+
+export type ProxyHandlerOptions = {
+  proxyHandlers?: Array<ProxyHandler>;
+  extraProxyHandlers?: Array<ProxyHandler>;
+};
+
+export type HostBridgeOptions = ProxyHandlerOptions & {
+  hostId: HostId;
   reconcile: (
     rootId: RenderRootId,
     updates: Array<ReconciliationUpdate>
-  ) => void
-): Promise<HostBridgeMaker> => {
+  ) => void;
+  hostConfig?: HostConfig;
+};
+
+const initializeHostBridge = ({
+  hostId,
+  hostConfig,
+  reconcile,
+  ...proxyOpts
+}: HostBridgeOptions): Promise<HostBridgeMaker> => {
   let sendCommandToIntermediateFrame: null | OnReceiveCallback = null;
   let { resolve: onReady, promise: ready } = resolvablePromise();
   let bridgeByWindow = new Map<Window, HostBridge>();
@@ -586,7 +620,7 @@ const initializeHostBridge = (
           )).sendCommand = onReceiveCommandFromIntermediateFrame;
 
           loadSameOriginFrameScript(
-            hostConfig,
+            hostConfig ?? {},
             intermediateFrame,
             intermediateFrameScript
           );
@@ -613,7 +647,8 @@ const initializeHostBridge = (
         sendCommandToIntermediateFrame,
         reconcile,
         hostId,
-        pluginUrl
+        pluginUrl,
+        getProxyHandlers(proxyOpts)
       );
       bridgeByWindow.set(bridge.pluginFrameWindow, bridge);
       return bridge;
@@ -623,10 +658,17 @@ const initializeHostBridge = (
 
 const { parent, addEventListener } = window;
 
-const initializePluginBridge = async (
-  origin: string,
-  render: (rootId: RenderRootId, props: Props) => void
-): Promise<PluginBridge> => {
+export type PluginBridgeOptions = ProxyHandlerOptions & {
+  origin: string;
+  render: (rootId: RenderRootId, props: Props) => void;
+};
+
+const initializePluginBridge = async ({
+  origin,
+  render,
+  ...proxyOpts
+}: PluginBridgeOptions): Promise<PluginBridge> => {
+  const proxyHandlers = getProxyHandlers(proxyOpts);
   const renderHandler = (
     bridge: InternalBridge,
     msg: PluginMessage
@@ -636,7 +678,7 @@ const initializePluginBridge = async (
     }
 
     const { rootId, props } = msg.payload;
-    render(rootId, fromBridge(bridge, props));
+    render(rootId, fromBridge(bridge, props, proxyHandlers));
     return true;
   };
   const firstClassHandlers = [renderHandler];
@@ -648,7 +690,7 @@ const initializePluginBridge = async (
     bridge: commonBridge,
     fromThisBridge,
     toThisBridge,
-  } = makeCommonBridge(sendMessage, firstClassHandlers);
+  } = makeCommonBridge(sendMessage, firstClassHandlers, proxyHandlers);
 
   const bridge = {
     ...commonBridge,

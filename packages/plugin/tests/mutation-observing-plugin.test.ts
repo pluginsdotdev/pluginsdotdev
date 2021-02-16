@@ -28,16 +28,19 @@ describe("mutation-observing-plugin", () => {
     const page = t.page();
     await page.evaluate(() => {
       (<any>window).index
-        .initializeHostBridge(
-          "host",
-          {},
-          (rootId: RenderRootId, updates: Array<ReconciliationUpdate>) => {
+        .initializeHostBridge({
+          hostId: "host",
+          hostConfig: {},
+          reconcile: (
+            rootId: RenderRootId,
+            updates: Array<ReconciliationUpdate>
+          ) => {
             const d = document.createElement("div");
             d.id = "target";
             d.textContent = JSON.stringify({ rootId, updates });
             document.body.appendChild(d);
-          }
-        )
+          },
+        })
         .then((makeBridge: (pluginUrl: PluginUrl) => HostBridge) =>
           makeBridge("http://localhost:8081/tests/plugin.html")
         )
@@ -110,16 +113,16 @@ describe("mutation-observing-plugin", () => {
         new Promise<{ rootId: number; updates: Array<ReconciliationUpdate> }>(
           (resolve, reject) => {
             (<any>window).index
-              .initializeHostBridge(
-                "host",
-                {},
-                (
+              .initializeHostBridge({
+                hostId: "host",
+                hostConfig: {},
+                reconcile: (
                   rootId: RenderRootId,
                   updates: Array<ReconciliationUpdate>
                 ) => {
                   resolve({ rootId, updates });
-                }
-              )
+                },
+              })
               .then((makeBridge: (pluginUrl: PluginUrl) => HostBridge) =>
                 makeBridge("http://localhost:8081/tests/plugin.html")
               )

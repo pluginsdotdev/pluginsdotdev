@@ -1,6 +1,9 @@
-import { registerFromBridgeProxyHandler } from "@pluginsdotdev/bridge";
-
-import type { Bridge, ProxyId } from "@pluginsdotdev/bridge";
+import type {
+  Bridge,
+  ProxyId,
+  ProxyHandler,
+  ProxyType,
+} from "@pluginsdotdev/bridge";
 import type { GetNodeById } from "./types";
 
 interface EventCtor {
@@ -25,14 +28,10 @@ const eventCtorMap: Record<string, EventCtor> = {
 };
 
 const { InputDeviceCapabilities } = window as any;
-export const registerEventFromBridgeProxyHandler = (
+export const getEventProxyHandler = (
   getNodeById: GetNodeById
-) => {
-  const eventFromBridgeProxyHandler = (
-    bridge: Bridge,
-    proxyId: ProxyId,
-    value: any
-  ) => {
+): ProxyHandler => {
+  const fromBridgeHandler = (bridge: Bridge, proxyId: ProxyId, value: any) => {
     const { type, data }: { type: string; data: any } = value;
     const EventCtor = eventCtorMap[type] || Event;
     if (data.sourceCapabilities) {
@@ -60,8 +59,8 @@ export const registerEventFromBridgeProxyHandler = (
     return evt;
   };
 
-  registerFromBridgeProxyHandler(
-    "plugins.dev/Event",
-    eventFromBridgeProxyHandler
-  );
+  return {
+    type: "plugins.dev/Event" as ProxyType,
+    fromBridgeHandler,
+  };
 };

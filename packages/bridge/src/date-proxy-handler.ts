@@ -4,9 +4,13 @@ import type {
   ProxyIdFactory,
   LocalBridgeState,
   HostValue,
+  ProxyType,
+  ProxyHandler,
 } from "./types";
 
-export const toBridgeHandler = (
+const type = "plugins.dev/date" as ProxyType;
+
+const toBridgeHandler = (
   proxyId: ProxyIdFactory,
   localState: LocalBridgeState,
   hostValue: HostValue
@@ -20,3 +24,5 @@ export const toBridgeHandler = (
     replacementValue: hostValue,
   };
 };
+
+export const handler: ProxyHandler = { type, toBridgeHandler };

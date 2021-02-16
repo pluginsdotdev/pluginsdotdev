@@ -1,10 +1,10 @@
-import { registerToBridgeProxyHandler } from "@pluginsdotdev/bridge";
-
 import type {
   NodeId,
   LocalBridgeState,
   HostValue,
   ProxyIdFactory,
+  ProxyHandler,
+  ProxyType,
 } from "@pluginsdotdev/bridge";
 
 const isEvent = (e: any): e is Event => {
@@ -72,7 +72,7 @@ const toSimpleObj = (
   }, {} as { [key: string]: any });
 };
 
-export const proxyHandler = (
+export const toBridgeHandler = (
   nodeIdByNode: WeakMap<EventTarget, NodeId>,
   proxyId: ProxyIdFactory,
   localState: LocalBridgeState,
@@ -91,9 +91,9 @@ export const proxyHandler = (
   };
 };
 
-export const registerHandler = (nodeIdByNode: WeakMap<EventTarget, NodeId>) => {
-  registerToBridgeProxyHandler(
-    "plugins.dev/Event",
-    proxyHandler.bind(null, nodeIdByNode)
-  );
-};
+export const getProxyHandler = (
+  nodeIdByNode: WeakMap<EventTarget, NodeId>
+) => ({
+  type: "plugins.dev/Event" as ProxyType,
+  toBridgeHandler: toBridgeHandler.bind(null, nodeIdByNode),
+});

@@ -4,9 +4,13 @@ import type {
   ProxyIdFactory,
   LocalBridgeState,
   HostValue,
+  ProxyType,
+  ProxyHandler,
 } from "./types";
 
-export const toBridgeHandler = (
+const type = "plugins.dev/error" as ProxyType;
+
+const toBridgeHandler = (
   proxyId: ProxyIdFactory,
   localState: LocalBridgeState,
   hostValue: HostValue
@@ -24,12 +28,14 @@ export const toBridgeHandler = (
   };
 };
 
-export const fromBridgeHandler = (
-  bridge: Bridge,
-  proxyId: ProxyId,
-  value: any
-) => {
+const fromBridgeHandler = (bridge: Bridge, proxyId: ProxyId, value: any) => {
   const error: any = new Error(value.message);
   error.name = value.name;
   return error;
+};
+
+export const handler: ProxyHandler = {
+  type,
+  toBridgeHandler,
+  fromBridgeHandler,
 };

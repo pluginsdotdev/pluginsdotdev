@@ -5,9 +5,13 @@ import type {
   LocalBridgeState,
   HostValue,
   ProxyHandlerToBridge,
+  ProxyType,
+  ProxyHandler,
 } from "./types";
 
-export const toBridgeHandler = (
+const type = "plugins.dev/set" as ProxyType;
+
+const toBridgeHandler = (
   proxyId: ProxyIdFactory,
   localState: LocalBridgeState,
   hostValue: HostValue,
@@ -24,11 +28,7 @@ export const toBridgeHandler = (
   };
 };
 
-export const fromBridgeHandler = (
-  bridge: Bridge,
-  proxyId: ProxyId,
-  value: any
-) => {
+const fromBridgeHandler = (bridge: Bridge, proxyId: ProxyId, value: any) => {
   const setItems = value as Array<any>;
   const regular = setItems.filter((item) => item !== set);
   const set = new Set(setItems);
@@ -37,4 +37,10 @@ export const fromBridgeHandler = (
     set.add(set);
   }
   return set;
+};
+
+export const handler: ProxyHandler = {
+  type,
+  toBridgeHandler,
+  fromBridgeHandler,
 };

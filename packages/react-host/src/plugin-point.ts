@@ -1,10 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import url from "url";
-import {
-  initializeHostBridge,
-  registerFromBridgeProxyHandler,
-} from "@pluginsdotdev/bridge";
+import { initializeHostBridge } from "@pluginsdotdev/bridge";
 import { getStyleSheetRulesStringifier } from "@pluginsdotdev/style-utils";
 import {
   isValidElement,
@@ -13,8 +10,8 @@ import {
   domainFromUrl,
 } from "@pluginsdotdev/sanitizers";
 import { applyUpdates, emptyRootNode, eventConfigsMatch } from "./update-utils";
-import { registerHandler as registerEventHandler } from "./event-bridge-proxy";
-import { registerHandler as registerSyntheticEventHandler } from "./synthetic-event-bridge-proxy";
+import { getProxyHandler as getEventProxyHandler } from "./event-bridge-proxy";
+import { proxyHandler as syntheticEventProxyHandler } from "./synthetic-event-bridge-proxy";
 
 import type { ComponentType, RefAttributes, ReactNode, RefObject } from "react";
 import type {
@@ -30,9 +27,6 @@ import type { Node, RootNode, NodeEventConfig } from "./update-utils";
 
 // ok that this is global since each EventTarget is only in a single NodeId namespace
 const nodeIdByNode = new WeakMap<EventTarget, NodeId>();
-
-registerEventHandler(nodeIdByNode);
-registerSyntheticEventHandler();
 
 const isHostComponent = (type: string) => type.startsWith("host:");
 const hostComponentName = (type: string) => type.replace(/^host:/, "");
@@ -384,7 +378,15 @@ class PluginPoint<P> extends React.Component<PluginPointProps<P>> {
       },
     });
 
-    initializeHostBridge(hostId, hostConfig, this.onReconcile.bind(this))
+    initializeHostBridge({
+      hostId,
+      hostConfig,
+      reconcile: this.onReconcile.bind(this),
+      extraProxyHandlers: [
+        getEventProxyHandler(nodeIdByNode),
+        syntheticEventProxyHandler,
+      ],
+    })
       .then((bridgeMaker) => bridgeMaker(pluginUrlWithParams))
       .then((bridge) => {
         this.setState({ bridge });

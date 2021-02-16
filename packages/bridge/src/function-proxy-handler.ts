@@ -4,14 +4,18 @@ import type {
   ProxyIdFactory,
   LocalBridgeState,
   HostValue,
+  ProxyType,
+  ProxyHandler,
 } from "./types";
 
-export const fromBridgeHandler = (bridge: Bridge, proxyId: ProxyId) => {
+const type = "plugins.dev/function" as ProxyType;
+
+const fromBridgeHandler = (bridge: Bridge, proxyId: ProxyId) => {
   // TODO: catch and unwrap any exception
   return (...args: any[]): Promise<any> => bridge.invokeFn(proxyId, args);
 };
 
-export const toBridgeHandler = (
+const toBridgeHandler = (
   proxyId: ProxyIdFactory,
   localState: LocalBridgeState,
   hostValue: HostValue
@@ -28,4 +32,10 @@ export const toBridgeHandler = (
     proxyId: proxyId(localState, hostValue),
     retainedValue: hostValue,
   };
+};
+
+export const handler: ProxyHandler = {
+  type,
+  toBridgeHandler,
+  fromBridgeHandler,
 };

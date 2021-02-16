@@ -1,6 +1,7 @@
 import { initializePluginBridge } from "@pluginsdotdev/bridge";
 import { extractStylesheetRules } from "@pluginsdotdev/style-utils";
 import { setupPluginEnvironment } from "./setup-plugin-environment";
+import { getEventProxyHandler } from "./event-proxy-handler";
 import { isCustomElement } from "./is-custom-element";
 import { browserData } from "./browser-data";
 
@@ -678,10 +679,11 @@ const registerPlugin = async (pluginFactory: PluginFactory) => {
     ...pluginConfig,
     exposedComponents: makeExposedComponents(exposedComponentsList),
   });
-  const pluginBridge: PluginBridge = await initializePluginBridge(
-    hostOrigin,
-    onRender
-  );
+  const pluginBridge: PluginBridge = await initializePluginBridge({
+    origin: hostOrigin,
+    render: onRender,
+    extraProxyHandlers: [getEventProxyHandler(getNodeById)],
+  });
 
   function onRender(rootId: RenderRootId, props: Props) {
     const root = constructRenderRootIfNeeded(rootId, pluginBridge);
@@ -750,7 +752,6 @@ const getNodeById: GetNodeById = (nodeId) => {
 };
 
 setupPluginEnvironment({
-  getNodeById,
   queueHandlerUpdate,
 });
 

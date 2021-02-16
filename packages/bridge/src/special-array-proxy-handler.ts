@@ -5,9 +5,13 @@ import type {
   LocalBridgeState,
   HostValue,
   ProxyHandlerToBridge,
+  ProxyType,
+  ProxyHandler,
 } from "./types";
 
-export const toBridgeHandler = (
+const type = "plugins.dev/special-array" as ProxyType;
+
+const toBridgeHandler = (
   proxyId: ProxyIdFactory,
   localState: LocalBridgeState,
   hostValue: HostValue
@@ -21,3 +25,5 @@ export const toBridgeHandler = (
     replacementValue: hostValue,
   };
 };
+
+export const handler: ProxyHandler = { type, toBridgeHandler };

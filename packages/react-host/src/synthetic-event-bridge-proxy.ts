@@ -1,10 +1,10 @@
-import { registerToBridgeProxyHandler } from "@pluginsdotdev/bridge";
-
 import type { SyntheticEvent } from "react";
 import type {
   LocalBridgeState,
   HostValue,
   ProxyIdFactory,
+  ProxyHandler,
+  ProxyType,
 } from "@pluginsdotdev/bridge";
 
 /**
@@ -82,7 +82,7 @@ const toSimpleObj = (orig: { [key: string]: any }) => {
   }, {} as { [key: string]: any });
 };
 
-export const proxyHandler = (
+export const toBridgeHandler = (
   _: ProxyIdFactory,
   localState: LocalBridgeState,
   hostValue: HostValue
@@ -96,6 +96,7 @@ export const proxyHandler = (
   };
 };
 
-export const registerHandler = () => {
-  registerToBridgeProxyHandler("plugins.dev/SyntheticEvent", proxyHandler);
+export const proxyHandler = {
+  type: "plugins.dev/SyntheticEvent" as ProxyType,
+  toBridgeHandler,
 };

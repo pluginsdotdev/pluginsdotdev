@@ -5,13 +5,13 @@ import type {
   LocalBridgeState,
   HostValue,
   ProxyHandlerToBridge,
+  ProxyType,
+  ProxyHandler,
 } from "./types";
 
-export const fromBridgeHandler = (
-  bridge: Bridge,
-  proxyId: ProxyId,
-  value: any
-) => {
+const type = "plugins.dev/map" as ProxyType;
+
+const fromBridgeHandler = (bridge: Bridge, proxyId: ProxyId, value: any) => {
   const arr = value as Array<[any, any]>;
   const m = new Map(arr);
   arr.forEach(([k, v]) => {
@@ -26,7 +26,7 @@ export const fromBridgeHandler = (
   return m;
 };
 
-export const toBridgeHandler = (
+const toBridgeHandler = (
   proxyId: ProxyIdFactory,
   localState: LocalBridgeState,
   hostValue: HostValue,
@@ -42,4 +42,10 @@ export const toBridgeHandler = (
     proxyId: pId,
     replacementValue: toBridge(Array.from(hostValue.entries()), [], pId),
   };
+};
+
+export const handler: ProxyHandler = {
+  type,
+  toBridgeHandler,
+  fromBridgeHandler,
 };

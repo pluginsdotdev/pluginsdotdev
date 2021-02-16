@@ -25,7 +25,10 @@
     }
 
     // localhost:8080 can be hard coded because we know the domain of the host
-    window.index.initializePluginBridge('http://localhost:8080', render).then(bridge => {
+    window.index.initializePluginBridge({
+      origin: 'http://localhost:8080',
+      render
+    }).then(bridge => {
       console.log('initialized plugin bridge');
     });
   </script>

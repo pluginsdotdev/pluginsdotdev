@@ -21,6 +21,8 @@ import type {
   ProxyId,
 } from "@pluginsdotdev/bridge";
 
+const { toBridgeHandler } = proxyHandler;
+
 describe("proxyHandler", () => {
   it("should not proxy non-synthetic events", () => {
     fc.assert(
@@ -32,7 +34,7 @@ describe("proxyHandler", () => {
           localProxies: new Map(),
           knownProxies: new Map(),
         };
-        expect(proxyHandler(idFactory, localState, hostValue)).toBe(null);
+        expect(toBridgeHandler(idFactory, localState, hostValue)).toBe(null);
       })
     );
   });
@@ -93,7 +95,7 @@ describe("proxyHandler", () => {
             localProxies: new Map(),
             knownProxies: new Map(),
           };
-          const proxied = proxyHandler(idFactory, localState, event);
+          const proxied = toBridgeHandler(idFactory, localState, event);
           expect(proxied).toBeTruthy();
           const { replacementValue } = proxied!;
           expect(replacementValue).toBeTruthy();
@@ -188,7 +190,7 @@ describe("proxyHandler", () => {
             localProxies: new Map(),
             knownProxies: new Map(),
           };
-          const proxied = proxyHandler(idFactory, localState, event);
+          const proxied = toBridgeHandler(idFactory, localState, event);
 
           if (!isSyntheticEvent) {
             expect(proxied).toBe(null);

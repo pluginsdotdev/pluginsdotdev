@@ -148,6 +148,12 @@ export type FromBridgeProxyHandler = (
   value?: any
 ) => any;
 
+export type ProxyHandler = {
+  fromBridgeHandler?: FromBridgeProxyHandler;
+  toBridgeHandler?: ToBridgeProxyHandler;
+  type: ProxyType;
+};
+
 export type RenderRootId = number;
 
 export type Props = { [key: string]: any };

@@ -1,4 +1,4 @@
-import { registerDefaultProxyHandlers } from "./default-proxy-handlers";
+import { getDefaultProxyHandlers } from "./default-proxy-handlers";
 
 import type {
   Bridge,
@@ -15,6 +15,7 @@ import type {
   ToBridgeProxyValueReplacementValue,
   ProxyIdFactory,
   ProxyHandlerToBridge,
+  ProxyHandler,
 } from "./types";
 
 export type ObjectPathParts = Array<string | number>;
@@ -104,17 +105,6 @@ export class UnregisteredProxyTypeError extends Error {
   }
 }
 
-type ToBridgeProxyHandlerWithId = (
-  localState: LocalBridgeState,
-  hostValue: HostValue,
-  toBridge: ProxyHandlerToBridge
-) => ToBridgeProxyValue | null;
-const toBridgeProxyHandlers: Array<{
-  type: ProxyType;
-  handler: ToBridgeProxyHandlerWithId;
-}> = [];
-const fromBridgeProxyHandlers = new Map<ProxyType, FromBridgeProxyHandler>();
-
 type FromBridgeProxyHandlerMiddleware = (
   handler: FromBridgeProxyHandler,
   bridge: Bridge,
@@ -152,67 +142,23 @@ const wrapProxyId = (unwrapped: UnwrappedProxyId): ProxyId =>
 const unwrapProxyId = (proxyId: ProxyId): UnwrappedProxyId =>
   parse(proxyId) as UnwrappedProxyId;
 
-// TODO: proxy id needs to be a string. maps don't handle object equality
+const nextIdsByType = new Map<ProxyType, number>();
 const makeProxyIdFactory = (type: ProxyType) => {
-  let nextId = 0;
-
   return (localState: LocalBridgeState, hostValue: HostValue): ProxyId => {
     const knownProxy = localState.knownProxies.get(hostValue);
     if (knownProxy) {
       return knownProxy;
     }
 
-    const id = ++nextId;
+    const id = (nextIdsByType.get(type) ?? 0) + 1;
+    nextIdsByType.set(type, id);
+
     return wrapProxyId({
       id,
       type,
     });
   };
 };
-
-/**
- * registerFromBridgeProxyHandler expects a namespaced type
- * ("namespace/name") a FromBridgeProxyHandler. The FromBridgeProxyHandler
- * will be called to re-hydrate any identifiers for its proxyType.
- *
- * @throws DuplicateProxyTypeError if multiple proxies of the same type are registered.
- **/
-export const registerFromBridgeProxyHandler = (
-  proxyType: string,
-  handler: FromBridgeProxyHandler
-): void => {
-  const type = proxyType as ProxyType;
-  if (fromBridgeProxyHandlers.has(type)) {
-    throw new DuplicateProxyTypeError(proxyType);
-  }
-  fromBridgeProxyHandlers.set(type, handler);
-};
-
-/**
- * registerToBridgeProxyHandler expects a namespaced type
- * ("namespace/name") a FromBridgeProxyHandler. The FromBridgeProxyHandler
- * will be called to re-hydrate any identifiers for its proxyType.
- *
- * @throws DuplicateProxyTypeError if multiple proxies of the same type are registered.
- **/
-export const registerToBridgeProxyHandler = (
-  proxyType: string,
-  handler: ToBridgeProxyHandler
-): void => {
-  const type = proxyType as ProxyType;
-  if (toBridgeProxyHandlers.some((handler) => handler.type === type)) {
-    throw new DuplicateProxyTypeError(proxyType);
-  }
-  toBridgeProxyHandlers.push({
-    type,
-    handler: handler.bind(null, makeProxyIdFactory(type)),
-  });
-};
-
-registerDefaultProxyHandlers(
-  registerToBridgeProxyHandler,
-  registerFromBridgeProxyHandler
-);
 
 const isToBridgeProxyValueProxyId = (
   v: ToBridgeProxyValue
@@ -227,6 +173,7 @@ const isToBridgeProxyValueReplacementValue = (
     "undefined";
 
 const _toBridge = (
+  proxyHandlers: Array<ProxyHandler>,
   localState: LocalBridgeState,
   bridgeProxyIds: Map<ObjectPath, ProxyId>,
   previouslySeenValues: Map<any, any>,
@@ -236,33 +183,45 @@ const _toBridge = (
   overrideProxyId?: ProxyId
 ): any => {
   const previouslySeenValueKey = standinHostValue ?? hostValue;
-  const handlerValue = toBridgeProxyHandlers.reduce(
-    (value, { handler }) =>
-      value ||
-      handler(
+  const handlerValue = proxyHandlers.reduce(
+    (value, { type, toBridgeHandler }) => {
+      if (value) {
+        return value;
+      }
+
+      if (!toBridgeHandler) {
+        return value;
+      }
+
+      const handlerToBridge = (
+        hostSubValue: HostValue,
+        relativePath: Array<string | number>,
+        currentValueProxyId?: ProxyId
+      ) => {
+        // simple recursive call but:
+        // 1. to handle self-referential proxied objects, we need to pass the proxyId to use.
+        // 2. we may want the children to use our original host value as their previouslySeenValueKey
+
+        const descendantPreviouslySeenValues = new Map(previouslySeenValues);
+        return _toBridge(
+          proxyHandlers,
+          localState,
+          bridgeProxyIds,
+          descendantPreviouslySeenValues,
+          hostSubValue,
+          path.concat(relativePath),
+          currentValueProxyId ? hostValue : void 0,
+          currentValueProxyId
+        );
+      };
+
+      return toBridgeHandler(
+        makeProxyIdFactory(type),
         localState,
         hostValue,
-        (
-          hostSubValue: HostValue,
-          relativePath: Array<string | number>,
-          currentValueProxyId?: ProxyId
-        ) => {
-          // simple recursive call but:
-          // 1. to handle self-referential proxied objects, we need to pass the proxyId to use.
-          // 2. we may want the children to use our original host value as their previouslySeenValueKey
-
-          const descendantPreviouslySeenValues = new Map(previouslySeenValues);
-          return _toBridge(
-            localState,
-            bridgeProxyIds,
-            descendantPreviouslySeenValues,
-            hostSubValue,
-            path.concat(relativePath),
-            currentValueProxyId ? hostValue : void 0,
-            currentValueProxyId
-          );
-        }
-      ),
+        handlerToBridge
+      );
+    },
     null as ToBridgeProxyValue | null
   );
 
@@ -325,6 +284,7 @@ const _toBridge = (
     hostValue.forEach(
       (hostVal, idx) =>
         (bridgeValue[idx] = _toBridge(
+          proxyHandlers,
           localState,
           bridgeProxyIds,
           previouslySeenValues,
@@ -356,6 +316,7 @@ const _toBridge = (
     });
     Object.keys(hostValue).forEach((key: string) => {
       bridgeValue[key] = _toBridge(
+        proxyHandlers,
         localState,
         bridgeProxyIds,
         previouslySeenValues,
@@ -379,11 +340,15 @@ const _toBridge = (
  **/
 export const toBridge = (
   localState: LocalBridgeState,
-  hostValue: HostValue
+  hostValue: HostValue,
+  proxyHandlers: Array<ProxyHandler> = getDefaultProxyHandlers()
 ): BridgeValue => {
   const bridgeProxyIds = new Map<ObjectPath, ProxyId>();
 
   const bridgeData = _toBridge(
+    proxyHandlers
+      .filter(({ toBridgeHandler }) => !!toBridgeHandler)
+      .map(({ toBridgeHandler, type }) => ({ toBridgeHandler, type })),
     localState,
     bridgeProxyIds,
     new Map<any, any>(),
@@ -430,9 +395,20 @@ const getAtPath = (container: any, path: ObjectPathParts): any =>
  **/
 export const fromBridge = (
   bridge: Bridge,
-  bridgeValue: Readonly<BridgeValue>
+  bridgeValue: Readonly<BridgeValue>,
+  proxyHandlers: Array<ProxyHandler> = getDefaultProxyHandlers()
 ): any => {
   const { bridgeProxyIds } = bridgeValue;
+  const fromBridgeProxyHandlers = proxyHandlers.reduce(
+    (m, { type, fromBridgeHandler }) => {
+      if (!fromBridgeHandler) {
+        return m;
+      }
+      m.set(type, fromBridgeHandler);
+      return m;
+    },
+    new Map<string, FromBridgeProxyHandler>()
+  );
   // we proceed by converting the longest paths first because this ensures that children are
   // processed before parents.
   const paths = Array.from(bridgeValue.bridgeProxyIds.keys()).sort(

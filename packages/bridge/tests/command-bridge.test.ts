@@ -25,8 +25,12 @@ describe("initializeHostBridge", () => {
   it("intermediate iframe created", async () => {
     const page = t.page();
     await page.evaluate(() =>
-      (<any>window).index.initializeHostBridge("host", {
-        scriptNonce: "my-nonce",
+      (<any>window).index.initializeHostBridge({
+        hostId: "host",
+        hostConfig: {
+          scriptNonce: "my-nonce",
+        },
+        reconcile: () => {},
       })
     );
     await page.waitForSelector("iframe");
@@ -46,7 +50,10 @@ describe("initializeHostBridge", () => {
     const page = t.page();
     await page.evaluate(() => {
       (<any>window).index
-        .initializeHostBridge("host")
+        .initializeHostBridge({
+          hostId: "host",
+          reconcile: () => {},
+        })
         .then((makeBridge: (pluginUrl: PluginUrl) => HostBridge) =>
           makeBridge("http://localhost:8081/tests/plugin.html")
         );
@@ -60,7 +67,10 @@ describe("initializeHostBridge", () => {
     const page = t.page();
     await page.evaluate(() => {
       (<any>window).index
-        .initializeHostBridge("host")
+        .initializeHostBridge({
+          hostId: "host",
+          reconcile: () => {},
+        })
         .then((makeBridge: (pluginUrl: PluginUrl) => HostBridge) => {
           return makeBridge("http://localhost:8081/tests/plugin.html");
         })
@@ -93,7 +103,10 @@ describe("initializeHostBridge", () => {
         document.body.appendChild(d);
       };
       return (<any>window).index
-        .initializeHostBridge("host")
+        .initializeHostBridge({
+          hostId: "host",
+          reconcile: () => {},
+        })
         .then((makeBridge: (pluginUrl: PluginUrl) => HostBridge) => {
           return makeBridge("http://localhost:8081/tests/plugin.html");
         })
@@ -120,7 +133,10 @@ describe("initializeHostBridge", () => {
         fn(s + " world", callback2);
       };
       return (<any>window).index
-        .initializeHostBridge("host")
+        .initializeHostBridge({
+          hostId: "host",
+          reconcile: () => {},
+        })
         .then((makeBridge: (pluginUrl: PluginUrl) => HostBridge) => {
           return makeBridge("http://localhost:8081/tests/plugin.html");
         })
@@ -140,7 +156,10 @@ describe("initializeHostBridge", () => {
       };
 
       return (<any>window).index
-        .initializeHostBridge("host")
+        .initializeHostBridge({
+          hostId: "host",
+          reconcile: () => {},
+        })
         .then((makeBridge: (pluginUrl: PluginUrl) => HostBridge) => {
           return makeBridge("http://localhost:8081/tests/plugin.html");
         })

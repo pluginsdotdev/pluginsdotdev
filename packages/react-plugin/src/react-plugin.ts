@@ -83,7 +83,10 @@ const exposeReactPlugin = async (pluginFactory: PluginFactory) => {
     rootById.set(rootId, rootNode);
     render(React.createElement(plugin, props), rootNode);
   };
-  const pluginBridge = await initializePluginBridge(hostOrigin, onRender);
+  const pluginBridge = await initializePluginBridge({
+    origin: hostOrigin,
+    render: onRender,
+  });
 };
 
 export { exposeReactPlugin };
