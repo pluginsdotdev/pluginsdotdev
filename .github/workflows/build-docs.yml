@@ -10,14 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: NPM install
-        run: docker-compose run --rm npm install
-      - name: Lerna bootstrap
-        run: docker-compose run --rm npm run lerna bootstrap
-      - name: Build
-        run: docker-compose run --rm npm run lerna run build
-      - name: Build docs
-        run: $GITHUB_WORKSPACE/scripts/build-docs
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 14
+      - uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - run: npm ci
+      - run: npm run bootstrap-ci
+      - run: npm run build
+      - run: $GITHUB_WORKSPACE/scripts/build-docs
         env:
           CURRENT_USER: 0
       - name: Share artifact inside workflow
@@ -29,10 +34,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Destination
-        id: destination
+      - id: destination
         shell: bash
-        run: echo "::set-output name=dest::$(if [ \"${GITHUB_REF#refs/heads/}\" == \"master\" ]; then echo \"latest\"; else echo \"${GITHUB_REF#refs/tags/\"; fi)"
+        run: echo "::set-output name=dest::$(if [ \"${GITHUB_REF#refs/heads/}\" == \"master\" ]; then echo \"latest\"; else echo \"${GITHUB_REF#refs/tags/}\"; fi)"
       - name: Get artifact
         uses: actions/download-artifact@v1
         with:
