@@ -28,19 +28,22 @@ const toBridgeHandler = (
   };
 };
 
-const fromBridgeHandler = (bridge: Bridge, proxyId: ProxyId, value: any) => {
+const mutatingFromBridgeHandler = (
+  bridge: Bridge,
+  proxyId: ProxyId,
+  value: any,
+  mutableValue: Set<any>
+) => {
   const setItems = value as Array<any>;
-  const regular = setItems.filter((item) => item !== set);
-  const set = new Set(setItems);
-  const hasSelf = setItems.find((item) => item === setItems);
-  if (hasSelf) {
-    set.add(set);
-  }
-  return set;
+  setItems.forEach((i) => {
+    mutableValue.add(i);
+  });
+  return mutableValue;
 };
 
 export const handler: ProxyHandler = {
   type,
   toBridgeHandler,
-  fromBridgeHandler,
+  mutatingFromBridgeHandler,
+  mutableInit: () => new Set<any>(),
 };

@@ -400,6 +400,98 @@ describe("fromBridge", () => {
     expect(fromBridgeVal.has("a")).toBeTruthy();
     expect(fromBridgeVal.has(fromBridgeVal)).toBeTruthy();
   });
+  it("should work for mutually self-referential objects", () => {
+    const localState = {
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
+    };
+
+    const obj2: any = {
+      b: "bye",
+    };
+    const obj: any = {
+      a: "hi",
+      other: obj2,
+    };
+    obj2.other = obj;
+    const bridgeValue = toBridge(localState, obj);
+    const bridge = bridgeFromLocalState(localState);
+    const fromBridgeVal = fromBridge(bridge, bridgeValue);
+    expect(fromBridgeVal.a).toEqual("hi");
+    expect(fromBridgeVal.other.b).toEqual("bye");
+    expect(fromBridgeVal.other.other).toBe(fromBridgeVal);
+  });
+  it("should work for mutually self-referential sets", () => {
+    const localState = {
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
+    };
+
+    const set2 = new Set<any>(["b"]);
+    const set = new Set<any>(["a", set2]);
+    set2.add(set);
+    const bridgeValue = toBridge(localState, set);
+    const bridge = bridgeFromLocalState(localState);
+    const fromBridgeVal = fromBridge(bridge, bridgeValue);
+    expect(fromBridgeVal.has("a")).toBeTruthy();
+    const s2 = Array.from(fromBridgeVal).filter(
+      (v) => v !== "a"
+    )[0] as Set<any>;
+    expect(fromBridgeVal.has(s2)).toBeTruthy();
+    expect(s2.has(fromBridgeVal)).toBeTruthy();
+  });
+  it("should work for mutually self-referential maps", () => {
+    const localState = {
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
+    };
+
+    const map2 = new Map<string, any>([["b", "bye"]]);
+    const map = new Map<string, any>([
+      ["a", "hi"],
+      ["down", map2],
+    ]);
+    map2.set("up", map);
+    const bridgeValue = toBridge(localState, map);
+    const bridge = bridgeFromLocalState(localState);
+    const fromBridgeVal = fromBridge(bridge, bridgeValue);
+    expect(fromBridgeVal.get("a")).toEqual("hi");
+    expect(fromBridgeVal.get("down").get("b")).toEqual("bye");
+    expect(fromBridgeVal.get("down").get("up").get("a")).toEqual("hi");
+  });
+  it("should work for 3-way self-referential maps", () => {
+    const localState = {
+      localProxies: new Map<ProxyId, ProxyValue>(),
+      knownProxies: new WeakMap<ProxyValue, ProxyId>(),
+    };
+
+    const map3 = new Map<string, any>([["c", "see ya"]]);
+    const map2 = new Map<string, any>([
+      ["b", "bye"],
+      ["right", map3],
+    ]);
+    const map = new Map<string, any>([
+      ["a", "hi"],
+      ["down-left", map2],
+      ["down-right", map3],
+    ]);
+    map2.set("up", map);
+    map3.set("up", map);
+    map3.set("left", map2);
+    const bridgeValue = toBridge(localState, map);
+    const bridge = bridgeFromLocalState(localState);
+    const fromBridgeVal = fromBridge(bridge, bridgeValue);
+    expect(fromBridgeVal.get("a")).toEqual("hi");
+    expect(fromBridgeVal.get("down-left").get("b")).toEqual("bye");
+    expect(fromBridgeVal.get("down-right").get("c")).toEqual("see ya");
+    expect(fromBridgeVal.get("down-right").get("left").get("b")).toEqual("bye");
+    expect(fromBridgeVal.get("down-left").get("right").get("c")).toEqual(
+      "see ya"
+    );
+    expect(fromBridgeVal.get("down-left").get("right").get("up")).toBe(
+      fromBridgeVal
+    );
+  });
 });
 
 const setAtPath = (obj: any, path: Array<string>, val: any) => {

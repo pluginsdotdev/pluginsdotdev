@@ -219,9 +219,10 @@ registerFromBridgeProxyHandlerMiddleware(
     handler: FromBridgeProxyHandler,
     bridge: Bridge,
     proxyId: ProxyId,
-    value?: any
+    value?: any,
+    mutableValue?: any
   ) => {
-    const result = handler(bridge, proxyId, value);
+    const result = handler(bridge, proxyId, value, mutableValue);
     if (isInternalBridge(bridge)) {
       bridge.registerDisposalWatcher(proxyId, result);
     }

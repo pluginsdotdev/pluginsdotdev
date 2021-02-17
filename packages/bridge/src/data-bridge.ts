@@ -9,6 +9,7 @@ import type {
   HostValue,
   ProxyType,
   FromBridgeProxyHandler,
+  MutatingFromBridgeProxyHandler,
   ToBridgeProxyHandler,
   ToBridgeProxyValue,
   ToBridgeProxyValueProxyId,
@@ -106,29 +107,41 @@ export class UnregisteredProxyTypeError extends Error {
 }
 
 type FromBridgeProxyHandlerMiddleware = (
-  handler: FromBridgeProxyHandler,
+  handler: FromBridgeProxyHandler | MutatingFromBridgeProxyHandler,
   bridge: Bridge,
   proxyId: ProxyId,
-  value?: any
+  value?: any,
+  mutableValue?: any
 ) => any;
 
-let fromBridgeProxyHandlerMiddleware = (
-  handler: FromBridgeProxyHandler,
-  bridge: Bridge,
-  proxyId: ProxyId,
-  value?: any
-) => handler(bridge, proxyId, value);
+let fromBridgeProxyHandlerMiddleware: FromBridgeProxyHandlerMiddleware = (
+  handler,
+  bridge,
+  proxyId,
+  value,
+  mutableValue
+) =>
+  typeof mutableValue === "undefined"
+    ? (handler as FromBridgeProxyHandler)(bridge, proxyId, value)
+    : (handler as MutatingFromBridgeProxyHandler)(
+        bridge,
+        proxyId,
+        value,
+        mutableValue
+      );
 
 export const registerFromBridgeProxyHandlerMiddleware = (
   middleware: FromBridgeProxyHandlerMiddleware
 ): void => {
   const prev = fromBridgeProxyHandlerMiddleware;
   fromBridgeProxyHandlerMiddleware = (
-    handler: FromBridgeProxyHandler,
-    bridge: Bridge,
-    proxyId: ProxyId,
-    value?: any
-  ) => middleware(prev.bind(null, handler), bridge, proxyId, value);
+    handler,
+    bridge,
+    proxyId,
+    value,
+    mutableValue
+  ) =>
+    middleware(prev.bind(null, handler), bridge, proxyId, value, mutableValue);
 };
 
 type UnwrappedProxyId = {
@@ -387,6 +400,23 @@ const assignAtPath = (container: any, path: ObjectPathParts, val: any): any => {
 const getAtPath = (container: any, path: ObjectPathParts): any =>
   path.reduce((o, part) => (o ? o[part] : null), container);
 
+const isPrefixOf = (
+  maybePrefix: ObjectPathParts,
+  full: ObjectPathParts
+): boolean => {
+  if (full.length < maybePrefix.length) {
+    return false;
+  }
+
+  const commonLen = Math.min(full.length, maybePrefix.length);
+  for (let i = 0; i < commonLen; ++i) {
+    if (full[i] !== maybePrefix[i]) {
+      return false;
+    }
+  }
+  return true;
+};
+
 /**
  * Given a bridge and a bridgeValue, construct a regular object with all
  * functions on the bridgeValue proxied back over the bridge.
@@ -400,35 +430,102 @@ export const fromBridge = (
 ): any => {
   const { bridgeProxyIds } = bridgeValue;
   const fromBridgeProxyHandlers = proxyHandlers.reduce(
-    (m, { type, fromBridgeHandler }) => {
-      if (!fromBridgeHandler) {
+    (
+      m,
+      { type, fromBridgeHandler, mutableInit, mutatingFromBridgeHandler }
+    ) => {
+      if (!fromBridgeHandler && !mutatingFromBridgeHandler) {
         return m;
       }
-      m.set(type, fromBridgeHandler);
+      m.set(type, {
+        fromBridgeHandler,
+        mutableInit,
+        mutatingFromBridgeHandler,
+      });
       return m;
     },
-    new Map<string, FromBridgeProxyHandler>()
+    new Map<
+      string,
+      Pick<
+        ProxyHandler,
+        "fromBridgeHandler" | "mutatingFromBridgeHandler" | "mutableInit"
+      >
+    >()
   );
-  // we proceed by converting the longest paths first because this ensures that children are
-  // processed before parents.
   const paths = Array.from(bridgeValue.bridgeProxyIds.keys()).sort(
     (a, b) => b.length - a.length
   );
   const itemByProxyId = new Map<ProxyId, any>();
-  return paths.reduce((stubbedBridgeValue, path) => {
+  // we find the paths closest to the root that represent a particular
+  // object where object identity defined by proxy id.
+  const rootPathsByProxyId = paths.reduce((rootPaths, path) => {
+    const proxyId = bridgeValue.bridgeProxyIds.get(path)!;
+    const existingPath = rootPaths.get(proxyId);
+    if (
+      !existingPath ||
+      isPrefixOf(
+        objectPathToPathParts(path),
+        objectPathToPathParts(existingPath)
+      )
+    ) {
+      rootPaths.set(proxyId, path);
+    }
+    return rootPaths;
+  }, new Map<ProxyId, ObjectPath>());
+
+  return paths.reduce((stubbed, path) => {
     const proxyId = bridgeValue.bridgeProxyIds.get(path)!;
     const { type } = unwrapProxyId(proxyId);
     if (!fromBridgeProxyHandlers.has(type)) {
       throw new UnregisteredProxyTypeError(type);
     }
 
-    const handler = fromBridgeProxyHandlers.get(type)!;
+    const {
+      mutableInit,
+      fromBridgeHandler,
+      mutatingFromBridgeHandler,
+    } = fromBridgeProxyHandlers.get(type)!;
     const pathParts = objectPathToPathParts(path);
-    const val = getAtPath(stubbedBridgeValue, pathParts);
-    const replacedValue =
-      itemByProxyId.get(proxyId) ??
-      fromBridgeProxyHandlerMiddleware(handler, bridge, proxyId, val);
-    itemByProxyId.set(proxyId, replacedValue);
-    return assignAtPath(stubbedBridgeValue, pathParts, replacedValue);
+    const val = getAtPath(stubbed, pathParts);
+
+    if (fromBridgeHandler) {
+      // for simple handlers, just replace the value at the path
+      const replacedValue = fromBridgeProxyHandlerMiddleware(
+        fromBridgeHandler!,
+        bridge,
+        proxyId,
+        val
+      );
+      itemByProxyId.set(proxyId, replacedValue);
+      return assignAtPath(stubbed, pathParts, replacedValue);
+    }
+
+    if (!mutableInit || !mutatingFromBridgeHandler) {
+      console.error("invalid proxy handler", fromBridgeProxyHandlers.get(type));
+      return stubbed;
+    }
+
+    // for circular reference-supporting handlers (i.e. mutable handlers),
+    // we retrieve or construct an empty object.
+    const mutableValue = itemByProxyId.get(proxyId) ?? mutableInit();
+    // and cache it
+    itemByProxyId.set(proxyId, mutableValue);
+
+    if (rootPathsByProxyId.get(proxyId) === path) {
+      // if we are the root-most version of this entity, we fill ourselves in
+      const replacedValue = fromBridgeProxyHandlerMiddleware(
+        mutatingFromBridgeHandler,
+        bridge,
+        proxyId,
+        val,
+        mutableValue
+      );
+      return assignAtPath(stubbed, pathParts, replacedValue);
+    } else {
+      // if we are not the root-most version of this entity (i.e. we are a
+      // circular reference to an object above us), we replace our path
+      // with our mutable instance
+      return assignAtPath(stubbed, pathParts, mutableValue);
+    }
   }, bridgeValue.bridgeData);
 };

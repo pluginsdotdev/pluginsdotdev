@@ -11,19 +11,17 @@ import type {
 
 const type = "plugins.dev/map" as ProxyType;
 
-const fromBridgeHandler = (bridge: Bridge, proxyId: ProxyId, value: any) => {
+const mutatingFromBridgeHandler = (
+  bridge: Bridge,
+  proxyId: ProxyId,
+  value: any,
+  mutableValue: Map<any, any>
+) => {
   const arr = value as Array<[any, any]>;
-  const m = new Map(arr);
   arr.forEach(([k, v]) => {
-    const kIsArr = k === arr;
-    const vIsArr = v === arr;
-    const km = kIsArr ? m : k;
-    const vm = vIsArr ? m : v;
-    if (kIsArr || vIsArr) {
-      m.set(km, vm);
-    }
+    mutableValue.set(k, v);
   });
-  return m;
+  return mutableValue;
 };
 
 const toBridgeHandler = (
@@ -47,5 +45,6 @@ const toBridgeHandler = (
 export const handler: ProxyHandler = {
   type,
   toBridgeHandler,
-  fromBridgeHandler,
+  mutatingFromBridgeHandler,
+  mutableInit: () => new Map<any, any>(),
 };

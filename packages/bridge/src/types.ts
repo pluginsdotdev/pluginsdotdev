@@ -60,8 +60,7 @@ export type ToBridgeProxyValueReplacementValue = {
 };
 
 /**
- * This is the type returned by a to-bridge proxy (registered via
- * dataBridge::registerToBridgeProxyHandler).
+ * This is the type returned by a to-bridge proxy.
  *
  * proxyId
  *   If a to-bridge proxy returns a proxyId, we will include a mapping from
@@ -123,9 +122,6 @@ export type ProxyHandlerToBridge = (
  * localState - to be removed
  * hostValue is the value the handler should convert to a bridgeable value (or proxy)
  * toBridge allows the handler to recursively convert sub-values to bridgeable values
- * preregisterMutableResult allows the handler to register a mutable result it intends to return
- *                          **before** calling toBridge on any children to allow self-referential
- *                          children to resolve properly
  **/
 export type ToBridgeProxyHandler = (
   proxyIdFactory: ProxyIdFactory,
@@ -148,10 +144,31 @@ export type FromBridgeProxyHandler = (
   value?: any
 ) => any;
 
+/**
+ * MutatingFromBridgeProxyHandler is a handler for a proxy type that allows
+ * implementers to support mutual circular references by caching a mutable
+ * value that is then filled in by a MutatingFromBridgeProxyHandler.
+ *
+ * This allows the implementer to handle custom proxying from the bridge.
+ *
+ * bridge is the Bridge instance
+ * proxyId is the id returned in the corresponding ToBridgeProxyHandler
+ * value is the replacement value returned in the corresponding ToBridgeProxyHandler
+ * mutableValue is the result of calling mutableInit on the ProxyHandler.
+ **/
+export type MutatingFromBridgeProxyHandler = (
+  bridge: Bridge,
+  proxyId: ProxyId,
+  value?: any,
+  mutableValue: any
+) => any;
+
 export type ProxyHandler = {
-  fromBridgeHandler?: FromBridgeProxyHandler;
-  toBridgeHandler?: ToBridgeProxyHandler;
   type: ProxyType;
+  fromBridgeHandler?: FromBridgeProxyHandler;
+  mutatingFromBridgeHandler?: MutatingFromBridgeProxyHandler;
+  toBridgeHandler?: ToBridgeProxyHandler;
+  mutableInit?: () => any;
 };
 
 export type RenderRootId = number;
