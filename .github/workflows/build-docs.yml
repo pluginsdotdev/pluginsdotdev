@@ -2,6 +2,7 @@ name: Build-Docs
 
 on:
   push:
+    branches: [ "master" ]
     tags: [ "*" ]
 
 jobs:
@@ -19,9 +20,29 @@ jobs:
         run: $GITHUB_WORKSPACE/scripts/build-docs
         env:
           CURRENT_USER: 0
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Share artifact inside workflow
+        uses: actions/upload-artifact@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
-
+          name: static-assets
+          path: ./docs
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Destination
+        id: destination
+        shell: bash
+        run: echo "::set-output name=dest::$(if [ \"${GITHUB_REF#refs/heads/}\" == \"master\" ]; then echo \"latest\"; else echo \"${GITHUB_REF#refs/tags/\"; fi)"
+      - name: Get artifact
+        uses: actions/download-artifact@v1
+        with:
+          name: static-assets
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+      - name: Deploy to S3
+        run: aws s3 sync --delete --cache-control 'max-age=300' . s3://docs.plugins.dev/${{ steps.destination.dest }}
+        working-directory: static-assets

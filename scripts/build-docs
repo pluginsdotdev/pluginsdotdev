@@ -15,6 +15,7 @@ CURRENT_USER="$USER" docker-compose run --rm npm run lerna run build-docs
 # coalesce
 rm -rf "${root}/docs"
 cp -r "${root}/packages/docs/dist" "${root}/docs"
+cp "${root}/packages/docs/favicon.ico" "${root}"
 for doc in ${root}/packages/*/docs;
 do
   if [ -d "${doc}" ]; then
