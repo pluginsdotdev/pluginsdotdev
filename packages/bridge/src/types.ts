@@ -141,7 +141,7 @@ export type ToBridgeProxyHandler = (
 export type FromBridgeProxyHandler = (
   bridge: Bridge,
   proxyId: ProxyId,
-  value?: any
+  value: any
 ) => any;
 
 /**
@@ -159,7 +159,7 @@ export type FromBridgeProxyHandler = (
 export type MutatingFromBridgeProxyHandler = (
   bridge: Bridge,
   proxyId: ProxyId,
-  value?: any,
+  value: any,
   mutableValue: any
 ) => any;
 

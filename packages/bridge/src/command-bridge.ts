@@ -215,13 +215,7 @@ const isInternalBridge = (bridge: Bridge): bridge is InternalBridge =>
   typeof (bridge as InternalBridge).registerDisposalWatcher === "function";
 
 registerFromBridgeProxyHandlerMiddleware(
-  (
-    handler: FromBridgeProxyHandler,
-    bridge: Bridge,
-    proxyId: ProxyId,
-    value?: any,
-    mutableValue?: any
-  ) => {
+  (handler, bridge, proxyId, value, mutableValue) => {
     const result = handler(bridge, proxyId, value, mutableValue);
     if (isInternalBridge(bridge)) {
       bridge.registerDisposalWatcher(proxyId, result);
