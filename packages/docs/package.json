@@ -1,27 +1,16 @@
 {
   "name": "@pluginsdotdev/docs",
-  "version": "0.0.0",
-  "description": "Documentation for plugins.dev",
-  "author": "Adam Berger <adam@plugins.dev>",
-  "homepage": "https://plugins.dev",
-  "license": "AGPL-3.0-only",
-  "private": true,
-  "directories": {
-    "lib": "src",
-    "test": "tests"
+  "version": "2.0.0",
+  "license": "MIT",
+  "scripts": {
+    "dev": "docz dev --config doczrc.js",
+    "build": "docz build --config doczrc.js && cp public/favicon.ico dist/",
+    "serve": "docz serve --config doczrc.js"
   },
-  "files": [
-    "src"
-  ],
-  "publishConfig": {
-    "access": "restricted"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/pluginsdotdev/pluginsdotdev.git"
-  },
-  "scripts": {},
-  "bugs": {
-    "url": "https://github.com/pluginsdotdev/pluginsdotdev/issues"
+  "dependencies": {
+    "docz": "^2.3.1",
+    "prop-types": "^15.7.2",
+    "react": "^16.11.0",
+    "react-dom": "^16.11.0"
   }
 }

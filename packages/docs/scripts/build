@@ -1,6 +1,0 @@
-#!/bin/bash
-
-d="$(dirname $0)"
-${d}/preamble
-cd /usr/src/app
-exec bundle exec middleman build
