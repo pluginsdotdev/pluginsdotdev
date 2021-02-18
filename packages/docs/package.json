@@ -4,7 +4,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "docz dev --config doczrc.js",
-    "build": "docz build --config doczrc.js && cp public/favicon.ico dist/",
+    "build-docs": "docz build --config doczrc.js && cp public/favicon.ico dist/",
     "serve": "docz serve --config doczrc.js"
   },
   "dependencies": {
