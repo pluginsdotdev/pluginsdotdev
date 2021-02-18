@@ -17,6 +17,6 @@ do
     package_name="$(basename "$(dirname "${doc}")")"
     api_dir="${root}/docs/api/${package_name}"
     mkdir -p "${api_dir}"
-    cp -r "${doc}/*" "${api_dir}"
+    cp -r ${doc}/* "${api_dir}"
   fi
 done
