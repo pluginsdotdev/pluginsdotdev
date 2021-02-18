@@ -35,7 +35,7 @@ export const Header = props => {
               target="_blank"
               rel="noopener noreferrer"
             >
-              Host sign up&nbsp;<ExternalLink size={15} />
+              Hosts&nbsp;<ExternalLink size={15} />
             </a>
           </Box>
           <Box sx={{ mr: 2 }}>
@@ -45,7 +45,7 @@ export const Header = props => {
               target="_blank"
               rel="noopener noreferrer"
             >
-              Author sign up&nbsp;<ExternalLink size={15} />
+              Authors &nbsp;<ExternalLink size={15} />
             </a>
           </Box>
           {showDarkModeSwitch && (
