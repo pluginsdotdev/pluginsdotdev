@@ -7,6 +7,7 @@ export default {
   title: "Plugins.dev",
   description: "Plugins.dev documentation - enable an ecosystem of 3rd-party plugins for your app in 15 minutes",
   menu: [
-    "Index"
+    "Index",
+    "Api"
   ]
 };
