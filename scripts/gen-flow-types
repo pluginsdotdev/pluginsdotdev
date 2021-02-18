@@ -1,0 +1,6 @@
+#!/bin/sh
+
+for type_file in $(find dist/types/ -type f -name "*.d.ts"); do
+  base_ts_def="$(basename --suffix=".d.ts" "${type_file}")" 
+  npx flowgen "${type_file}" --output-file "dist/lib/${base_ts_def}.js.flow"
+done
