@@ -20,6 +20,7 @@ import type {
   HostValue,
   FromBridgeProxyHandler,
   ProxyHandler,
+  ProxyType,
 } from "./types";
 
 const intermediateFrameScript = `
@@ -139,6 +140,10 @@ type InvocationId = number;
 
 interface PluginReadyMessage {
   msg: "plugin-ready";
+  payload: {
+    version: number;
+    proxyHandlers: Array<ProxyType>;
+  };
 }
 
 interface InvokeMessage {
@@ -555,9 +560,7 @@ interface HostConfig {
   styleNonce?: string;
 }
 
-const getProxyHandlers = (
-  opts: ProxyHandlerOptions
-): Array<ProxyHandler> | undefined => {
+const getProxyHandlers = (opts: ProxyHandlerOptions): Array<ProxyHandler> => {
   if (opts.proxyHandlers) {
     return opts.proxyHandlers;
   }
@@ -566,7 +569,7 @@ const getProxyHandlers = (
     return getDefaultProxyHandlers().concat(opts.extraProxyHandlers);
   }
 
-  return void 0;
+  return getDefaultProxyHandlers();
 };
 
 export type ProxyHandlerOptions = {
@@ -738,7 +741,13 @@ const initializePluginBridge = async ({
     false
   );
 
-  sendMessage({ msg: "plugin-ready" });
+  sendMessage({
+    msg: "plugin-ready",
+    payload: {
+      version: 1,
+      proxyHandlers: proxyHandlers.map((h) => h.type),
+    },
+  });
 
   return bridge;
 };
