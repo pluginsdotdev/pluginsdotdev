@@ -2,6 +2,7 @@
   "name": "@pluginsdotdev/docs",
   "version": "2.0.0",
   "license": "MIT",
+  "private": true,
   "scripts": {
     "dev": "docz dev --config doczrc.js",
     "build-docs": "docz build --config doczrc.js && cp public/favicon.ico dist/",
