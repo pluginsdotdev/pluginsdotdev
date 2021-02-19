@@ -27,18 +27,18 @@ const intermediateFrameScript = `
     var sendCommand = window.sendCommand;
     window.onReceiveCommand(function(cmd) {
       var payload = cmd.payload;
-      if ( cmd.cmd === 'send' ) {
+      if ( cmd.cmd === "send" ) {
         payload.targetWindow.postMessage(payload.msg, payload.targetOrigin);
       }
     });
     window.addEventListener(
-      'message',
+      "message",
       function receiveMessage(evt) {
-        sendCommand({cmd: 'message', payload: {data: evt.data, origin: evt.origin, source: evt.source}});
+        sendCommand({cmd: "message", payload: {data: evt.data, origin: evt.origin, source: evt.source}});
       },
       false
     );
-    sendCommand({cmd: 'ready'});
+    sendCommand({cmd: "ready"});
   })();
 `;
 
@@ -200,6 +200,12 @@ type PluginMessage =
   | RenderMessage
   | ReconcileMessage
   | DisposeMessage;
+
+interface PluginMessageEnvelope {
+  secret: string;
+}
+
+type PluginMessageWithEnvelope = PluginMessage & PluginMessageEnvelope;
 
 type PluginMessageHandler = (msg: PluginMessage) => void;
 
@@ -499,11 +505,15 @@ const makeHostBridge = async (
     fromThisBridge,
     toThisBridge,
   } = makeCommonBridge(queueOrRun, firstClassHandlers, proxyHandlers);
+  let pluginSecret: string | null = null;
 
   const bridge = {
     ...commonBridge,
     pluginFrameWindow: frameContentWindow,
-    onReceiveMessageFromPlugin(origin: string, pluginMsg: PluginMessage) {
+    onReceiveMessageFromPlugin(
+      origin: string,
+      { secret, ...pluginMsg }: PluginMessageWithEnvelope
+    ) {
       // origin should always be 'null' for sandboxed, non-allow-same-origin
       // iframes but should match targetOrigin otherwise
       // we already know that the message was sent from the window we expect so this is somewhat redundant.
@@ -511,8 +521,16 @@ const makeHostBridge = async (
         return;
       }
 
+      // plugin code is untrusted beyond the assumption that our plugin bridge is initialized before
+      // any untrusted code. therefore, we establish a secret on plugin-ready that we check on all
+      // subsequent messages to ignore untrusted messages.
       if (pluginMsg.msg === "plugin-ready") {
+        pluginSecret = secret;
         onReady();
+        return;
+      }
+
+      if (!pluginSecret || pluginSecret !== secret) {
         return;
       }
 
@@ -572,8 +590,8 @@ const initializeHostBridge = ({
   ...proxyOpts
 }: HostBridgeOptions): Promise<HostBridgeMaker> => {
   let sendCommandToIntermediateFrame: null | OnReceiveCallback = null;
-  let { resolve: onReady, promise: ready } = resolvablePromise();
-  let bridgeByWindow = new Map<Window, HostBridge>();
+  const { resolve: onReady, promise: ready } = resolvablePromise();
+  const bridgeByWindow = new Map<Window, HostBridge>();
   const onReceiveCommandFromIntermediateFrame = (command: Command) => {
     switch (command.cmd) {
       case "ready":
@@ -677,8 +695,9 @@ const initializePluginBridge = async ({
     return true;
   };
   const firstClassHandlers = [renderHandler];
+  const secret = "" + Math.random();
   const sendMessage = (msg: PluginMessage) => {
-    parent.postMessage(msg, origin);
+    parent.postMessage({ ...msg, secret }, origin);
     return Promise.resolve();
   };
   const {
@@ -719,7 +738,7 @@ const initializePluginBridge = async ({
     false
   );
 
-  parent.postMessage({ msg: "plugin-ready" }, origin);
+  sendMessage({ msg: "plugin-ready" });
 
   return bridge;
 };

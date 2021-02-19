@@ -180,4 +180,29 @@ describe("initializeHostBridge", () => {
         .$('div[data-promise-result="hello world"]')
     ).toBeTruthy();
   });
+
+  it("ignores messages with bad secrets", async () => {
+    const page = t.page();
+    const expectedRootId = 234;
+    const result = await page.evaluate((expectedRootId: number) => {
+      return new Promise((resolve, reject) => {
+        (<any>window).index
+          .initializeHostBridge({
+            hostId: "host",
+            reconcile: (rootId: number) => {
+              resolve(rootId);
+            },
+          })
+          .then((makeBridge: (pluginUrl: PluginUrl) => HostBridge) => {
+            return makeBridge(
+              "http://localhost:8081/tests/plugin-bad-secret.html"
+            );
+          })
+          .then((bridge: HostBridge) => {
+            return bridge.render(expectedRootId, {});
+          });
+      });
+    }, expectedRootId);
+    expect(result).toEqual(expectedRootId);
+  });
 });
