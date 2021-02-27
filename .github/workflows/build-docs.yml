@@ -35,7 +35,8 @@ jobs:
     steps:
       - id: destination
         shell: bash
-        run: echo $"::set-output name=dest::$(if [ \"${GITHUB_REF#refs/heads/}\" == \"master\" ]; then echo \"latest\"; else echo \"${GITHUB_REF#refs/tags/}\"; fi)"
+        run: >
+          echo "::set-output name=dest::$(if [ "${GITHUB_REF#refs/heads/}" == "master" ]; then echo "latest"; else echo "${GITHUB_REF#refs/tags/}"; fi)"
       - name: Get artifact
         uses: actions/download-artifact@v1
         with:
