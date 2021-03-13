@@ -6,7 +6,8 @@ export const urlAllowed = (
 ): boolean => {
   const { hostname } = u.parse(url);
   if (!hostname) {
-    return false;
+    // you can hit your own host
+    return true;
   }
 
   return allowedDomains.some(
