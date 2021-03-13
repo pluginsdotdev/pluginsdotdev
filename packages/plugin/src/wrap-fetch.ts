@@ -13,6 +13,12 @@ export const wrapFetch = () => {
           : anyResource instanceof URL
           ? anyResource.href
           : (anyResource as string);
+
+      if (urlAllowed([], url)) {
+        // short circuit to avoid infinite recursion for browser data
+        return fetch(resource, init);
+      }
+
       return browserData().then(({ allowedDomains }) => {
         if (!urlAllowed(allowedDomains, url)) {
           throw new Error("Attempted to access blocked domain");
