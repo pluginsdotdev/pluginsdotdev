@@ -1,12 +1,69 @@
+import fs from "fs";
+import { pem2jwk } from "pem-jwk";
+import jwt from "jsonwebtoken";
 import { browserTest } from "@pluginsdotdev/test-utils";
 import type { Page, ElementHandle } from "puppeteer";
 
+const hostId = "host";
 const hostPort = 8080;
 const pluginPort = 8081;
+const pluginUrl = `http://localhost:${pluginPort}/tests/plugin.html`;
+const kid = "123";
+const userId = "user-123";
+const groups = {
+  "group-123": "admin",
+};
+const jwtString = jwt.sign(
+  {
+    sub: userId,
+    groups,
+  },
+  fs.readFileSync("tests/private.pem").toString("utf8"),
+  {
+    algorithm: "RS256",
+    audience: `localhost:${pluginPort}`,
+    issuer: "plugins.dev",
+    keyid: kid,
+    expiresIn: "1 day",
+  }
+);
+
+const jwksHandler = (pathname: string) => {
+  if (pathname !== "/.well-known/jwks.json") {
+    return null;
+  }
+
+  return {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      keys: [
+        {
+          ...pem2jwk(fs.readFileSync("tests/public.pem").toString("utf8")),
+          kid,
+        },
+      ],
+    }),
+  };
+};
+
+const pluginHandler = (pathname: string) => {
+  if (pathname !== "/tests/plugin.html") {
+    return null;
+  }
+
+  return {
+    status: 200,
+    headers: {
+      "Set-Cookie": `${hostId}--jwt=${jwtString}`,
+    },
+  };
+};
 
 const t = browserTest(
   [hostPort, pluginPort],
-  `http://localhost:${hostPort}/tests/host.html`
+  `http://localhost:${hostPort}/tests/host.html`,
+  [jwksHandler, pluginHandler]
 );
 
 const getMainPluginDiv = async (
@@ -32,10 +89,9 @@ const getMainPluginDiv = async (
 };
 
 const baseProps = {
-  hostId: "my-host",
+  hostId,
   pluginPoint: "my-plugin-point",
-  jwt: "fake-jwt",
-  pluginUrl: "http://localhost:8081/tests/plugin.html",
+  pluginUrl,
   hostConfig: {
     scriptNonce: "abc",
     styleNonce: "xyz",
@@ -100,21 +156,24 @@ describe("plugin-point", () => {
       "world"
     );
 
-    await page.evaluate(() => {
-      window.ReactDOM.render(
-        window.React.createElement((<any>window).index.PluginPoint, {
-          hostId: "my-host",
-          pluginPoint: "my-plugin-point",
-          jwt: "fake-jwt",
-          pluginUrl: "http://localhost:8081/tests/plugin.html",
-          props: {
-            className: "hello2",
-            title: "world!",
-          },
-        }),
-        document.getElementById("root")
-      );
-    });
+    await page.evaluate(
+      (hostId: string, pluginUrl: string) => {
+        window.ReactDOM.render(
+          window.React.createElement((<any>window).index.PluginPoint, {
+            hostId,
+            pluginPoint: "my-plugin-point",
+            pluginUrl,
+            props: {
+              className: "hello2",
+              title: "world!",
+            },
+          }),
+          document.getElementById("root")
+        );
+      },
+      hostId,
+      pluginUrl
+    );
     const div2 = await getMainPluginDiv(page, "hello2");
     const oldDivExists = await page.evaluate(() =>
       document
