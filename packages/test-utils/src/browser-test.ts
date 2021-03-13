@@ -1,9 +1,13 @@
 import puppeteer from "puppeteer";
-import { startServer as startTestServer } from "./test-server";
+import { startServer as startTestServer, Handler } from "./test-server";
 
 import type { Browser, Page } from "puppeteer";
 
-const browserTest = (ports: Array<number>, initialPage: string) => {
+const browserTest = (
+  ports: Array<number>,
+  initialPage: string,
+  handlers?: Array<Handler>
+) => {
   let _browser: Browser;
   let _page: Page;
   let shutdown: () => Promise<undefined>;
@@ -18,7 +22,9 @@ const browserTest = (ports: Array<number>, initialPage: string) => {
     },
 
     async beforeAll() {
-      const shutdowns = await Promise.all(ports.map(startTestServer));
+      const shutdowns = await Promise.all(
+        ports.map((port) => startTestServer(port, handlers))
+      );
 
       shutdown = async () => {
         await Promise.all(shutdowns.map((shutdown) => shutdown()));

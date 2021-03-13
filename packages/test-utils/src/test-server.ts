@@ -3,7 +3,24 @@ import * as url from "url";
 import * as http from "http";
 import * as path from "path";
 
-const startServer = (port: number): Promise<() => Promise<undefined>> =>
+import { OutgoingHttpHeaders } from "http";
+
+/**
+ * If a {@link Handler} returns a HandlerResult without a body,
+ * the status and headers will be used and the body will be rendered
+ * from a static file.
+ **/
+export type HandlerResult = {
+  status: number;
+  headers: OutgoingHttpHeaders;
+  body?: string;
+};
+export type Handler = (pathname: string) => HandlerResult | null | undefined;
+
+const startServer = (
+  port: number,
+  handlers?: Array<Handler>
+): Promise<() => Promise<undefined>> =>
   new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
       if (!req.url || req.method !== "GET") {
@@ -28,7 +45,22 @@ const startServer = (port: number): Promise<() => Promise<undefined>> =>
         return;
       }
 
-      res.writeHead(200, { "Content-Type": "..." });
+      const result = (handlers || []).reduce(
+        (prev, handler) => prev || handler(pathname),
+        null as HandlerResult | null | undefined
+      );
+
+      if (result) {
+        res.writeHead(result.status, result.headers);
+        if (result.body) {
+          res.write(result.body);
+          res.end();
+          return;
+        }
+      } else {
+        res.writeHead(200);
+      }
+
       fs.createReadStream(fsPath, "UTF-8").pipe(res);
     });
     server.listen({ port }, (err: Error) => {
